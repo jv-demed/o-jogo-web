@@ -1,0 +1,15 @@
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.flexR{
+    display: flex;
+    flex-direction: row;
+}
+
+.flexC{
+    display: flex;
+    flex-direction: column;
+}
