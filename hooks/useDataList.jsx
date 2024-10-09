@@ -1,15 +1,16 @@
-'use client'
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/supabase/client';
 
-export function useDataObj({
+
+export function useDataList({
     table,
     select,
-    filter
+    filter, 
+    order = 'name', 
+    ascending = true
 }){
 
-    const [obj, setObj] = useState();
+    const [list, setList] = useState([]);
     const [flag, setFlag] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -25,10 +26,10 @@ export function useDataObj({
                 if(filter){
                     query = filter(query);
                 }
-                query.limit(1);
+                query = query.order(order, { ascending });
                 const { data, error } = await query;
                 if(error) throw error;
-                setObj(data[0]);
+                setList(data);
             }catch(err){
                 console.log(err.message);
             }finally{
@@ -38,5 +39,5 @@ export function useDataObj({
         fetchData();
     }, [flag]);
 
-    return { obj, loading, refresh };
+    return { list, loading, refresh };
 }

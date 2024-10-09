@@ -9,6 +9,7 @@ export async function startMatch({user, match, router}){
         await insertRecord('matches', {
             ...match,
             id: await generateId('matches'),
+            host: user.id,
             players: [user.id]
         });
     }else{
@@ -17,8 +18,8 @@ export async function startMatch({user, match, router}){
                 ...match,
                 players: [...match.players, user.id]
             });
-        }
-    }router.push('/partida');
+        };
+    } router.push('/game');
 }
 
 export async function updateMatch(match){

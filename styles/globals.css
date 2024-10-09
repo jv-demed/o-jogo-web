@@ -4,6 +4,10 @@
     padding: 0;
 }
 
+ul{
+    list-style: none;
+}
+
 .flexR{
     display: flex;
     flex-direction: row;

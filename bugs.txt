@@ -1,0 +1,2 @@
+- Comportamento estranho caso mais de um jogador inicie a partida simultanemente;
+- Jogadores entrando simultanemente na partida já criada não foi testado;

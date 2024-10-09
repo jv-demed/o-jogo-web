@@ -1,5 +1,3 @@
-'use client'
-
 import styled from 'styled-components';
 
 export const Box = styled.div`
@@ -11,4 +9,8 @@ export const Box = styled.div`
     gap: 10px;
     padding: 15px 20px;
     width: 100%;
+    ${({ $fullHeight }) => $fullHeight && `
+        flex-grow: 1;
+        max-height: 100%;
+    `}
 `;
