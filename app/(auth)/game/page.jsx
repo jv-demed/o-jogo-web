@@ -23,9 +23,6 @@ export default function Game(){
         filter: e => match.obj?.players?.length > 0 ? e.in('id', match.obj.players) : e.eq('id', null)
     })
 
-    // console.log(match);
-    // console.log(players);
-
     useEffect(() => {
         const channel = getRealtime({ 
             name: 'matches realtime',
