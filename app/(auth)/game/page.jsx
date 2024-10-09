@@ -42,7 +42,7 @@ export default function Game(){
     return (
         <Main>
             <Box $fullHeight>
-                {match.loading ? <Loading /> : <>
+                {!match ? <Loading /> : <>
                     {match.obj.status == 'waiting' && <LobbySection 
                         match={match.obj}
                         players={players.list}
