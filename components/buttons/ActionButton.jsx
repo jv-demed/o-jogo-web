@@ -1,5 +1,3 @@
-'use client'
-
 import styled from 'styled-components';
 import { useState } from 'react';
 import { Loading } from '@/components/elements/Loading';
