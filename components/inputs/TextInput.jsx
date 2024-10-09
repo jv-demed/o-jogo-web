@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ICONS } from '@/assets/icons';
 import { DefaultInput } from '@/components/inputs/DefaultInput';
+import { ErrorMessage } from '../elements/ErrorMessage';
 
 export function TextInput({ 
     name, 
@@ -39,10 +40,9 @@ export function TextInput({
                 onChange={handleInputChange}
                 disabled={disabled}
             />
-            {(error || internalError) && <span className='flexR error'>
-                {ICONS.warning}
-                {internalError || error}
-            </span>}
+            {(error || internalError) && <ErrorMessage 
+                message={internalError || error}
+            />}
         </DefaultInput>
     )
 };

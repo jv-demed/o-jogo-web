@@ -28,14 +28,14 @@ const Styled = styled.button`
 `
 
 export function ActionButton({ 
-    name,
-    type, 
-    icon, 
-    bg, 
-    width, 
-    disabled, 
     action,
-    reverse
+    bg, 
+    disabled,
+    icon, 
+    name,
+    reverse,
+    type, 
+    width
 }){
 
     const [infoDisabled, setInfoDisabled] = useState(disabled);

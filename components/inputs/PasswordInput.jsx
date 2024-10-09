@@ -70,10 +70,9 @@ export function PasswordInput({
                     {passMode ? ICONS.eye : ICONS.eyeOff}
                 </div>
             </div>
-            {error && <span className='flexR error'>
-                {ICONS.warning}
-                {error}
-            </span>}
+            {error && <ErrorMessage 
+                message={error}
+            />}
         </Styled>
     )
 };
