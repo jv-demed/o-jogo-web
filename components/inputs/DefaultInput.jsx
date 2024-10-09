@@ -6,16 +6,13 @@ export const DefaultInput = styled.label`
     flex-direction: column;
     gap: 2px;
     width: 100%;
-    .name{
-        font-size: 0.8rem;
-    }
     input{
         background: ${({ theme }) => theme.input};
         border: 1px solid gray;
         border-radius: 4px;
         color: ${({ theme }) => theme.text};
         font-size: 1.2rem;
-        height: 30px;
+        height: 50px;
         padding: 0 8px;
         width: 100%;
     }

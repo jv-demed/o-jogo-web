@@ -17,7 +17,7 @@ export default function Home(){
                     <Actions>
                         <ActionButton name='Entrar' 
                             type='submit'
-                            icon={{obj: ICONS.login}}
+                            icon={ICONS.login}
                         />
                     </Actions>
                 </Form>

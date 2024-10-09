@@ -18,7 +18,6 @@ const Styled = styled(DefaultInput)`
         input{
             border: none;
             font-size: 1.2rem;
-            height: 30px;
             padding: 0 8px;
             width: 100%;
         }
@@ -29,7 +28,7 @@ const Styled = styled(DefaultInput)`
             color: gray;
             cursor: pointer;
             display: flex;
-            font-size: 1.8rem;
+            font-size: 2.4rem;
             padding: 0 5px;
         }
     }

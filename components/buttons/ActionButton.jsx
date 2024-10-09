@@ -14,12 +14,13 @@ const Styled = styled.button`
     display: flex;
     flex-direction: ${({ $reverse }) => $reverse ? 'row-reverse' : 'row'};
     gap: 10px;
-    height: 30px;
+    height: 50px;
     justify-content: center;
     padding: 0 8px;
     width: ${props => props.$width || '100%'};
+    font-size: 1.2rem;
     .login-icon{
-        font-size: 1.2rem;
+        font-size: 1.5rem;
     }
     ${props => props.disabled && `
         cursor: not-allowed;
@@ -56,7 +57,7 @@ export function ActionButton({
         >
             {!isLoading ? <>
                 {name && <span>{name}</span>}
-                {icon && icon.obj}
+                {icon && icon}
             </> : <Loading color={({ theme }) => theme.textPrimary} />}
         </Styled>
     )
