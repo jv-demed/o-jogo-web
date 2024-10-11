@@ -10,6 +10,13 @@ const Styled = styled.section`
     height: 100%;
     justify-content: space-between;
     max-height: 100%;
+    .waiting{
+        align-items: center;
+        flex-grow: 1;
+        gap: 20px;
+        height: 100%;
+        justify-content: center;
+    }
     .content{
         align-items: center;
         display: flex;
@@ -36,7 +43,11 @@ const Styled = styled.section`
     }
 `;
 
-export function LobbySection({ match, players }){
+export function LobbySection({ 
+    user,
+    match, 
+    players 
+}){
 
     const [playerList, setPlayerList] = useState(null);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -62,23 +73,28 @@ export function LobbySection({ match, players }){
 
     return (
         <Styled>
-            {!playerList ? <Loading /> : <>
-                <div className='content'>
-                    <ul>
-                        {playerList.map((player, i) => (
-                            <li key={player.id}
-                                className={selectedPlayer === i ? 'selected' : ''}
-                                onClick={() => handlePlayerClick(i)}
-                            >
-                                <span>
-                                    {player.name}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+            {user.id !== match.host ? <div className='flexC waiting'>
+                <Loading />
+                <span>Aguardando o host...</span>
+            </div> : <>
+                {!playerList ? <Loading /> : <>
+                    <div className='content'>
+                        <ul>
+                            {playerList.map((player, i) => (
+                                <li key={player.id}
+                                    className={selectedPlayer === i ? 'selected' : ''}
+                                    onClick={() => handlePlayerClick(i)}
+                                >
+                                    <span>
+                                        {player.name}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </>}
+                <ActionButton name='Começar' />
             </>}
-            <ActionButton name='Começar' />
         </Styled>
     );
 }

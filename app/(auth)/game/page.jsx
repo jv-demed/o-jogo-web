@@ -8,8 +8,11 @@ import { LobbySection } from '@/components/game/LobbySection';
 import { useDataObj } from '@/hooks/useDataObj';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { useDataList } from '@/hooks/useDataList';
+import { useUser } from '@/providers/UserProvider';
 
 export default function Game(){
+
+    const user = useUser();
 
     const match = useDataObj({
         table: 'matches',
@@ -20,7 +23,7 @@ export default function Game(){
     const players = useDataList({
         table: 'users',
         select: '*',
-        filter: e => match.obj?.players?.length > 0 ? e.in('id', match.obj.players) : e.eq('id', null)
+        filter: e => match.obj?.players?.length > 0 ? e.in('id', match.obj.players) : e.is('id', null)
     })
 
     useEffect(() => {
@@ -41,6 +44,7 @@ export default function Game(){
             <Box $fullHeight>
                 {!match.obj ? <Loading /> : <>
                     {match.obj.status == 'waiting' && <LobbySection 
+                        user={user}
                         match={match.obj}
                         players={players.list}
                     />}
