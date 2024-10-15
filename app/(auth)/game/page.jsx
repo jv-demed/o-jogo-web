@@ -1,54 +1,57 @@
 'use client'
 
+import styled from 'styled-components';
 import { useEffect } from 'react';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
-import { Loading } from '@/components/elements/Loading';
-import { LobbySection } from '@/components/game/LobbySection';
-import { useDataObj } from '@/hooks/useDataObj';
-import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
+import { Box } from '@/components/boxes/Box';
+import { Main } from '@/components/boxes/Main';
+
+const Styled = styled.div`
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+    justify-content: space-between;
+    .table{
+        border: 1px solid red;
+        flex-grow: 2;
+    }
+    .hand{
+        border: 1px solid blue;
+        flex-grow: 1;
+    }
+`;
 
 export default function Game(){
 
     const user = useUser();
 
-    const match = useDataObj({
-        table: 'matches',
+    const players = useDataList({
+        table: 'game-players',
         select: '*',
-        filter: e => e.eq('status', 'waiting')
+        order: 'position'
     });
 
-    const players = useDataList({
-        table: 'users',
-        select: '*',
-        filter: e => match.obj?.players?.length > 0 ? e.in('id', match.obj.players) : e.is('id', null)
-    })
-
-    useEffect(() => {
-        const channel = getRealtime({ 
-            name: 'matches realtime',
-            table: 'matches',
-            callback: match.refresh
-        });
-        return () => removeChannel(channel);
-    }, []);
-
-    useEffect(() => {
-        players.refresh();
-    }, [match.obj]);
+    console.log(players);
 
     return (
         <Main>
             <Box $fullHeight>
-                {!match.obj ? <Loading /> : <>
-                    {match.obj.status == 'waiting' && <LobbySection 
-                        user={user}
-                        match={match.obj}
-                        players={players.list}
-                    />}
-                </>}
+                {!players.loading && <Styled>
+                    <section className='flexC table'>
+                        <ul>
+                            {players.list.map(player => (
+                                <li key={player.id}>
+                                    {player.name}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                    <section className='flexC hand'>
+                        oi
+                    </section>
+                </Styled>}
             </Box>
         </Main>
     );

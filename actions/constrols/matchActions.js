@@ -4,7 +4,7 @@ export async function getWaitingMatch({ select }){
     return await getRecordByFilter('matches', select, 'status', 'waiting');
 }
 
-export async function startMatch({user, match, router}){
+export async function createMatch({user, match, router}){
     if(!match){
         await insertRecord('matches', {
             ...match,
@@ -19,6 +19,23 @@ export async function startMatch({user, match, router}){
                 players: [...match.players, user.id]
             });
         };
+    } router.push('/lobby');
+}
+
+export async function startMatch({match, players, router}){
+    await updateMatch({
+        ...match,
+        status: 'progress'
+    });
+    let position = 0;
+    for(const player of players){
+        await insertRecord('game-players', {
+            id: await generateId('game-players'),
+            idUser: player.id,
+            name: player.name,
+            position: position
+        });
+        position++;
     } router.push('/game');
 }
 
