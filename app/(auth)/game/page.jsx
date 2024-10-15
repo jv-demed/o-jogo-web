@@ -6,6 +6,7 @@ import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { Box } from '@/components/boxes/Box';
 import { Main } from '@/components/boxes/Main';
+import { GameTable } from '@/components/game/GameTable';
 
 const Styled = styled.div`
     display: flex;
@@ -13,13 +14,9 @@ const Styled = styled.div`
     flex-grow: 1;
     height: 100%;
     justify-content: space-between;
-    .table{
-        border: 1px solid red;
-        flex-grow: 2;
-    }
     .hand{
         border: 1px solid blue;
-        flex-grow: 1;
+        height: 200px;
     }
 `;
 
@@ -39,15 +36,10 @@ export default function Game(){
         <Main>
             <Box $fullHeight>
                 {!players.loading && <Styled>
-                    <section className='flexC table'>
-                        <ul>
-                            {players.list.map(player => (
-                                <li key={player.id}>
-                                    {player.name}
-                                </li>
-                            ))}
-                        </ul>
-                    </section>
+                    <GameTable 
+                        user={user}
+                        players={players.list}
+                    />
                     <section className='flexC hand'>
                         oi
                     </section>

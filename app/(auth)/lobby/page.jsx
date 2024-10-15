@@ -1,17 +1,17 @@
 'use client'
 
 import styled from 'styled-components';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDataObj } from '@/hooks/useDataObj';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
+import { startMatch } from '@/actions/constrols/matchActions';
 import { Box } from '@/components/boxes/Box';
 import { Main } from '@/components/boxes/Main';
 import { Loading } from '@/components/elements/Loading';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { startMatch } from '@/actions/constrols/matchActions';
-import { useRouter } from 'next/navigation';
 
 const Styled = styled.section`
     display: flex;
