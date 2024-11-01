@@ -5,10 +5,11 @@ export async function getWaitingMatch({ select }){
 }
 
 export async function createMatch({user, match, router}){
+    const id = await generateId('matches');
     if(!match){
         await insertRecord('matches', {
             ...match,
-            id: await generateId('matches'),
+            id: id,
             host: user.id,
             players: [user.id]
         });
@@ -19,7 +20,7 @@ export async function createMatch({user, match, router}){
                 players: [...match.players, user.id]
             });
         };
-    } router.push('/lobby');
+    } router.push(`/lobby/${id}`);
 }
 
 export async function startMatch({match, players, router}){
