@@ -40,6 +40,12 @@ export default function Home(){
                         router: router
                     })}
                 />
+                <ActionButton name='Decks' 
+                    action={() => router.push('/decks')}
+                />
+                <ActionButton name='Coleção'
+                    action={() => router.push('/colecao')}
+                />
             </Box>
         </Main>
     );
