@@ -5,14 +5,15 @@ export async function getWaitingMatch({ select }){
 }
 
 export async function createMatch({user, match, router}){
-    const id = await generateId('matches');
     if(!match){
+        const id = await generateId('matches');
         await insertRecord('matches', {
             ...match,
             id: id,
             host: user.id,
             players: [user.id]
         });
+        router.push(`/lobby/${id}`);
     }else{
         if(!match.players.includes(user.id)){
             await updateMatch({
@@ -20,7 +21,8 @@ export async function createMatch({user, match, router}){
                 players: [...match.players, user.id]
             });
         };
-    } router.push(`/lobby/${id}`);
+        router.push(`/lobby/${match.id}`);
+    }
 }
 
 export async function startMatch({match, players, router}){
@@ -37,7 +39,7 @@ export async function startMatch({match, players, router}){
             position: position
         });
         position++;
-    } router.push('/game');
+    } router.push(`/game/${match.id}`);
 }
 
 export async function updateMatch(match){
