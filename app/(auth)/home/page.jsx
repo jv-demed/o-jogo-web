@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDataObj } from '@/hooks/useDataObj';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
-import { createMatch } from '@/actions/constrols/matchActions';
+import { createMatch } from '@/actions/controls/matchActions';
 import { Box } from '@/components/boxes/Box';
 import { Main } from '@/components/boxes/Main';
 import { ActionButton } from '@/components/buttons/ActionButton';
