@@ -1,19 +1,13 @@
 'use client'
-
-import { useEffect, useState } from 'react';
+import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
-import { useDataObj } from '@/hooks/useDataObj';
+import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
-import { getRealtime, removeChannel } from '@/supabase/realtime';
-import { createMatch } from '@/actions/controls/matchActions';
+import { ICONS } from '@/assets/icons';
+import { CARD_TYPES } from '@/actions/controls/cardActions';
 import { Box } from '@/components/boxes/Box';
 import { Main } from '@/components/boxes/Main';
-import { ActionButton } from '@/components/buttons/ActionButton';
-import styled from 'styled-components';
-import { ICONS } from '@/assets/icons';
-import { useDataList } from '@/hooks/useDataList';
 import { Loading } from '@/components/elements/Loading';
-import { CARD_TYPES } from '@/actions/controls/cardActions';
 
 const Styled = styled.div`
     display: flex;
@@ -56,53 +50,6 @@ const Styled = styled.div`
     }
 `;
 
-const Modal = styled.div`
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    .close-btn {
-        align-self: flex-end;
-        cursor: pointer;
-        font-size: 1.2rem;
-    }
-
-    .content {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-
-        .card-name {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .card-details {
-            font-size: 1rem;
-            color: gray;
-        }
-    }
-`;
-
-const Overlay = styled.div`
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-`;
-
 export default function Colecao(){
 
     const router = useRouter();
@@ -114,10 +61,6 @@ export default function Colecao(){
         select: '*',
         order: 'id'
     });
-
-    const [selectedCard, setSelectedCard] = useState(null);
-
-    const closeModal = () => setSelectedCard(null);
 
     return (
         <Main>
@@ -144,7 +87,7 @@ export default function Colecao(){
                                         </div>
                                     </div> : 
                                     <div className='flexR card'
-                                        onClick={() => setSelectedCard(card)}
+                                        onClick={() => router.push(`/colecao/${card.id}`)}
                                     >
                                         <div className='flexR text'>
                                             <span className='id'>
@@ -160,23 +103,6 @@ export default function Colecao(){
                     </ul>}
                 </Styled>
             </Box>
-            {selectedCard && (
-                <>
-                    <Overlay onClick={closeModal} />
-                    <Modal>
-                        <div className='close-btn' onClick={closeModal}>
-                            &times;
-                        </div>
-                        <div className='content'>
-                            <span className='card-name'>{selectedCard.name}</span>
-                            <span className='card-details'>ID: {selectedCard.id}</span>
-                            <span className='card-details'>
-                                Type: {CARD_TYPES.find((t) => t.id === selectedCard.type)?.name}
-                            </span>
-                        </div>
-                    </Modal>
-                </>
-            )}
         </Main>
     );
 }
