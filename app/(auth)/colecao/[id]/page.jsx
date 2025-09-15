@@ -6,15 +6,15 @@ import { useDataObj } from '@/hooks/useDataObj';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { createMatch } from '@/actions/controls/matchActions';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
+import { Box } from '@/components/containers/Box';
+import { Main } from '@/components/containers/Main';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import styled from 'styled-components';
 import { ICONS } from '@/assets/icons';
 import { useDataList } from '@/hooks/useDataList';
 import { Loading } from '@/components/elements/Loading';
 import { CARD_TYPES } from '@/actions/controls/cardActions';
-import { Modal } from '@/components/boxes/Modal';
+import { Modal } from '@/components/containers/Modal';
 import { Card } from '@/components/cards/Card';
 
 const Styled = styled.div`

@@ -4,8 +4,8 @@ import styled from 'styled-components';
 import { useEffect } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
+import { Box } from '@/components/containers/Box';
+import { Main } from '@/components/containers/Main';
 import { GameTable } from '@/components/game/GameTable';
 
 const Styled = styled.div`

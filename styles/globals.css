@@ -1,8 +1,15 @@
-*{
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+@import 'tailwindcss';
+
+/* @theme {
+    --color-box: '#171717',
+    --color-error: tomato;
+    /* 
+    content: '#252525',
+    error: 'tomato',
+    input: '#2f2f2f',
+    primary: '#2b88c1',
+    text: '#e2d4b8',
+    textPrimary: 'white' */
 
 ul{
     list-style: none;

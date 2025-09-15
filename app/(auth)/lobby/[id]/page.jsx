@@ -8,8 +8,8 @@ import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { startMatch } from '@/actions/controls/matchActions';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
+import { Box } from '@/components/containers/Box';
+import { Main } from '@/components/containers/Main';
 import { Loading } from '@/components/elements/Loading';
 import { ActionButton } from '@/components/buttons/ActionButton';
 

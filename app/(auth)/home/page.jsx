@@ -6,8 +6,8 @@ import { useDataObj } from '@/hooks/useDataObj';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { createMatch } from '@/actions/controls/matchActions';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
+import { Box } from '@/components/containers/Box';
+import { Main } from '@/components/containers/Main';
 import { ActionButton } from '@/components/buttons/ActionButton';
 
 export default function Home(){

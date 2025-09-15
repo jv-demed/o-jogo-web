@@ -5,8 +5,8 @@ import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { ICONS } from '@/assets/icons';
 import { CARD_TYPES } from '@/actions/controls/cardActions';
-import { Box } from '@/components/boxes/Box';
-import { Main } from '@/components/boxes/Main';
+import { Box } from '@/components/containers/Box';
+import { Main } from '@/components/containers/Main';
 import { Loading } from '@/components/elements/Loading';
 
 const Styled = styled.div`

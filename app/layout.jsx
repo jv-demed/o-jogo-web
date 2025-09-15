@@ -1,6 +1,4 @@
-import { ThemeProvider } from '@/providers/ThemeProvider';
 import '@/styles/globals.css';
-import '@/styles/typography.css';
 
 export const metadata = {
     title: 'O JOGO',
@@ -11,9 +9,7 @@ export default function RootLayout({ children }){
     return (
         <html lang='pt-br'>
             <body>
-                <ThemeProvider>
-                    {children}
-                </ThemeProvider>
+                {children}
             </body>
         </html>
     );

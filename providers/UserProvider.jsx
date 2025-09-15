@@ -1,9 +1,8 @@
 'use client'
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
-import { Main } from '@/components/boxes/Main';
+import { Main } from '@/components/containers/Main';
 import { Loading } from '@/components/elements/Loading';
 
 const UserContext = createContext(null);
@@ -18,14 +17,15 @@ export function UserProvider({ children }){
 
     async function getUser(){
         const { data, error } = await supabase.auth.getUser();
+        console.log(data);
         if(error || !data?.user){
             router.push('/');
             return;
         }
         const { data: userData, error: userError } = await supabase
-            .from('users')
+            .from('oJogo-users')
             .select('*')
-            .eq('idUser', data.user.id)
+            .eq('idAuth', data.user.id)
             .single();
         if(userError){
             router.push('/');
