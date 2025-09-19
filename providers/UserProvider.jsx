@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
 import { Main } from '@/components/containers/Main';
-import { Loading } from '@/components/elements/Loading';
+import { Loading } from '@/components/elements/SpinLoader';
 
 const UserContext = createContext(null);
 

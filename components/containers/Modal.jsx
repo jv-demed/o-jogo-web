@@ -12,7 +12,7 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 import styled from 'styled-components';
 import { ICONS } from '@/assets/icons';
 import { useDataList } from '@/hooks/useDataList';
-import { Loading } from '@/components/elements/Loading';
+import { Loading } from '@/components/elements/SpinLoader';
 import { CARD_TYPES } from '@/actions/controls/cardActions';
 
 const Styled = styled.div`

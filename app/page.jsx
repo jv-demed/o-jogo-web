@@ -1,8 +1,10 @@
 'use client'
 import { useState } from 'react';
+import { useMedia } from '@/hooks/useMedia';
 import { useRouter } from 'next/navigation';
 import { login } from '@/services/AuthService';
 import { ICONS } from '@/assets/icons';
+import { SCREENS } from '@/assets/screens';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { Form } from '@/components/containers/Form';
@@ -15,6 +17,7 @@ import { PasswordInput } from '@/components/inputs/PasswordInput';
 export default function LoginPage(){
 
     const router = useRouter();
+    const isMobile = useMedia(SCREENS.mobile);
 
     const [error, setError] = useState();
     const [auth, setAuth] = useState({
@@ -35,7 +38,7 @@ export default function LoginPage(){
 
     return (
         <Main>
-            <Box>
+            <Box width={!isMobile && '400px'}>
                 <Form>
                     <TextInput name='E-mail' 
                         type='email'
@@ -47,7 +50,7 @@ export default function LoginPage(){
                         setValue={e => setAuth({...auth, password: e})}
                     />
                     <Actions>
-                        <ActionButton name='Entrar' 
+                        <ActionButton text='Entrar' 
                             type='submit'
                             icon={ICONS.login}
                             action={handleSubmit}

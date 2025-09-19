@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react';
-import { Loading } from '@/components/elements/Loading';
+import { SpinLoader } from '@/components/elements/SpinLoader';
 
 
 export function Form({ children, onSubmit }){
@@ -22,7 +22,7 @@ export function Form({ children, onSubmit }){
                 w-full  
             `}
         >
-            {isLoading ? <Loading /> : children}
+            {isLoading ? <SpinLoader /> : children}
         </form>
     )
 }

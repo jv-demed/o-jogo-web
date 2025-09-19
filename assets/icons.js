@@ -7,10 +7,10 @@ import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
 export const ICONS = {
     arrowLeft: <FaArrowLeft className='icon arrow-left-icon' />,
     arrowRight: <FaArrowRight className='icon arrow-right-icon' />,
-    eye: <IoEyeOutline className='icon eye-icon' />,
-    eyeOff: <IoEyeOffOutline className='icon eyeOff-icon' />,
-    loading: <AiOutlineLoading3Quarters className='icon loading-icon' />,
-    login: <AiOutlineLogin className='icon login-icon' />,
+    eye: IoEyeOutline,
+    eyeOff: IoEyeOffOutline,
+    spinLoader: AiOutlineLoading3Quarters,
+    login: AiOutlineLogin,
     shot: <FaWhiskeyGlass className='icon shot-icon' />,
-    warning: <RiErrorWarningLine className='icon warning-icon' />
+    warning: RiErrorWarningLine
 }

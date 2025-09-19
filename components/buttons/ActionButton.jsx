@@ -1,62 +1,54 @@
-import styled from 'styled-components';
 import { useState } from 'react';
-import { Loading } from '@/components/elements/Loading';
-
-const Styled = styled.button`
-    align-items: center;
-    background-color: ${({ theme, $bg }) => $bg || theme.primary};
-    border: none;
-    border-radius: 4px;
-    color: ${({ theme }) => theme.textPrimary};
-    cursor: pointer;
-    display: flex;
-    flex-direction: ${({ $reverse }) => $reverse ? 'row-reverse' : 'row'};
-    gap: 10px;
-    height: 50px;
-    justify-content: center;
-    padding: 0 8px;
-    width: ${props => props.$width || '100%'};
-    font-size: 1.2rem;
-    .login-icon{
-        font-size: 1.5rem;
-    }
-    ${props => props.disabled && `
-        cursor: not-allowed;
-    `}
-`
+import { SpinLoader } from '@/components/elements/SpinLoader';
 
 export function ActionButton({ 
-    action,
-    bg, 
-    disabled,
-    icon, 
-    name,
-    reverse,
+    text,
     type, 
-    width
+    action,
+    disabled,
+    reverse,
+    bg = '#1b5b82', 
+    width = '100%',
+    icon: Icon
 }){
 
     const [infoDisabled, setInfoDisabled] = useState(disabled);
     const [isLoading, setIsLoading] = useState(false);
 
+    async function handleAction() {
+        setInfoDisabled(true);
+        setIsLoading(true);
+        action && await action();
+        setInfoDisabled(false);
+        setIsLoading(false);
+    }
+
     return(
-        <Styled type={type || 'button'}
+        <button type={type || 'button'}
             disabled={infoDisabled}
-            onClick={async () => {
-                setInfoDisabled(true);
-                setIsLoading(true);
-                action && await action();
-                setInfoDisabled(false);
-                setIsLoading(false);
+            onClick={handleAction}
+            className={`
+                flex items-center justify-center gap-2.5
+                rounded h-12 px-2
+                hover:brightness-90
+                focus:outline-none focus:ring-2
+                focus:ring-[#1b5b82] focus:border-[#1b5b82]
+            `}
+            style={{ 
+                background: disabled ? 'gray' : bg,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                flexDirection: reverse ? 'row-reverse' : 'row',
+                width: width 
             }}
-            $bg={bg}
-            $width={width}
-            $reverse={reverse}
         >
-            {!isLoading ? <>
-                {name && <span>{name}</span>}
-                {icon && icon}
-            </> : <Loading color={({ theme }) => theme.textPrimary} />}
-        </Styled>
+            {!isLoading 
+                ? <>
+                    {text && <span>{text}</span>}
+                    {Icon && <span className='text-2xl'>
+                        <Icon />    
+                    </span>}
+                </> 
+                : <SpinLoader color='white' />}
+        </button>
     )
 }

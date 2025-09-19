@@ -10,7 +10,7 @@ import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { startMatch } from '@/actions/controls/matchActions';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { Loading } from '@/components/elements/Loading';
+import { Loading } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
 
 const Styled = styled.section`

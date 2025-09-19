@@ -7,7 +7,7 @@ import { ICONS } from '@/assets/icons';
 import { CARD_TYPES } from '@/actions/controls/cardActions';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { Loading } from '@/components/elements/Loading';
+import { Loading } from '@/components/elements/SpinLoader';
 
 const Styled = styled.div`
     display: flex;

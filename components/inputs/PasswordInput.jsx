@@ -1,46 +1,6 @@
 'use client'
-
-import styled from 'styled-components';
 import { useState } from 'react';
 import { ICONS } from '@/assets/icons';
-import { DefaultInput } from '@/components/inputs/DefaultInput';
-
-const Styled = styled(DefaultInput)`
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    .box{
-        align-items: center;
-        background-color: ${({ theme }) => theme.input};
-        border: 1px solid gray;
-        border-radius: 4px;
-        display: flex;
-        input{
-            border: none;
-            font-size: 1.2rem;
-            padding: 0 8px;
-            width: 100%;
-        }
-        input:hover, input:focus{
-            outline: none;
-        }
-        .icon{
-            color: gray;
-            cursor: pointer;
-            display: flex;
-            font-size: 2.4rem;
-            padding: 0 5px;
-        }
-    }
-    .box:hover{
-        border: 1px solid ${({ theme }) => theme.primary};
-        outline: 1px solid ${({ theme }) => theme.primary};
-    }
-    .box:focus-within{
-        border: 1px solid ${({ theme }) => theme.primary};
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-`;
 
 export function PasswordInput({ 
     name, 
@@ -54,25 +14,43 @@ export function PasswordInput({
     const [passMode, setPassMode] = useState(true);
 
     return(
-        <Styled>
-            {name && <span className='name'>
-                {name}:
-            </span>}
-            <div className='box'>
+        <div className={`
+            flex flex-col gap-0.5
+            w-full relative
+        `}>
+            {name && <span>{name}:</span>}
+            <div className='relative'>
                 <input name={name || 'input-label'}
                     type={passMode ? 'password' : 'text'}
                     placeholder={placeholder || '...'}
                     value={value}
                     onChange={e => setValue(e.target.value)}
                     disabled={disabled}
+                    className={`
+                        flex items-center
+                        w-full h-12 px-2 text-xl
+                        border border-gray-500 rounded   
+                        hover:border-[#1b5b82]
+                        focus:outline-none focus:ring-2
+                        focus:ring-[#1b5b82] focus:border-[#1b5b82]
+                    `}
                 />
-                <div className='icon' onClick={() => setPassMode(!passMode)}>
-                    {passMode ? ICONS.eye : ICONS.eyeOff}
-                </div>
+                <button type='button' 
+                    onClick={() => setPassMode(!passMode)}
+                    className={`
+                        absolute right-2 top-1/2 
+                        transform -translate-y-1/2 
+                        rounded cursor-pointer p-1 text-xl
+                        hover:text-[#1b5b82] 
+                        focus:outline-none focus:ring-2 focus:ring-[#1b5b82]
+                    `}
+                >
+                    {passMode ? <ICONS.eyeOff /> : <ICONS.eye />}
+                </button>
             </div>
             {error && <ErrorMessage 
-                message={error}
+                error={{ message: error }}
             />}
-        </Styled>
+        </div>
     )
 };
