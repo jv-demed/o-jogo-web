@@ -16,20 +16,26 @@ export function Card({ card }) {
             `}>
                 {card.name}
             </div>
-            <div className='absolute top-[50px] left-[25px] w-[250px] h-[250px] bg-white flex items-center justify-center overflow-hidden'>
+            <div className={`
+                flex items-center justify-center 
+                absolute top-[80px] left-[33px] 
+                w-[234px] h-[231px] bg-white 
+                overflow-hidden    
+            `}>
                 <Image
+                    className='object-contain'
                     src={`/cards/${card.number}.png`}
                     alt={card.name}
                     width={250}
                     height={250}
-                    className='object-contain'
                 />
             </div>
-
-        {/* Descrição */}
-        <div className='absolute bottom-[20px] left-[25px] right-[25px] h-[90px] overflow-hidden text-xs text-black'>
-            {card.description}
-        </div>
+            <div className={`
+                absolute bottom-[26px] left-[25px] right-[25px] 
+                h-[82px] overflow-hidden text-xs text-black    
+            `}>
+                {card.text}
+            </div>
         </div>
     )
 }
