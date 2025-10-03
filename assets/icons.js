@@ -1,10 +1,11 @@
 import { PiBeerBottleBold } from 'react-icons/pi';
 import { RiErrorWarningLine } from 'react-icons/ri';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
-import { IoEyeOutline, IoEyeOffOutline, IoClose } from 'react-icons/io5';
 import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { IoEyeOutline, IoEyeOffOutline, IoClose, IoAddOutline } from 'react-icons/io5';
 
 export const ICONS = {
+    add: IoAddOutline,
     arrowLeft: FaArrowLeft,
     arrowRight: FaArrowRight,
     close: IoClose,

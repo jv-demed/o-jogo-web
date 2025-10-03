@@ -1,16 +1,16 @@
 'use client'
+import { useEffect, useState } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { userHaveCard } from '@/presenters/usersPresenter';
 import { getCardTypeIcon } from '@/presenters/cardsPresenter';
+import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { SpinLoader } from '@/components/elements/SpinLoader';
-import { PageHeader } from '@/components/elements/PageHeader';
-import { useEffect, useState } from 'react';
 import { Modal } from '@/components/containers/Modal';
-import { Card } from '@/components/cards/Card';
 import { TextInput } from '@/components/inputs/TextInput';
+import { PageHeader } from '@/components/elements/PageHeader';
+import { SpinLoader } from '@/components/elements/SpinLoader';
 
 export default function Colecao(){
 
@@ -20,8 +20,6 @@ export default function Colecao(){
         table: 'oJogo-cards',
         order: 'number'
     });
-    console.log(user);
-    console.log(cards);
 
     const [search, setSearch] = useState('');
     const [copyList, setCopyList] = useState([]);
@@ -71,6 +69,7 @@ export default function Colecao(){
                                     </li>
                                 )
                             })}
+                            {copyList.length == 0 && <span>Nenhum carta encontrada</span>}
                         </ul>
                     </div> 
                 }
