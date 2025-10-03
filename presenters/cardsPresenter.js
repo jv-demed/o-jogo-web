@@ -4,18 +4,14 @@ export const CARD_TYPES = [
     {
         id: 0,
         name: 'Shot',
-        icon: <ICONS.shot />,
-        bg: 'radial-gradient(circle at 90.56% -7.92%, #ff82ca 0, #f77ace 16.67%, #e973d3 33.33%, #d86cd8 50%, #c467dd 66.67%, #ae64e2 83.33%, #9462e7 100%)'
+        icon: <ICONS.shot />
     }
 ];
 
-export function getCardTypeIcon(card) {
-    return CARD_TYPES.find(t => t.id == card.type).icon;
+export function getCardTypeName(card) {
+    return CARD_TYPES.find(t => t.id == card.type)?.name;
 }
 
-export function getBackground(card){
-    switch(card.type){
-        case 1:
-            return CARD_TYPES[0].bg;
-    }
+export function getCardTypeIcon(card) {
+    return CARD_TYPES.find(t => t.id == card.type)?.icon;
 }

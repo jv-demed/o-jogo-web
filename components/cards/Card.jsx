@@ -1,5 +1,6 @@
 'use client'
 import Image from 'next/image'
+import { getCardTypeIcon, getCardTypeName } from '@/presenters/cardsPresenter';
 
 export function Card({ card }) {
     return (
@@ -17,6 +18,18 @@ export function Card({ card }) {
                 {card.name}
             </div>
             <div className={`
+                absolute top-[56px] right-[42px]
+                text-black text-xs
+            `}>
+                {getCardTypeName(card)} 
+            </div>
+            <div className={`
+                absolute top-[54px] right-[20px]
+                text-gray-900
+            `}>
+                {getCardTypeIcon(card)} 
+            </div>
+            <div className={`
                 flex items-center justify-center 
                 absolute top-[80px] left-[33px] 
                 w-[234px] h-[231px] bg-white 
@@ -32,7 +45,7 @@ export function Card({ card }) {
             </div>
             <div className={`
                 absolute bottom-[26px] left-[25px] right-[25px] 
-                h-[82px] overflow-hidden text-xs text-black    
+                h-[82px] overflow-hidden text-xs text-black   
             `}>
                 {card.text}
             </div>
