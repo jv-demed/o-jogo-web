@@ -1,51 +1,35 @@
-import { CARD_TYPES, getBackground } from '@/actions/controls/cardActions';
-import styled from 'styled-components';
+'use client'
+import Image from 'next/image'
 
-const Styled = styled.div`
-    background-image: ${({ $bg }) => $bg};
-    border: 3px solid white;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
-    height: ${({ $width }) => `${$width*1.4}px`};
-    padding: 10px;
-    width: ${({ $width }) => `${$width}px`};
-    header{
-        border: 2px solid white;
-        border-radius: 3px;
-        color: white;
-        font-weight: bold;
-        padding: 7px 5px;
-        width: 100%;
-    }
-    .type-info{
-        align-items: center;
-        gap: 5px;
-        font-size: 0.8rem;
-        justify-content: flex-end;
-        margin-top: 3px;
-    }
-`;
-
-export function Card({ 
-    card,
-    width 
-}){
+export function Card({ card }) {
     return (
-        <Styled
-            $bg={() => getBackground(card)} 
-            $width={width}
-        >
-            <header className='flexR'>
-                <span>
-                    {card.name}
-                </span>
-            </header>
-            <div className='flexR type-info'>
-                {CARD_TYPES.find(t => t.id == card.type).name}
-                {CARD_TYPES.find(t => t.id == card.type).icon}
+        <div className='relative w-[300px] h-[440px]'>
+            <Image
+                src='/trap-card.jpg'
+                alt='Card frame'
+                className='object-cover'
+                fill
+            />
+            <div className={`
+                absolute top-[24px] left-[20px] 
+                text-sm font-bold text-black text-center
+            `}>
+                {card.name}
             </div>
-        </Styled>
-    );
+            <div className='absolute top-[50px] left-[25px] w-[250px] h-[250px] bg-white flex items-center justify-center overflow-hidden'>
+                <Image
+                    src={`/cards/${card.number}.png`}
+                    alt={card.name}
+                    width={250}
+                    height={250}
+                    className='object-contain'
+                />
+            </div>
+
+        {/* Descrição */}
+        <div className='absolute bottom-[20px] left-[25px] right-[25px] h-[90px] overflow-hidden text-xs text-black'>
+            {card.description}
+        </div>
+        </div>
+    )
 }

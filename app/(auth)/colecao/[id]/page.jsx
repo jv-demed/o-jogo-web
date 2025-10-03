@@ -13,7 +13,7 @@ import styled from 'styled-components';
 import { ICONS } from '@/assets/icons';
 import { useDataList } from '@/hooks/useDataList';
 import { Loading } from '@/components/elements/SpinLoader';
-import { CARD_TYPES } from '@/actions/controls/cardActions';
+import { CARD_TYPES } from '@/presenters/cardsPresenter';
 import { Modal } from '@/components/containers/Modal';
 import { Card } from '@/components/cards/Card';
 

@@ -1,62 +1,30 @@
 'use client'
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useDataObj } from '@/hooks/useDataObj';
-import { useUser } from '@/providers/UserProvider';
-import { getRealtime, removeChannel } from '@/supabase/realtime';
-import { createMatch } from '@/actions/controls/matchActions';
-import { Box } from '@/components/containers/Box';
-import { Main } from '@/components/containers/Main';
-import { ActionButton } from '@/components/buttons/ActionButton';
-import styled from 'styled-components';
 import { ICONS } from '@/assets/icons';
-import { useDataList } from '@/hooks/useDataList';
-import { Loading } from '@/components/elements/SpinLoader';
-import { CARD_TYPES } from '@/actions/controls/cardActions';
 
-const Styled = styled.div`
-    border: 1px solid red;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+export function Modal({ isOpen, onClose, children }) {
+    if (!isOpen) return null;
 
-    .close-btn {
-        align-self: flex-end;
-        cursor: pointer;
-        font-size: 1.2rem;
-    }
-
-    .content {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-
-        .card-name {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .card-details {
-            font-size: 1rem;
-            color: gray;
-        }
-    }
-`;
-
-export function Modal(){
     return (
-        <Styled>
-                        
-        </Styled>
+        <div className={`
+            fixed inset-0 bg-black/50 px-4
+            flex items-center justify-center z-50
+        `}>
+            <div className={`
+                flex justify-center items-center
+                bg-[#212121] text-[#e2d4b8] 
+                rounded-2xl p-6 max-w-lg w-full 
+                relative shadow-xl
+            `}>
+                <button onClick={onClose} 
+                    className={`
+                        absolute top-3 right-3 
+                        text-2xl hover:text-red-400    
+                    `}
+                >
+                    <ICONS.close />
+                </button>
+                {children}
+            </div>
+        </div>
     );
 }

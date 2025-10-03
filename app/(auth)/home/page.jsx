@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDataObj } from '@/hooks/useDataObj';
@@ -15,35 +14,34 @@ export default function Home(){
     const router = useRouter();
     const user = useUser();
 
-    const match = useDataObj({
-        table: 'matches',
-        select: '*',
-        filter: e => e.eq('status', 'waiting')
-    });
+    // const match = useDataObj({
+    //     table: 'matches',
+    //     filter: e => e.eq('status', 'waiting')
+    // });
 
-    useEffect(() => {
-        const channel = getRealtime({ 
-            name: 'matches realtime',
-            table: 'matches',
-            callback: match.refresh
-        });
-        return () => removeChannel(channel);
-    }, []);
+    // useEffect(() => {
+    //     const channel = getRealtime({ 
+    //         name: 'matches realtime',
+    //         table: 'matches',
+    //         callback: match.refresh
+    //     });
+    //     return () => removeChannel(channel);
+    // }, []);
 
     return (
         <Main>
             <Box>
-                <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
+                {/* <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
                     action={async () => await createMatch({
                         user: user,
                         match: match.obj,
                         router: router
                     })}
-                />
-                <ActionButton name='Decks' 
+                /> */}
+                <ActionButton text='Decks' 
                     action={() => router.push('/decks')}
                 />
-                <ActionButton name='Coleção'
+                <ActionButton text='Coleção'
                     action={() => router.push('/colecao')}
                 />
             </Box>
