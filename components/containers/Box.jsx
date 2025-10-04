@@ -13,9 +13,10 @@ export function Box({
         <div 
             className={`
                 flex flex-col gap-2.5
-                px-5 py-4 w-full
+                px-5 py-4 w-full rounded-2xl 
                 bg-[#171717]
-                rounded-2xl
+                overflow-y-auto overflow-x-hidden
+                scrollbar-custom   
                 ${fullH && 'grow-1 h-full'}
             `}
             style={{ width: isMobile ? '100%' : '400px' }}

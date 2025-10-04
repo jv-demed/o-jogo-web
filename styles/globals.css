@@ -5,19 +5,17 @@ ul{
 }
 
 .scrollbar-custom {
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: #4b5563 transparent; /* thumb (cinza-600), track (transparente) */
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
 }
-
-/* WebKit (Chrome, Edge, Safari) */
 .scrollbar-custom::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 .scrollbar-custom::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 .scrollbar-custom::-webkit-scrollbar-thumb {
-  background-color: #4b5563; /* gray-600 */
-  border-radius: 9999px;
+    background-color: #4b5563;
+    border-radius: 9999px;
 }

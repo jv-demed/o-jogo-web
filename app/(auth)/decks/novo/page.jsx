@@ -1,17 +1,17 @@
 'use client'
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
+import { insertDeck } from '@/presenters/decksPresenter';
+import { ICONS } from '@/assets/icons';
+import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
-import { Card } from '@/components/cards/Card';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { ICONS } from '@/assets/icons';
-import { insertDeck } from '@/presenters/decksPresenter';
-import { useRouter } from 'next/navigation';
 
 export default function Deck(){
 
@@ -51,7 +51,6 @@ export default function Deck(){
         });
         router.push('/decks');
     }
-    console.log(selectedCards);
 
     return (
         <Main between>
@@ -102,8 +101,8 @@ export default function Deck(){
                     <ul className={`
                         flex gap-2 
                         overflow-x-auto overflow-y-hidden
-                        snap-x snap-mandatory
                         scrollbar-custom    
+                        snap-x snap-mandatory
                     `}>
                         {selectedCards.map((card, i) => (
                             <li key={`card-${i}/${card.id}`}
