@@ -8,6 +8,7 @@ import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
+import { Modal } from '@/components/containers/Modal';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
@@ -52,6 +53,8 @@ export default function Deck(){
         router.push('/decks');
     }
 
+    const [selectedCard, setSelectedCard] = useState(null);
+
     return (
         <Main between>
             <Box>
@@ -85,6 +88,7 @@ export default function Deck(){
                                     >
                                         <Card card={card} 
                                             scale={0.24}
+                                            onLongPress={() => setSelectedCard(card)}
                                         />        
                                     </li>
                                 ))}
@@ -121,6 +125,7 @@ export default function Deck(){
                             >
                                 <Card card={card} 
                                     scale={0.25}
+                                    onLongPress={() => setSelectedCard(card)}
                                 />        
                             </li>
                         ))}
@@ -137,6 +142,11 @@ export default function Deck(){
                     />
                 </div>
             </Box>} 
+            <Modal isOpen={selectedCard} 
+                onClose={() => setSelectedCard(null)}
+            >
+                <Card card={selectedCard} />
+            </Modal>
         </Main>
     );
 }
