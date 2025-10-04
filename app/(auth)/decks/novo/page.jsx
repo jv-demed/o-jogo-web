@@ -44,6 +44,28 @@ export default function Deck(){
     const [selectedCards, setSelectedCards] = useState([]);
     const [deckName, setDeckName] = useState('');
 
+    function handleAddCard(card) {
+        setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
+        setUserCards(prev => {
+            const index = prev.findIndex(c => c.id === card.id);
+            if (index === -1) return prev;
+            const copy = [...prev];
+            copy.splice(index, 1);
+            return copy;
+        });
+    }
+
+    function handleRemoveCard(card) {
+        setSelectedCards(prev => {
+            const index = prev.findIndex(c => c.id === card.id)
+            if (index === -1) return prev;
+            const copy = [...prev];
+            copy.splice(index, 1);
+            return copy;
+        });
+        setUserCards(prev => [...prev, card]);
+    }
+
     async function handleSaveDeck() {
         await insertDeck({
             idUser: user.id,
@@ -56,59 +78,88 @@ export default function Deck(){
     const [selectedCard, setSelectedCard] = useState(null);
 
     return (
-        <Main between>
-            <Box>
+        <Main>
+            <Box fullH>
                 <PageHeader title='Montar deck' 
                     returnTo='/decks'
                 />
                 {cards.loading 
                     ? <SpinLoader /> 
-                    : <div className='flex flex-col gap-3'>
-                        <div className='flex flex-col gap-3'>
-                            <TextInput value={search}
-                                setValue={setSearch}
-                                placeholder='Buscar carta...'
-                            />
-                            <ul className={`
-                                grid gap-x-1 gap-y-2 justify-between
-                                grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
-                            `}>
-                                {copyList.map((card, i) => (
-                                    <li key={`card-${i}/${card.id}`}
-                                        // onClick={() => {
-                                        //     setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
-                                        //     setUserCards(prev => {
-                                        //         const index = prev.findIndex(c => c.id === card.id);
-                                        //         if (index === -1) return prev;
-                                        //         const copy = [...prev];
-                                        //         copy.splice(index, 1);
-                                        //         return copy;
-                                        //     });
-                                        // }}
-                                    >
+                    : <div className={`
+                        flex flex-col gap-3 
+                        h-full min-h-0
+                    `}>
+                        <TextInput value={search}
+                            setValue={setSearch}
+                            placeholder='Buscar carta...'
+                        />
+                        <ul className={`
+                            flex-grow min-h-0
+                            grid gap-x-1 gap-y-2 justify-between
+                            grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
+                            overflow-y-auto overflow-x-hidden 
+                            scrollbar-custom pr-1
+                        `}>
+                            {copyList.map((card, i) => (
+                                <li key={`card-${i}/${card.id}`}>
+                                    <div className='flex flex-col items-center'>
                                         <Card card={card} 
                                             scale={0.24}
-                                            onClick={() => {
-                                                setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
-                                                setUserCards(prev => {
-                                                    const index = prev.findIndex(c => c.id === card.id);
-                                                    if (index === -1) return prev;
-                                                    const copy = [...prev];
-                                                    copy.splice(index, 1);
-                                                    return copy;
-                                                });
-                                            }}
                                             onLongPress={() => setSelectedCard(card)}
-                                        />        
+                                        />   
+                                        <ICONS.add 
+                                            onClick={() => handleAddCard(card)}
+                                            className={`
+                                                border-b border-r border-l 
+                                                w-full rounded-b-2xl    
+                                            `} 
+                                        />       
+                                    </div>
+                                </li>
+                            ))}
+                            {copyList.length == 0 && 
+                                <span>Nenhum carta encontrada</span>
+                            }
+                        </ul>
+                        {selectedCards.length > 0 && <div>
+                            <div className={`
+                                border-b border-gray-500 
+                                w-full rounded-2xl    
+                            `}/>
+                            <div className='flex justify-center text-2xl mb-1'>
+                                <ICONS.chevronUp />
+                            </div>
+                            <ul className={`
+                                flex gap-2 pb-1
+                                overflow-x-auto overflow-y-hidden
+                                scrollbar-custom    
+                                snap-x snap-mandatory
+                            `}>
+                                {selectedCards.map((card, i) => (
+                                    <li key={`card-${i}/${card.id}`}
+                                        className='snap-center shrink-0'
+                                    >
+                                        <div className='flex flex-col items-center'>
+                                            <Card card={card} 
+                                                scale={0.24}
+                                                onLongPress={() => setSelectedCard(card)}
+                                            />  
+                                            <ICONS.close 
+                                                onClick={() => handleRemoveCard(card)}
+                                                className={`
+                                                    w-full rounded-b-2xl bg-red-400 
+                                                `} 
+                                            />      
+                                        </div>
                                     </li>
                                 ))}
-                                {copyList.length == 0 && <span>Nenhum carta encontrada</span>}
                             </ul>
-                        </div> 
-                    </div>
+                        </div>}
+                    </div> 
                 }
             </Box>
-            {selectedCards.length > 0 && <Box>
+            {/* <Box height='100px'>
+
                 <div className='flex flex-col gap-3'>
                     <span>
                         Número de cartas: {selectedCards.length}
@@ -122,29 +173,19 @@ export default function Deck(){
                         {selectedCards.map((card, i) => (
                             <li key={`card-${i}/${card.id}`}
                                 className='snap-center shrink-0'
-                                // onClick={() => {
-                                //     setSelectedCards(prev => {
-                                //         const index = prev.findIndex(c => c.id === card.id)
-                                //         if (index === -1) return prev;
-                                //         const copy = [...prev];
-                                //         copy.splice(index, 1);
-                                //         return copy;
-                                //     });
-                                //     setUserCards(prev => [...prev, card]);
-                                // }}
+                                onClick={() => {
+                                    setSelectedCards(prev => {
+                                        const index = prev.findIndex(c => c.id === card.id)
+                                        if (index === -1) return prev;
+                                        const copy = [...prev];
+                                        copy.splice(index, 1);
+                                        return copy;
+                                    });
+                                    setUserCards(prev => [...prev, card]);
+                                }}
                             >
                                 <Card card={card} 
                                     scale={0.25}
-                                    onClick={() => {
-                                        setSelectedCards(prev => {
-                                            const index = prev.findIndex(c => c.id === card.id)
-                                            if (index === -1) return prev;
-                                            const copy = [...prev];
-                                            copy.splice(index, 1);
-                                            return copy;
-                                        });
-                                        setUserCards(prev => [...prev, card]);
-                                    }}
                                     onLongPress={() => setSelectedCard(card)}
                                 />        
                             </li>
@@ -161,7 +202,7 @@ export default function Deck(){
                         action={handleSaveDeck}
                     />
                 </div>
-            </Box>} 
+            </Box> */}
             <Modal isOpen={selectedCard} 
                 onClose={() => setSelectedCard(null)}
             >
