@@ -96,11 +96,9 @@ export default function Deck(){
             </Box>
             {selectedCards.length > 0 && <Box>
                 <div className='flex flex-col gap-3'>
-                    <TextInput placeholder='Nome do deck'
-                        value={deckName}
-                        setValue={setDeckName}
-                        maxLength={20}
-                    />
+                    <span>
+                        Número de cartas: {selectedCards.length}
+                    </span>
                     <ul className={`
                         flex gap-2 
                         overflow-x-auto overflow-y-hidden
@@ -127,6 +125,11 @@ export default function Deck(){
                             </li>
                         ))}
                     </ul>
+                    <TextInput placeholder='Nome do deck'
+                        value={deckName}
+                        setValue={setDeckName}
+                        maxLength={20}
+                    />
                     <ActionButton text='Salvar' 
                         icon={ICONS.check}
                         disabled={deckName.length == 0}
