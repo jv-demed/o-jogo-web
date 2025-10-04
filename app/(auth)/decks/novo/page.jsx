@@ -66,6 +66,8 @@ export default function Deck(){
         setUserCards(prev => [...prev, card]);
     }
 
+    const [saveMode, setSaveMode] = useState(false);
+
     async function handleSaveDeck() {
         await insertDeck({
             idUser: user.id,
@@ -126,83 +128,57 @@ export default function Deck(){
                                 border-b border-gray-500 
                                 w-full rounded-2xl    
                             `}/>
-                            <div className='flex justify-center text-2xl mb-1'>
-                                <ICONS.chevronUp />
+                            <div className='flex justify-center text-2xl py-1'
+                                onClick={() => setSaveMode(!saveMode)}
+                            >
+                                {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
                             </div>
-                            <ul className={`
-                                flex gap-2 pb-1
-                                overflow-x-auto overflow-y-hidden
-                                scrollbar-custom    
-                                snap-x snap-mandatory
-                            `}>
-                                {selectedCards.map((card, i) => (
-                                    <li key={`card-${i}/${card.id}`}
-                                        className='snap-center shrink-0'
-                                    >
-                                        <div className='flex flex-col items-center'>
-                                            <Card card={card} 
-                                                scale={0.24}
-                                                onLongPress={() => setSelectedCard(card)}
-                                            />  
-                                            <ICONS.close 
-                                                onClick={() => handleRemoveCard(card)}
-                                                className={`
-                                                    w-full rounded-b-2xl bg-red-400 
-                                                `} 
-                                            />      
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className='flex flex-col gap-2'>
+                                {saveMode && <span>
+                                    Número de cartas: {selectedCards.length}
+                                </span>}
+                                <ul className={`
+                                    flex gap-2 pb-2
+                                    overflow-x-auto overflow-y-hidden
+                                    scrollbar-custom    
+                                    snap-x snap-mandatory
+                                `}>
+                                    {selectedCards.map((card, i) => (
+                                        <li key={`card-${i}/${card.id}`}
+                                            className='snap-center shrink-0'
+                                        >
+                                            <div className='flex flex-col items-center'>
+                                                <Card card={card} 
+                                                    scale={0.24}
+                                                    onLongPress={() => setSelectedCard(card)}
+                                                />  
+                                                <ICONS.close 
+                                                    onClick={() => handleRemoveCard(card)}
+                                                    className={`
+                                                        w-full rounded-b-2xl bg-red-400 
+                                                    `} 
+                                                />      
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                                {saveMode && <div className='flex flex-col gap-1'>
+                                    <TextInput placeholder='Nome do deck'
+                                        value={deckName}
+                                        setValue={setDeckName}
+                                        maxLength={20}
+                                    />
+                                    <ActionButton text='Salvar' 
+                                        icon={ICONS.check}
+                                        disabled={deckName.length == 0}
+                                        action={handleSaveDeck}
+                                    />
+                                </div>}
+                            </div>
                         </div>}
                     </div> 
                 }
             </Box>
-            {/* <Box height='100px'>
-
-                <div className='flex flex-col gap-3'>
-                    <span>
-                        Número de cartas: {selectedCards.length}
-                    </span>
-                    <ul className={`
-                        flex gap-2 
-                        overflow-x-auto overflow-y-hidden
-                        scrollbar-custom    
-                        snap-x snap-mandatory
-                    `}>
-                        {selectedCards.map((card, i) => (
-                            <li key={`card-${i}/${card.id}`}
-                                className='snap-center shrink-0'
-                                onClick={() => {
-                                    setSelectedCards(prev => {
-                                        const index = prev.findIndex(c => c.id === card.id)
-                                        if (index === -1) return prev;
-                                        const copy = [...prev];
-                                        copy.splice(index, 1);
-                                        return copy;
-                                    });
-                                    setUserCards(prev => [...prev, card]);
-                                }}
-                            >
-                                <Card card={card} 
-                                    scale={0.25}
-                                    onLongPress={() => setSelectedCard(card)}
-                                />        
-                            </li>
-                        ))}
-                    </ul>
-                    <TextInput placeholder='Nome do deck'
-                        value={deckName}
-                        setValue={setDeckName}
-                        maxLength={20}
-                    />
-                    <ActionButton text='Salvar' 
-                        icon={ICONS.check}
-                        disabled={deckName.length == 0}
-                        action={handleSaveDeck}
-                    />
-                </div>
-            </Box> */}
             <Modal isOpen={selectedCard} 
                 onClose={() => setSelectedCard(null)}
             >
