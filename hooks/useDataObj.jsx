@@ -6,7 +6,8 @@ import { supabase } from '@/supabase/client';
 export function useDataObj({
     table,
     select = '*',
-    filter
+    filter,
+    delay
 }){
 
     const [obj, setObj] = useState();
@@ -18,6 +19,7 @@ export function useDataObj({
     }, []);
 
     useEffect(() => {
+        if(delay) return;
         const fetchData = async () => {
             setLoading(true);
             try{
@@ -36,7 +38,7 @@ export function useDataObj({
             }
         };
         fetchData();
-    }, [flag]);
+    }, [flag, delay]);
 
     return { obj, loading, refresh };
 }

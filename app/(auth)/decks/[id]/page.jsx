@@ -13,11 +13,18 @@ import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
+import { useDataObj } from '@/hooks/useDataObj';
 
-export default function Deck(){
+export default function Deck({ params }){
 
     const user = useUser();
     const router = useRouter();
+
+    const deck = useDataObj({
+        table: 'oJogo-decks',
+        delay: params.id == 0,
+        filter: q => q.eq('id', params.id)
+    });
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -40,6 +47,44 @@ export default function Deck(){
             .sort((a, b) => a.name.localeCompare(b.name));
         setCopyList(filteredList);
     }, [userCards, search]);
+
+    useEffect(() => {
+        if (!deck.obj || !Array.isArray(deck.obj.cards)) return;
+        if (!cards.list.length || !user.cards.length) return;
+
+        // Lista completa do usuário (objetos)
+        const userFull = user.cards
+            .map(n => cards.list.find(c => String(c.number) === String(n)))
+            .filter(Boolean);
+
+        // cópia dos números do deck (strings) pra remover as ocorrências conforme achar
+        const deckNums = deck.obj.cards.map(String);
+
+        const selected = [];
+        const remaining = [];
+
+        for (const card of userFull) {
+            const idx = deckNums.indexOf(String(card.number));
+            if (idx !== -1) {
+            // achou — adiciona aos selecionados e remove apenas uma ocorrência do deckNums
+            selected.push(card);
+            deckNums.splice(idx, 1);
+            } else {
+            // não está no deck (ou já foi consumido pelas duplicatas)
+            remaining.push(card);
+            }
+        }
+
+        // Se quiser também adicionar cartas que estejam no deck mas o usuário não possua:
+        const missingFromUser = deckNums
+            .map(n => cards.list.find(c => String(c.number) === n))
+            .filter(Boolean);
+
+        setSelectedCards(selected.concat(missingFromUser)); // mantém ordem do userFull + missing
+        setUserCards(remaining.sort((a, b) => a.name.localeCompare(b.name)));
+        setDeckName(deck.obj.name ?? '');
+
+        }, [deck.obj, cards.list, user.cards]);
 
     const [selectedCards, setSelectedCards] = useState([]);
     const [deckName, setDeckName] = useState('');

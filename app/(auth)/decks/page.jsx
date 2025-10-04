@@ -44,17 +44,19 @@ export default function Deck(){
                             <ActionButton
                                 icon={ICONS.add}
                                 width='40px'
-                                action={() => router.push('/decks/novo')}
+                                action={() => router.push('/decks/0')}
                             />
                         </div>
                         <ul className='flex flex-col gap-2'>
                             {copyList.map(deck => (
                                 <li key={deck.id}>
-                                    <div className={`
-                                        flex items-center justify-between
-                                        border border-gray-500 rounded-4xl
-                                        px-4 py-3 cursor-pointer
-                                    `}>
+                                    <div onClick={() => router.push(`/decks/${deck.id}`)}
+                                        className={`
+                                            flex items-center justify-between
+                                            border border-gray-500 rounded-4xl
+                                            px-4 py-3 cursor-pointer
+                                        `}
+                                    >
                                         <span>{deck.name}</span>
                                         <span className='text-xs'>
                                             N. Cartas: {deck.cards.length}
