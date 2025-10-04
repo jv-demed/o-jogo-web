@@ -75,19 +75,29 @@ export default function Deck(){
                             `}>
                                 {copyList.map((card, i) => (
                                     <li key={`card-${i}/${card.id}`}
-                                        onClick={() => {
-                                            setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
-                                            setUserCards(prev => {
-                                                const index = prev.findIndex(c => c.id === card.id);
-                                                if (index === -1) return prev;
-                                                const copy = [...prev];
-                                                copy.splice(index, 1);
-                                                return copy;
-                                            });
-                                        }}
+                                        // onClick={() => {
+                                        //     setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
+                                        //     setUserCards(prev => {
+                                        //         const index = prev.findIndex(c => c.id === card.id);
+                                        //         if (index === -1) return prev;
+                                        //         const copy = [...prev];
+                                        //         copy.splice(index, 1);
+                                        //         return copy;
+                                        //     });
+                                        // }}
                                     >
                                         <Card card={card} 
                                             scale={0.24}
+                                            onClick={() => {
+                                                setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
+                                                setUserCards(prev => {
+                                                    const index = prev.findIndex(c => c.id === card.id);
+                                                    if (index === -1) return prev;
+                                                    const copy = [...prev];
+                                                    copy.splice(index, 1);
+                                                    return copy;
+                                                });
+                                            }}
                                             onLongPress={() => setSelectedCard(card)}
                                         />        
                                     </li>
@@ -112,19 +122,29 @@ export default function Deck(){
                         {selectedCards.map((card, i) => (
                             <li key={`card-${i}/${card.id}`}
                                 className='snap-center shrink-0'
-                                onClick={() => {
-                                    setSelectedCards(prev => {
-                                        const index = prev.findIndex(c => c.id === card.id)
-                                        if (index === -1) return prev;
-                                        const copy = [...prev];
-                                        copy.splice(index, 1);
-                                        return copy;
-                                    });
-                                    setUserCards(prev => [...prev, card]);
-                                }}
+                                // onClick={() => {
+                                //     setSelectedCards(prev => {
+                                //         const index = prev.findIndex(c => c.id === card.id)
+                                //         if (index === -1) return prev;
+                                //         const copy = [...prev];
+                                //         copy.splice(index, 1);
+                                //         return copy;
+                                //     });
+                                //     setUserCards(prev => [...prev, card]);
+                                // }}
                             >
                                 <Card card={card} 
                                     scale={0.25}
+                                    onClick={() => {
+                                        setSelectedCards(prev => {
+                                            const index = prev.findIndex(c => c.id === card.id)
+                                            if (index === -1) return prev;
+                                            const copy = [...prev];
+                                            copy.splice(index, 1);
+                                            return copy;
+                                        });
+                                        setUserCards(prev => [...prev, card]);
+                                    }}
                                     onLongPress={() => setSelectedCard(card)}
                                 />        
                             </li>

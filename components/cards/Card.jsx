@@ -8,7 +8,7 @@ export function Card({
     scale = 1,
     onClick,
     onLongPress,
-    longPressDelay = 600 
+    longPressDelay = 300 
 }) {
 
     const baseWidth = 300;
