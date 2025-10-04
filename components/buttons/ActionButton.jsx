@@ -12,20 +12,17 @@ export function ActionButton({
     icon: Icon
 }){
 
-    const [infoDisabled, setInfoDisabled] = useState(disabled);
     const [isLoading, setIsLoading] = useState(false);
 
     async function handleAction() {
-        setInfoDisabled(true);
         setIsLoading(true);
         action && await action();
-        setInfoDisabled(false);
         setIsLoading(false);
     }
 
     return(
         <button type={type || 'button'}
-            disabled={infoDisabled}
+            disabled={disabled || isLoading}
             onClick={handleAction}
             className={`
                 flex items-center justify-center gap-2.5

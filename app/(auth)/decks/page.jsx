@@ -1,18 +1,19 @@
 'use client'
-
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
+import { ICONS } from '@/assets/icons';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { ActionButton } from '@/components/buttons/ActionButton';
-import { ICONS } from '@/assets/icons';
-import { useDataList } from '@/hooks/useDataList';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
+import { ActionButton } from '@/components/buttons/ActionButton';
 
 export default function Deck(){
 
+    const router = useRouter();
     const user = useUser();
 
     const decks = useDataList({
@@ -43,6 +44,7 @@ export default function Deck(){
                             <ActionButton
                                 icon={ICONS.add}
                                 width='40px'
+                                action={() => router.push('/decks/novo')}
                             />
                         </div>
                         <ul className='flex flex-col gap-2'>
