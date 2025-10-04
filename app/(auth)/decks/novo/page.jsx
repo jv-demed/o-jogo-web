@@ -66,7 +66,10 @@ export default function Deck(){
                                 setValue={setSearch}
                                 placeholder='Buscar carta...'
                             />
-                            <ul className='flex flex-wrap gap-2'>
+                            <ul className={`
+                                grid gap-x-1 gap-y-2 justify-between
+                                grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
+                            `}>
                                 {copyList.map((card, i) => (
                                     <li key={`card-${i}/${card.id}`}
                                         onClick={() => {
@@ -81,7 +84,7 @@ export default function Deck(){
                                         }}
                                     >
                                         <Card card={card} 
-                                            scale={0.25}
+                                            scale={0.24}
                                         />        
                                     </li>
                                 ))}
