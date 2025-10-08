@@ -1,8 +1,13 @@
 'use client'
 import { ICONS } from '@/assets/icons';
+import { Card } from '@/components/cards/Card';
 
-export function Modal({ isOpen, onClose, children }) {
-    if (!isOpen) return null;
+export function CardDetailsModal({ 
+    selectedCard,
+    setSelectedCard
+}) {
+    //criar feat de navegar entre cartas
+    if (!selectedCard) return null;
 
     return (
         <div className={`
@@ -15,13 +20,17 @@ export function Modal({ isOpen, onClose, children }) {
                 relative shadow-xl
             `}>
                 <header className='flex justify-end w-full'>
-                    <button onClick={onClose} 
-                        className={` text-2xl hover:text-red-400`}
+                    <button onClick={() => setSelectedCard(null)} 
+                        className={` text-4xl hover:text-red-400`}
                     >
                         <ICONS.close />
                     </button>
                 </header>
-                {children}
+                <div className='flex items-center gap-1'>
+                    <ICONS.chevronBack className='text-3xl' />
+                    <Card card={selectedCard} />
+                    <ICONS.chevronForward className='text-3xl' />
+                </div>
             </div>
         </div>
     );

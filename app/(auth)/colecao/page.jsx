@@ -7,7 +7,7 @@ import { getCardTypeIcon } from '@/presenters/cardsPresenter';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { Modal } from '@/components/containers/Modal';
+import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
@@ -74,11 +74,10 @@ export default function Colecao(){
                     </div> 
                 }
             </Box>
-            <Modal isOpen={selectedCard} 
+            <CardDetailsModal isOpen={selectedCard} 
                 onClose={() => setSelectedCard(null)}
-            >
-                <Card card={selectedCard} />
-            </Modal>
+                selectedCard={selectedCard}
+            />
         </Main>
     );
 }

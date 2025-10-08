@@ -1,19 +1,19 @@
 'use client'
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useDataObj } from '@/hooks/useDataObj';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
-import { insertDeck } from '@/presenters/decksPresenter';
+import { insertDeck, updateDeck } from '@/presenters/decksPresenter';
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { Modal } from '@/components/containers/Modal';
+import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { useDataObj } from '@/hooks/useDataObj';
 
 export default function Deck({ params }){
 
@@ -51,40 +51,28 @@ export default function Deck({ params }){
     useEffect(() => {
         if (!deck.obj || !Array.isArray(deck.obj.cards)) return;
         if (!cards.list.length || !user.cards.length) return;
-
-        // Lista completa do usuário (objetos)
         const userFull = user.cards
             .map(n => cards.list.find(c => String(c.number) === String(n)))
             .filter(Boolean);
-
-        // cópia dos números do deck (strings) pra remover as ocorrências conforme achar
         const deckNums = deck.obj.cards.map(String);
-
         const selected = [];
         const remaining = [];
-
-        for (const card of userFull) {
+        for(const card of userFull) {
             const idx = deckNums.indexOf(String(card.number));
-            if (idx !== -1) {
-            // achou — adiciona aos selecionados e remove apenas uma ocorrência do deckNums
-            selected.push(card);
-            deckNums.splice(idx, 1);
-            } else {
-            // não está no deck (ou já foi consumido pelas duplicatas)
-            remaining.push(card);
+            if(idx !== -1) {
+                selected.push(card);
+                deckNums.splice(idx, 1);
+            }else {
+                remaining.push(card);
             }
         }
-
-        // Se quiser também adicionar cartas que estejam no deck mas o usuário não possua:
         const missingFromUser = deckNums
             .map(n => cards.list.find(c => String(c.number) === n))
             .filter(Boolean);
-
-        setSelectedCards(selected.concat(missingFromUser)); // mantém ordem do userFull + missing
+        setSelectedCards(selected.concat(missingFromUser)); 
         setUserCards(remaining.sort((a, b) => a.name.localeCompare(b.name)));
         setDeckName(deck.obj.name ?? '');
-
-        }, [deck.obj, cards.list, user.cards]);
+    }, [deck.obj, cards.list, user.cards]);
 
     const [selectedCards, setSelectedCards] = useState([]);
     const [deckName, setDeckName] = useState('');
@@ -114,12 +102,21 @@ export default function Deck({ params }){
     const [saveMode, setSaveMode] = useState(false);
 
     async function handleSaveDeck() {
-        await insertDeck({
-            idUser: user.id,
-            name: deckName,
-            cards: selectedCards.map(card => card.number)
-        });
-        router.push('/decks');
+        if(params.id != 0) {
+            const updatedDeck = {
+                idUser: user.id,
+                name: deckName,
+                cards: selectedCards.map(card => card.number)
+            };
+            await updateDeck(deck.obj.id, updatedDeck);
+        } else{
+            const { id } = await insertDeck({
+                idUser: user.id,
+                name: deckName,
+                cards: selectedCards.map(card => card.number)
+            });
+            router.replace(`/decks/${id}`);
+        }
     }
 
     const [selectedCard, setSelectedCard] = useState(null);
@@ -127,7 +124,7 @@ export default function Deck({ params }){
     return (
         <Main>
             <Box fullH>
-                <PageHeader title='Montar deck' 
+                <PageHeader title={deck.obj ? 'Editar deck' : 'Novo deck'} 
                     returnTo='/decks'
                 />
                 {cards.loading 
@@ -173,7 +170,7 @@ export default function Deck({ params }){
                                 border-b border-gray-500 
                                 w-full rounded-2xl    
                             `}/>
-                            <div className='flex justify-center text-2xl py-1'
+                            <div className='flex justify-center text-4xl py-1'
                                 onClick={() => setSaveMode(!saveMode)}
                             >
                                 {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
@@ -224,11 +221,10 @@ export default function Deck({ params }){
                     </div> 
                 }
             </Box>
-            <Modal isOpen={selectedCard} 
-                onClose={() => setSelectedCard(null)}
-            >
-                <Card card={selectedCard} />
-            </Modal>
+            <CardDetailsModal
+                selectedCard={selectedCard}
+                setSelectedCard={setSelectedCard}
+            />
         </Main>
     );
 }

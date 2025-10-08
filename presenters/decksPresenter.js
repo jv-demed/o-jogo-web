@@ -1,5 +1,9 @@
-import { insertRecord } from '@/supabase/crud';
+import { insertRecord, updateRecord } from '@/supabase/crud';
 
 export async function insertDeck(deck) {
-    await insertRecord('oJogo-decks', deck);
+    return await insertRecord('oJogo-decks', deck);
+}
+
+export async function updateDeck(idDeck, updatedCards) {
+    await updateRecord('oJogo-decks', idDeck, updatedCards);
 }
