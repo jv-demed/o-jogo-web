@@ -38,11 +38,17 @@ export default function Home(){
                         router: router
                     })}
                 /> */}
+                <ActionButton text='Jogar (em breve)'
+                    disabled
+                />
                 <ActionButton text='Decks' 
                     action={() => router.push('/decks')}
                 />
                 <ActionButton text='Coleção'
                     action={() => router.push('/colecao')}
+                />
+                <ActionButton text='Loja'
+                    action={() => router.push('/loja')}
                 />
             </Box>
         </Main>

@@ -45,7 +45,10 @@ export default function Colecao(){
                             setValue={setSearch}
                             placeholder='Buscar carta...'
                         />
-                        <div className='flex justify-end'>
+                        <div className='flex justify-between text-sm'>
+                            <span>
+                                Obtidas: {user?.cards?.length || 0}/{cards.list.length}
+                            </span>
                             <button onClick={() => setIsListMode(!isListMode)}
                                 className='text-xl'    
                             >
