@@ -54,11 +54,15 @@ export default function Colecao(){
                         </div>
                         {isListMode
                             ? <ul className='flex flex-col gap-2'>
-                                {copyList.map(card => {
+                                {copyList.map((card, i) => {
                                     const haveCard = userHaveCard(user, card.number);
                                     return (
                                         <li key={card.id}>
-                                            <div onClick={() => haveCard && setSelectedCard(card)}
+                                            <div onClick={() => {
+                                                if(!haveCard) return;
+                                                setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
+                                                setSelectedCardIndex(i);
+                                            }}
                                                 className={`
                                                     flex items-center
                                                     border border-gray-500 rounded-4xl

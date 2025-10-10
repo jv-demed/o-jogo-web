@@ -5,6 +5,14 @@ export const CARD_TYPES = [
         id: 0,
         name: 'Shot',
         icon: <ICONS.shot />
+    },{
+        id: 1,
+        name: 'Investigação',
+        icon: <ICONS.investigation />
+    },{
+        id: 2,
+        name: 'Efeito',
+        icon: <ICONS.effect />
     }
 ];
 
