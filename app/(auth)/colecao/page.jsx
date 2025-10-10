@@ -7,10 +7,11 @@ import { getCardTypeIcon } from '@/presenters/cardsPresenter';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
+import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
+import { ICONS } from '@/assets/icons';
 
 export default function Colecao(){
 
@@ -28,7 +29,10 @@ export default function Colecao(){
         setCopyList(filteredList);
     }, [cards.list, search]);
 
-    const [selectedCard, setSelectedCard] = useState(null);
+    const [isListMode, setIsListMode] = useState(true);
+
+    const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+    const [selectedCardList, setSelectedCardList] = useState([]);
 
     return (
         <Main>
@@ -41,42 +45,96 @@ export default function Colecao(){
                             setValue={setSearch}
                             placeholder='Buscar carta...'
                         />
-                        <ul className='flex flex-col gap-2'>
-                            {copyList.map(card => {
-                                const haveCard = userHaveCard(user, card.number);
-                                return (
-                                    <li key={card.id}>
-                                        <div onClick={() => haveCard && setSelectedCard(card)}
-                                            className={`
-                                                flex items-center
-                                                border border-gray-500 rounded-4xl
-                                                px-4 py-3 cursor-pointer
-                                            `}
-                                        >
-                                            <span className='id'>
-                                                {card.number}
-                                            </span>
-                                            <div className={`
-                                                flex ${haveCard ? 'justify-start' : 'justify-center'}
-                                                w-full 
-                                            `}>
-                                                <span className={haveCard ? 'pl-4' : ''}>
-                                                    {haveCard ? card.name : '???'}
+                        <div className='flex justify-end'>
+                            <button onClick={() => setIsListMode(!isListMode)}
+                                className='text-xl'    
+                            >
+                                {isListMode ? <ICONS.list /> : <ICONS.blocks />}
+                            </button>
+                        </div>
+                        {isListMode
+                            ? <ul className='flex flex-col gap-2'>
+                                {copyList.map(card => {
+                                    const haveCard = userHaveCard(user, card.number);
+                                    return (
+                                        <li key={card.id}>
+                                            <div onClick={() => haveCard && setSelectedCard(card)}
+                                                className={`
+                                                    flex items-center
+                                                    border border-gray-500 rounded-4xl
+                                                    px-4 py-3 cursor-pointer
+                                                `}
+                                            >
+                                                <span className='id'>
+                                                    {card.number}
                                                 </span>
+                                                <div className={`
+                                                    flex ${haveCard ? 'justify-start' : 'justify-center'}
+                                                    w-full 
+                                                `}>
+                                                    <span className={haveCard ? 'pl-4' : ''}>
+                                                        {haveCard ? card.name : '???'}
+                                                    </span>
+                                                </div>
+                                                {haveCard && getCardTypeIcon(card)}
                                             </div>
-                                            {haveCard && getCardTypeIcon(card)}
-                                        </div>
-                                    </li>
-                                )
-                            })}
-                            {copyList.length == 0 && <span>Nenhum carta encontrada</span>}
-                        </ul>
+                                        </li>
+                                    )
+                                })}
+                                {copyList.length == 0 && <span>Nenhum carta encontrada</span>}
+                            </ul>
+                            : <ul className={`
+                                flex-grow min-h-0
+                                grid gap-x-1 gap-y-2 justify-between
+                                grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
+                                overflow-y-auto overflow-x-hidden 
+                                scrollbar-custom pr-1
+                            `}>
+                                {copyList.map((card, i) => {
+                                    const haveCard = userHaveCard(user, card.number);
+                                    return (
+                                        <li key={`card-${i}/${card.id}`}>
+                                            <div className='flex flex-col items-center'>
+                                                {haveCard 
+                                                    ? <Card card={card} 
+                                                        scale={0.24}
+                                                        onLongPress={() => {
+                                                            if(!haveCard) return;
+                                                            setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
+                                                            setSelectedCardIndex(i);
+                                                        }}
+                                                    />   
+                                                    : <div 
+                                                        className={`
+                                                            flex items-center justify-center
+                                                            bg-gray-700 rounded
+                                                        `}
+                                                        style={{ 
+                                                            width: 300*0.24, 
+                                                            height: 440*0.24 
+                                                        }}
+                                                    >
+                                                        <span className='text-gray-400'>
+                                                            {card.number}    
+                                                        </span> 
+                                                    </div>
+                                                }  
+                                            </div>
+                                        </li>
+                                    )
+                                })}
+                                {copyList.length == 0 && 
+                                    <span>Nenhum carta encontrada</span>
+                                }
+                            </ul>
+                        }
                     </div> 
                 }
             </Box>
-            <CardDetailsModal isOpen={selectedCard} 
-                onClose={() => setSelectedCard(null)}
-                selectedCard={selectedCard}
+            <CardDetailsModal
+                cards={selectedCardList}
+                selectedCardIndex={selectedCardIndex}
+                setSelectedCardIndex={setSelectedCardIndex}
             />
         </Main>
     );
