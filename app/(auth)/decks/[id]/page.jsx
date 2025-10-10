@@ -119,7 +119,8 @@ export default function Deck({ params }){
         }
     }
 
-    const [selectedCard, setSelectedCard] = useState(null);
+    const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+    const [selectedCardList, setSelectedCardList] = useState([]);
 
     return (
         <Main>
@@ -149,7 +150,10 @@ export default function Deck({ params }){
                                     <div className='flex flex-col items-center'>
                                         <Card card={card} 
                                             scale={0.24}
-                                            onLongPress={() => setSelectedCard(card)}
+                                            onLongPress={() => {
+                                                setSelectedCardList(copyList);
+                                                setSelectedCardIndex(i);
+                                            }}
                                         />   
                                         <ICONS.add 
                                             onClick={() => handleAddCard(card)}
@@ -192,7 +196,10 @@ export default function Deck({ params }){
                                             <div className='flex flex-col items-center'>
                                                 <Card card={card} 
                                                     scale={0.24}
-                                                    onLongPress={() => setSelectedCard(card)}
+                                                    onLongPress={() => {
+                                                        setSelectedCardList(selectedCards);
+                                                        setSelectedCardIndex(i);
+                                                    }}
                                                 />  
                                                 <ICONS.close 
                                                     onClick={() => handleRemoveCard(card)}
@@ -222,8 +229,9 @@ export default function Deck({ params }){
                 }
             </Box>
             <CardDetailsModal
-                selectedCard={selectedCard}
-                setSelectedCard={setSelectedCard}
+                cards={selectedCardList}
+                selectedCardIndex={selectedCardIndex}
+                setSelectedCardIndex={setSelectedCardIndex}
             />
         </Main>
     );
