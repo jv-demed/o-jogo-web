@@ -103,6 +103,12 @@ export function Card({
                     `}>
                         {card.text}
                     </div>
+                    <span className={`
+                        absolute bottom-[7px] right-[9px]
+                        text-gray-800 text-[0.56rem]
+                    `}>
+                        {card.number}
+                    </span>
                 </div>
             </div>
         </div>
