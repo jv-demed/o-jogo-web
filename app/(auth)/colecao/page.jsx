@@ -34,6 +34,13 @@ export default function Colecao(){
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [selectedCardList, setSelectedCardList] = useState([]);
 
+    function longPressCard(card) {
+        const ownedCards = copyList.filter(c => userHaveCard(user, c.number));
+        const cardIndexInOwned = ownedCards.findIndex(c => c.number === card.number);
+        setSelectedCardList(ownedCards);
+        setSelectedCardIndex(cardIndexInOwned);
+    }
+
     return (
         <Main>
             <Box>
@@ -63,8 +70,7 @@ export default function Colecao(){
                                         <li key={card.id}>
                                             <div onClick={() => {
                                                 if(!haveCard) return;
-                                                setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
-                                                setSelectedCardIndex(i);
+                                                longPressCard(card);
                                             }}
                                                 className={`
                                                     flex items-center
@@ -107,8 +113,7 @@ export default function Colecao(){
                                                         scale={0.24}
                                                         onLongPress={() => {
                                                             if(!haveCard) return;
-                                                            setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
-                                                            setSelectedCardIndex(i);
+                                                            longPressCard(card);
                                                         }}
                                                     />   
                                                     : <div 

@@ -7,7 +7,7 @@ export function CardDetailsModal({
     selectedCardIndex,
     setSelectedCardIndex
 }) {
-
+    console.log(cards)
     if (selectedCardIndex == null) return null;
 
     return (
