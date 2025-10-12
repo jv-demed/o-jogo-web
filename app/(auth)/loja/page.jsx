@@ -39,10 +39,10 @@ export default function StorePage(){
                 <PageHeader title='Loja' />  
                 {isLoading 
                     ? <SpinLoader /> 
-                    : <div className='flex flex-col gap-3'>
+                    : <div className='flex flex-col gap-6'>
                         {PACK_CATEGORIES.map(category => (
-                            <div className='border'>
-                                <span>
+                            <div className='flex flex-col gap-4 border-b pb-2'>
+                                <span className='underline'>
                                     Packs - {category.name}
                                 </span>
                                 <ul className={`
@@ -52,19 +52,20 @@ export default function StorePage(){
                                     overflow-y-auto overflow-x-hidden 
                                     scrollbar-custom pr-1
                                 `}>
-                                    {packs.list.map((pack, i) => {
-                                        if(pack.category == category.id) {
-                                            return (
-                                                <li key={`pack-${i}/${pack.id}`}>
-                                                    <CardForm factor={0.24}>
-                                                        <span className='text-gray-400'>
-                                                            {pack.name}    
-                                                        </span> 
-                                                    </CardForm>
-                                                </li>
-                                            )
-                                        }
-                                    })}
+                                    {packs.list
+                                        .filter(pack => pack.category === category.id)
+                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .map((pack, i) => (
+                                            <li key={`pack-${i}/${pack.id}`}>
+                                                <div className='flex flex-col items-center gap-0.5'>
+                                                <CardForm factor={0.24} />
+                                                <span className='text-gray-400 text-sm text-wrap'>
+                                                    {pack.name}
+                                                </span>
+                                                </div>
+                                            </li>
+                                        ))
+                                    }
                                 </ul>
                             </div>
                         ))}

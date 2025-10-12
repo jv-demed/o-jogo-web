@@ -60,7 +60,7 @@ export function Card({
                     }}
                 >
                     <Image
-                        src='/trap-card.jpg'
+                        src={`/cards-models/${card.isShot ? 'trap' : 'spell'}-card.jpg`}
                         alt='Card frame'
                         className='object-cover'
                         fill

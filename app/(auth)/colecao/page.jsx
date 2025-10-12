@@ -4,14 +4,15 @@ import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { userHaveCard } from '@/presenters/usersPresenter';
 import { getCardTypeIcon } from '@/presenters/cardsPresenter';
+import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { TextInput } from '@/components/inputs/TextInput';
+import { CardForm } from '@/components/containers/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
-import { ICONS } from '@/assets/icons';
 
 export default function Colecao(){
 
@@ -116,20 +117,11 @@ export default function Colecao(){
                                                             longPressCard(card);
                                                         }}
                                                     />   
-                                                    : <div 
-                                                        className={`
-                                                            flex items-center justify-center
-                                                            bg-gray-700 rounded
-                                                        `}
-                                                        style={{ 
-                                                            width: 300*0.24, 
-                                                            height: 440*0.24 
-                                                        }}
-                                                    >
+                                                    : <CardForm factor={0.24}>
                                                         <span className='text-gray-400'>
                                                             {card.number}    
                                                         </span> 
-                                                    </div>
+                                                    </CardForm>
                                                 }  
                                             </div>
                                         </li>
