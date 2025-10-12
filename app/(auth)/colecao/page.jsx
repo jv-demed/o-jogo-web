@@ -9,7 +9,7 @@ import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { TextInput } from '@/components/inputs/TextInput';
-import { CardForm } from '@/components/containers/CardForm';
+import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';

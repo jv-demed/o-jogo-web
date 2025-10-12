@@ -13,9 +13,12 @@ import { SpinLoader } from '@/components/elements/SpinLoader';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 import { ICONS } from '@/assets/icons';
 import { PACK_CATEGORIES } from '@/presenters/packsPresenter';
-import { CardForm } from '@/components/containers/CardForm';
+import { CardForm } from '@/components/cards/CardForm';
+import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
 
 export default function StorePage(){
+
+    const user = useUser();
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -33,6 +36,8 @@ export default function StorePage(){
         !cards.loading && !packs.loading && setIsLoading(false);
     }, [cards, packs]);
 
+    const [selectedPack, setSelectedPack] = useState(null);
+
     return (
         <Main>
             <Box>
@@ -41,7 +46,9 @@ export default function StorePage(){
                     ? <SpinLoader /> 
                     : <div className='flex flex-col gap-6'>
                         {PACK_CATEGORIES.map(category => (
-                            <div className='flex flex-col gap-4 border-b pb-2'>
+                            <div key={`category-${category.id}`}
+                                className='flex flex-col gap-4 border-b pb-2'
+                            >
                                 <span className='underline'>
                                     Packs - {category.name}
                                 </span>
@@ -57,11 +64,13 @@ export default function StorePage(){
                                         .sort((a, b) => a.name.localeCompare(b.name))
                                         .map((pack, i) => (
                                             <li key={`pack-${i}/${pack.id}`}>
-                                                <div className='flex flex-col items-center gap-0.5'>
-                                                <CardForm factor={0.24} />
-                                                <span className='text-gray-400 text-sm text-wrap'>
-                                                    {pack.name}
-                                                </span>
+                                                <div className='flex flex-col items-center gap-0.5'
+                                                    onClick={() => setSelectedPack(pack)}
+                                                >
+                                                    <CardForm factor={0.24} />
+                                                    <span className='text-gray-400 text-sm text-wrap'>
+                                                        {pack.name}
+                                                    </span>
                                                 </div>
                                             </li>
                                         ))
@@ -72,6 +81,12 @@ export default function StorePage(){
                     </div> 
                 }
             </Box>
+            <PackDetailsModal 
+                user={user}
+                pack={selectedPack}
+                cards={cards.list}
+                onClose={() => setSelectedPack(null)} 
+            />
         </Main>
     );
 }
