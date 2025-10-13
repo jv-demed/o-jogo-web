@@ -2,23 +2,17 @@
 import { useEffect, useState } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
-import { userHaveCard } from '@/presenters/usersPresenter';
-import { getCardTypeIcon } from '@/presenters/cardsPresenter';
-import { Card } from '@/components/cards/Card';
+import { PACK_CATEGORIES } from '@/presenters/packsPresenter';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { TextInput } from '@/components/inputs/TextInput';
+import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
-import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
-import { ICONS } from '@/assets/icons';
-import { PACK_CATEGORIES } from '@/presenters/packsPresenter';
-import { CardForm } from '@/components/cards/CardForm';
 import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
 
 export default function StorePage(){
 
-    const user = useUser();
+    const { user, refreshUser } = useUser();
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -29,7 +23,6 @@ export default function StorePage(){
         table: 'oJogo-packs',
         order: 'dateRelease'
     });
-    console.log(packs);
 
     const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
@@ -83,6 +76,7 @@ export default function StorePage(){
             </Box>
             <PackDetailsModal 
                 user={user}
+                refresh={refreshUser}
                 pack={selectedPack}
                 cards={cards.list}
                 onClose={() => setSelectedPack(null)} 

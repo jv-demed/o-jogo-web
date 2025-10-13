@@ -1,7 +1,6 @@
 'use client'
 import { ICONS } from '@/assets/icons';
-import { Card } from '@/components/cards/Card';
-import { CardNavigation } from './CardNavigation';
+import { CardNavigation } from '@/components/cards/CardNavigation';
 
 export function CardDetailsModal({ 
     cards,

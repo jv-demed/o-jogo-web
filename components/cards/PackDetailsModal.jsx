@@ -1,25 +1,25 @@
 'use client'
+import { useState } from 'react';
 import { useDataObj } from '@/hooks/useDataObj';
+import { addCardsInUser } from '@/presenters/usersPresenter';
 import { incPurchase, insertPurchase } from '@/presenters/packsPresenter';
 import { ICONS } from '@/assets/icons';
 import { CardForm } from '@/components/cards/CardForm';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { CardNavigation } from './CardNavigation';
-import { useState } from 'react';
-import { addCardsInUser } from '@/presenters/usersPresenter';
+import { CardNavigation } from '@/components/cards/CardNavigation';
 
 export function PackDetailsModal({ 
     user,
+    refresh,
     pack,
     cards,
     onClose
 }) {
 
-    //  CORRIGIR WARNING 
-    //  NÚMERO DE CARTAS POR PACK DINAMICAMENTE
+    //TODO: CORRIGIR WARNING
 
-    if (pack == null) return null;
+    if(pack == null) return null;
 
     const purchase = useDataObj({
         table: 'oJogo-users:packs',
@@ -41,8 +41,9 @@ export function PackDetailsModal({
         purchase.refresh();
         const deckNumbers = pack.cards;
         const shuffled = [...deckNumbers].sort(() => Math.random() - 0.5);
-        const drawnNumbers = shuffled.slice(0, 4);
+        const drawnNumbers = shuffled.slice(0, pack.quantity);
         await addCardsInUser(user, drawnNumbers);
+        await refresh();
         const newDrawnCards = cards.filter(card => 
             drawnNumbers.includes(card.number)
         );

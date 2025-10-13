@@ -1,3 +1,4 @@
+'use client'
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 

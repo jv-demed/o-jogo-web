@@ -31,6 +31,12 @@ export function UserProvider({ children }){
             return;
         }return userData;
     }
+
+    async function refreshUser() {
+        const userData = await getUser();
+        if(userData) setUser(userData);
+        return userData;
+    }
     
     useEffect(() => {
         getUser().then(async res => {
@@ -48,7 +54,7 @@ export function UserProvider({ children }){
         );
     }
     return (
-        <UserContext.Provider value={user}>
+        <UserContext.Provider value={{ user, refreshUser }}>
             {children}
         </UserContext.Provider>
     );

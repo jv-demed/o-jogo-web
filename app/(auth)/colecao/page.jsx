@@ -16,7 +16,7 @@ import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 
 export default function Colecao(){
 
-    const user = useUser();
+    const { user } = useUser();
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -42,6 +42,8 @@ export default function Colecao(){
         setSelectedCardIndex(cardIndexInOwned);
     }
 
+    const obtainedCount = cards.list.filter(card => userHaveCard(user, card.number)).length;
+
     return (
         <Main>
             <Box>
@@ -55,7 +57,7 @@ export default function Colecao(){
                         />
                         <div className='flex justify-between text-sm'>
                             <span>
-                                Obtidas: {user?.cards?.length || 0}/{cards.list.length}
+                                Obtidas: {obtainedCount || 0}/{cards.list.length}
                             </span>
                             <button onClick={() => setIsListMode(!isListMode)}
                                 className='text-xl'    
