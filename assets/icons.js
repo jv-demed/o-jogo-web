@@ -1,9 +1,9 @@
 import { BsFire } from 'react-icons/bs';
-import { PiBeerBottleBold } from 'react-icons/pi';
 import { RiErrorWarningLine } from 'react-icons/ri';
 import { LiaUserSecretSolid } from 'react-icons/lia';
+import { PiBeerBottleBold, PiSword, PiCross } from 'react-icons/pi';
 import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl, FaShieldAlt } from 'react-icons/fa';
 import { IoEyeOutline, IoEyeOffOutline, IoClose, IoAddOutline, IoChevronDown, IoChevronUp, IoChevronBack, IoChevronForward, IoList, IoAppsSharp } from 'react-icons/io5';
 
 export const ICONS = {
@@ -17,7 +17,10 @@ export const ICONS = {
     chevronForward: IoChevronForward,
     chevronUp: IoChevronUp,
     close: IoClose,
+    cross: PiCross,
+    defense: FaShieldAlt,
     effect: BsFire,
+    equip: PiSword,
     eye: IoEyeOutline,
     eyeOff: IoEyeOffOutline,
     investigation: LiaUserSecretSolid,

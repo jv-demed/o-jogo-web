@@ -13,6 +13,18 @@ export const CARD_TYPES = [
         id: 2,
         name: 'Efeito',
         icon: <ICONS.effect />
+    },{
+        id: 3,
+        name: 'Defesa',
+        icon: <ICONS.defense />
+    },{
+        id: 4,
+        name: 'Divino',
+        icon: <ICONS.cross />
+    },{
+        id: 5,
+        name: 'Equipamento',
+        icon: <ICONS.equip />
     }
 ];
 
