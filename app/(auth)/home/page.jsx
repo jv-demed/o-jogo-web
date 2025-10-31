@@ -12,7 +12,6 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 export default function Home(){
 
     const router = useRouter();
-    const user = useUser();
 
     // const match = useDataObj({
     //     table: 'matches',

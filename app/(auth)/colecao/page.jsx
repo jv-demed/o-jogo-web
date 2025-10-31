@@ -4,18 +4,19 @@ import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { userHaveCard } from '@/presenters/usersPresenter';
 import { getCardTypeIcon } from '@/presenters/cardsPresenter';
+import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { TextInput } from '@/components/inputs/TextInput';
+import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
-import { ICONS } from '@/assets/icons';
 
 export default function Colecao(){
 
-    const user = useUser();
+    const { user } = useUser();
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -34,6 +35,15 @@ export default function Colecao(){
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [selectedCardList, setSelectedCardList] = useState([]);
 
+    function longPressCard(card) {
+        const ownedCards = copyList.filter(c => userHaveCard(user, c.number));
+        const cardIndexInOwned = ownedCards.findIndex(c => c.number === card.number);
+        setSelectedCardList(ownedCards);
+        setSelectedCardIndex(cardIndexInOwned);
+    }
+
+    const obtainedCount = cards.list.filter(card => userHaveCard(user, card.number)).length;
+
     return (
         <Main>
             <Box>
@@ -47,7 +57,7 @@ export default function Colecao(){
                         />
                         <div className='flex justify-between text-sm'>
                             <span>
-                                Obtidas: {user?.cards?.length || 0}/{cards.list.length}
+                                Obtidas: {obtainedCount || 0}/{cards.list.length}
                             </span>
                             <button onClick={() => setIsListMode(!isListMode)}
                                 className='text-xl'    
@@ -63,8 +73,7 @@ export default function Colecao(){
                                         <li key={card.id}>
                                             <div onClick={() => {
                                                 if(!haveCard) return;
-                                                setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
-                                                setSelectedCardIndex(i);
+                                                longPressCard(card);
                                             }}
                                                 className={`
                                                     flex items-center
@@ -107,24 +116,14 @@ export default function Colecao(){
                                                         scale={0.24}
                                                         onLongPress={() => {
                                                             if(!haveCard) return;
-                                                            setSelectedCardList(copyList.filter(c => userHaveCard(user, c.number)));
-                                                            setSelectedCardIndex(i);
+                                                            longPressCard(card);
                                                         }}
                                                     />   
-                                                    : <div 
-                                                        className={`
-                                                            flex items-center justify-center
-                                                            bg-gray-700 rounded
-                                                        `}
-                                                        style={{ 
-                                                            width: 300*0.24, 
-                                                            height: 440*0.24 
-                                                        }}
-                                                    >
+                                                    : <CardForm factor={0.24}>
                                                         <span className='text-gray-400'>
                                                             {card.number}    
                                                         </span> 
-                                                    </div>
+                                                    </CardForm>
                                                 }  
                                             </div>
                                         </li>

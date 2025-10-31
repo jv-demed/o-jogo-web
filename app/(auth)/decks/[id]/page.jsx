@@ -17,8 +17,8 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 
 export default function Deck({ params }){
 
-    const user = useUser();
     const router = useRouter();
+    const { user } = useUser();
 
     const deck = useDataObj({
         table: 'oJogo-decks',

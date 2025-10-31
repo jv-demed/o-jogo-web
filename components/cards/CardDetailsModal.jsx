@@ -1,6 +1,6 @@
 'use client'
 import { ICONS } from '@/assets/icons';
-import { Card } from '@/components/cards/Card';
+import { CardNavigation } from '@/components/cards/CardNavigation';
 
 export function CardDetailsModal({ 
     cards,
@@ -27,23 +27,11 @@ export function CardDetailsModal({
                         <ICONS.close />
                     </button>
                 </header>
-                <div className='flex items-center gap-1'>
-                    <ICONS.chevronBack className='text-3xl' 
-                        onClick={() => {
-                            if(selectedCardIndex > 0) {
-                                setSelectedCardIndex(selectedCardIndex - 1);
-                            }
-                        }}
-                    />
-                    <Card card={cards[selectedCardIndex]} />
-                    <ICONS.chevronForward className='text-3xl'
-                        onClick={() => {
-                            if(selectedCardIndex < cards.length - 1) {
-                                setSelectedCardIndex(selectedCardIndex + 1);
-                            }
-                        }}
-                    />
-                </div>
+                <CardNavigation 
+                    cards={cards}
+                    index={selectedCardIndex}
+                    setIndex={setSelectedCardIndex}
+                />
             </div>
         </div>
     );

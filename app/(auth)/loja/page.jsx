@@ -2,20 +2,17 @@
 import { useEffect, useState } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
-import { userHaveCard } from '@/presenters/usersPresenter';
-import { getCardTypeIcon } from '@/presenters/cardsPresenter';
-import { Card } from '@/components/cards/Card';
+import { PACK_CATEGORIES } from '@/presenters/packsPresenter';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { TextInput } from '@/components/inputs/TextInput';
+import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
-import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
-import { ICONS } from '@/assets/icons';
+import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
 
-export default function Colecao(){
+export default function StorePage(){
 
-    const user = useUser();
+    const { user, refreshUser } = useUser();
 
     const cards = useDataList({
         table: 'oJogo-cards',
@@ -26,19 +23,64 @@ export default function Colecao(){
         table: 'oJogo-packs',
         order: 'dateRelease'
     });
-    console.log(packs);
+
+    const [isLoading, setIsLoading] = useState(true);
+    useEffect(() => {
+        !cards.loading && !packs.loading && setIsLoading(false);
+    }, [cards, packs]);
+
+    const [selectedPack, setSelectedPack] = useState(null);
 
     return (
         <Main>
             <Box>
                 <PageHeader title='Loja' />  
-                {cards.loading 
+                {isLoading 
                     ? <SpinLoader /> 
-                    : <div className='flex flex-col gap-3'>
-                        qeqweqew
+                    : <div className='flex flex-col gap-6'>
+                        {PACK_CATEGORIES.map(category => (
+                            <div key={`category-${category.id}`}
+                                className='flex flex-col gap-4 border-b pb-2'
+                            >
+                                <span className='underline'>
+                                    Packs - {category.name}
+                                </span>
+                                <ul className={`
+                                    flex-grow min-h-0
+                                    grid gap-x-1 gap-y-2 justify-between
+                                    grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
+                                    overflow-y-auto overflow-x-hidden 
+                                    scrollbar-custom pr-1
+                                `}>
+                                    {packs.list
+                                        .filter(pack => pack.category === category.id)
+                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .map((pack, i) => (
+                                            <li key={`pack-${i}/${pack.id}`}>
+                                                <div className='flex flex-col items-center gap-0.5'
+                                                    onClick={() => setSelectedPack(pack)}
+                                                >
+                                                    <CardForm factor={0.24} />
+                                                    <span className='text-gray-400 text-sm text-wrap'>
+                                                        {pack.name}
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        ))
+                                    }
+                                </ul>
+                            </div>
+                        ))}
                     </div> 
                 }
             </Box>
+            <PackDetailsModal 
+                user={user}
+                refresh={refreshUser}
+                pack={selectedPack}
+                cards={cards.list}
+                onClose={() => setSelectedPack(null)} 
+            />
         </Main>
     );
 }
