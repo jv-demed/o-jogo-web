@@ -1,7 +1,7 @@
 'use client'
+import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
 import Image from 'next/image'
 import { useRef } from 'react'
-import { getCardTypeIcon, getCardTypeName } from '@/presenters/cardsPresenter'
 
 export function Card({ 
     card, 
@@ -75,13 +75,13 @@ export function Card({
                         absolute top-[56px] right-[42px] 
                         text-black text-xs    
                     `}>
-                        {getCardTypeName(card)}
+                        {getCardTypeName(card.type)}
                     </div>
                     <div className={`
                         absolute top-[54px] right-[20px] 
                         text-gray-900    
                     `}>
-                        {getCardTypeIcon(card)}
+                        {getCardTypeIcon(card.type)}
                     </div>
                     <div className={`
                         flex items-center justify-center 

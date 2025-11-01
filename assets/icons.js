@@ -1,6 +1,5 @@
 import { BsFire } from 'react-icons/bs';
-import { RiErrorWarningLine } from 'react-icons/ri';
-import { LiaUserSecretSolid } from 'react-icons/lia';
+import { RiErrorWarningLine, RiSpyLine } from 'react-icons/ri';
 import { PiBeerBottleBold, PiSword, PiCross } from 'react-icons/pi';
 import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl, FaShieldAlt } from 'react-icons/fa';
@@ -23,7 +22,7 @@ export const ICONS = {
     equip: PiSword,
     eye: IoEyeOutline,
     eyeOff: IoEyeOffOutline,
-    investigation: LiaUserSecretSolid,
+    investigation: RiSpyLine,
     list: FaListUl,
     login: AiOutlineLogin,
     shot: PiBeerBottleBold,
