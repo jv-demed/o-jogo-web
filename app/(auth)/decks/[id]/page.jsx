@@ -2,7 +2,6 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDataObj } from '@/hooks/useDataObj';
-import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { insertDeck, updateDeck } from '@/presenters/decksPresenter';
 import { ICONS } from '@/assets/icons';
@@ -14,6 +13,7 @@ import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
+import { CARDS } from '@/assets/cards';
 
 export default function Deck({ params }){
 
@@ -25,19 +25,15 @@ export default function Deck({ params }){
         delay: params.id == 0,
         filter: q => q.eq('id', params.id)
     });
-
-    const cards = useDataList({
-        table: 'oJogo-cards',
-        filter: q => q.in('number', user.cards),
-    });
+    console.log(deck);
 
     const [userCards, setUserCards] = useState([]);
     useEffect(() => {
         const finalList = user.cards
-            .map(userCard => cards.list.find(c => c.number === userCard))
+            .map(userCard => CARDS.find(c => c.id === userCard))
             .filter(Boolean);
         setUserCards(finalList);
-    }, [cards.list, user.cards]);
+    }, [user.cards]);
 
     const [search, setSearch] = useState('');
     const [copyList, setCopyList] = useState([]);
@@ -50,9 +46,9 @@ export default function Deck({ params }){
 
     useEffect(() => {
         if (!deck.obj || !Array.isArray(deck.obj.cards)) return;
-        if (!cards.list.length || !user.cards.length) return;
+        if (!CARDS.length || !user.cards.length) return;
         const userFull = user.cards
-            .map(n => cards.list.find(c => String(c.number) === String(n)))
+            .map(n => CARDS.find(c => String(c.number) === String(n)))
             .filter(Boolean);
         const deckNums = deck.obj.cards.map(String);
         const selected = [];
@@ -67,12 +63,12 @@ export default function Deck({ params }){
             }
         }
         const missingFromUser = deckNums
-            .map(n => cards.list.find(c => String(c.number) === n))
+            .map(n => CARDS.find(c => String(c.number) === n))
             .filter(Boolean);
         setSelectedCards(selected.concat(missingFromUser)); 
         setUserCards(remaining.sort((a, b) => a.name.localeCompare(b.name)));
         setDeckName(deck.obj.name ?? '');
-    }, [deck.obj, cards.list, user.cards]);
+    }, [deck.obj, user.cards]);
 
     const [selectedCards, setSelectedCards] = useState([]);
     const [deckName, setDeckName] = useState('');
@@ -128,9 +124,7 @@ export default function Deck({ params }){
                 <PageHeader title={deck.obj ? 'Editar deck' : 'Novo deck'} 
                     returnTo='/decks'
                 />
-                {cards.loading 
-                    ? <SpinLoader /> 
-                    : <div className={`
+                <div className={`
                         flex flex-col gap-3 
                         h-full min-h-0
                     `}>
@@ -225,8 +219,7 @@ export default function Deck({ params }){
                                 </div>}
                             </div>
                         </div>}
-                    </div> 
-                }
+                </div> 
             </Box>
             <CardDetailsModal
                 cards={selectedCardList}

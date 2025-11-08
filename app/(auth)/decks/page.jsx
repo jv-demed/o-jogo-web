@@ -36,36 +36,49 @@ export default function Deck(){
                 {decks.loading 
                     ? <SpinLoader /> 
                     : <div className='flex flex-col gap-3'>
-                        <div className='flex gap-1'>
-                            <TextInput value={search}
-                                setValue={setSearch}
-                                placeholder='Buscar deck...'
-                            />
-                            <ActionButton
-                                icon={ICONS.add}
-                                width='40px'
-                                action={() => router.push('/decks/0')}
-                            />
-                        </div>
-                        <ul className='flex flex-col gap-2'>
-                            {copyList.map(deck => (
-                                <li key={deck.id}>
-                                    <div onClick={() => router.push(`/decks/${deck.id}`)}
-                                        className={`
-                                            flex items-center justify-between
-                                            border border-gray-500 rounded-4xl
-                                            px-4 py-3 cursor-pointer
-                                        `}
-                                    >
-                                        <span>{deck.name}</span>
-                                        <span className='text-xs'>
-                                            N. Cartas: {deck.cards.length}
-                                        </span>
-                                    </div>
-                                </li>
-                            ))}
-                            {copyList.length == 0 && <span>Nenhum deck encontrado</span>}
-                        </ul>
+                        {decks.list.length == 0
+                            ? <>
+                                <span className='text-center'>
+                                    Crie seu primeiro deck clicando no botão abaixo!
+                                </span>
+                                <ActionButton
+                                    icon={ICONS.add}
+                                    action={() => router.push('/decks/0')}
+                                />
+                            </> 
+                            : <>
+                                <div className='flex gap-1'>
+                                    <TextInput value={search}
+                                        setValue={setSearch}
+                                        placeholder='Buscar deck...'
+                                    />
+                                    <ActionButton
+                                        icon={ICONS.add}
+                                        width='40px'
+                                        action={() => router.push('/decks/0')}
+                                    />
+                                </div>
+                                <ul className='flex flex-col gap-2'>
+                                    {copyList.map(deck => (
+                                        <li key={deck.id}>
+                                            <div onClick={() => router.push(`/decks/${deck.id}`)}
+                                                className={`
+                                                    flex items-center justify-between
+                                                    border border-gray-500 rounded-4xl
+                                                    px-4 py-3 cursor-pointer
+                                                `}
+                                            >
+                                                <span>{deck.name}</span>
+                                                <span className='text-xs'>
+                                                    N. Cartas: {deck.cards.length}
+                                                </span>
+                                            </div>
+                                        </li>
+                                    ))}
+                                    {copyList.length == 0 && <span>Nenhum deck encontrado</span>}
+                                </ul>
+                            </>
+                        }
                     </div> 
                 }
             </Box>

@@ -41,6 +41,7 @@ export function Card({
                 height: baseHeight * scale,
                 overflow: 'hidden',
             }}
+            onContextMenu={e => e.preventDefault()}
             onMouseDown={startPress}
             onMouseUp={handleRelease}
             onMouseLeave={cancelPress}
