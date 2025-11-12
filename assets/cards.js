@@ -3,7 +3,6 @@ import { CardType } from '@/types/CardType';
 export const CARDS = [
     {
         id: 1,
-        idPack: 1,
         number: 1,
         name: 'A Bebida Infinita',
         isShot: true,
@@ -15,7 +14,6 @@ export const CARDS = [
         level: 2
     },{
         id: 2,
-        idPack: 1,
         number: 2,
         name: 'Festinha de Sexta',
         isShot: true,
@@ -27,7 +25,6 @@ export const CARDS = [
         level: 2
     },{
         id: 3,
-        idPack: 1,
         number: 3,
         name: 'Um Bom Companheiro',
         isShot: true,
@@ -38,7 +35,6 @@ export const CARDS = [
         level: 1
     },{
         id: 4,
-        idPack: 1,
         number: 4,
         name: 'Kitumbras',
         isShot: true,
@@ -50,7 +46,6 @@ export const CARDS = [
         level: 3
     },{
         id: 5,
-        idPack: 1,
         number: 5,
         name: 'Cabeça Rachada',
         isShot: false,
@@ -63,7 +58,6 @@ export const CARDS = [
         level: 3
     },{
         id: 6,
-        idPack: 1,
         number: 6,
         name: 'É, Deve Ser',
         isShot: false,
@@ -76,7 +70,6 @@ export const CARDS = [
         level: 2
     },{
         id: 7,
-        idPack: 1,
         number: 7,
         name: 'Livro do Brasa',
         isShot: true,
@@ -88,7 +81,6 @@ export const CARDS = [
         level: 2
     },{
         id: 8,
-        idPack: 1,
         number: 8,
         name: 'O Pai do Grupo',
         isShot: true,
@@ -101,7 +93,6 @@ export const CARDS = [
         level: 2
     },{
         id: 9,
-        idPack: 1,
         number: 9,
         name: 'Brasa Negrão',
         isShot: true,
@@ -113,7 +104,6 @@ export const CARDS = [
         level: 4
     },{
         id: 10,
-        idPack: 1,
         number: 10,
         name: 'César que Destruiu o Império',
         isShot: false,
@@ -127,7 +117,6 @@ export const CARDS = [
         level: 4
     },{
         id: 11,
-        idPack: 1,
         number: 11,
         name: 'Não Posso, Tenho que Codar',
         isShot: false,
@@ -139,7 +128,6 @@ export const CARDS = [
         level: 1
     },{
         id: 12,
-        idPack: 1,
         number: 12,
         name: 'Renekton de Rei Destruído',
         isShot: true,
@@ -151,7 +139,6 @@ export const CARDS = [
         level: 2
     },{
         id: 13,
-        idPack: 1,
         number: 13,
         name: 'Roubando a Jurupinga',
         isShot: true,
@@ -163,7 +150,6 @@ export const CARDS = [
         level: 2
     },{
         id: 14,
-        idPack: 1,
         number: 14,
         name: 'Cortador de Unhas',
         isShot: false,
@@ -175,7 +161,6 @@ export const CARDS = [
         level: 2
     },{
         id: 15,
-        idPack: 1,
         number: 15,
         name: 'O Guerreiro Entregue',
         isShot: false,
@@ -186,7 +171,6 @@ export const CARDS = [
         level: 3
     },{
         id: 16,
-        idPack: 1,
         number: 16,
         name: 'Não Dá Pra Tetudo',
         isShot: false,
@@ -197,7 +181,6 @@ export const CARDS = [
         level: 4
     },{
         id: 17,
-        idPack: 1,
         number: 17,
         name: 'Vão Chegar uns Amigos Aqui em Casa',
         isShot: true,
@@ -208,7 +191,6 @@ export const CARDS = [
         level: 2
     },{
         id: 18,
-        idPack: 1,
         number: 18,
         name: 'Todos a Bordo!',
         isShot: true,
@@ -220,7 +202,6 @@ export const CARDS = [
         level: 2
     },{
         id: 19,
-        idPack: 1,
         number: 19,
         name: 'Cebola Amiga',
         isShot: true,
@@ -232,7 +213,6 @@ export const CARDS = [
         level: 4
     },{
         id: 20,
-        idPack: 1,
         number: 20,
         name: 'Dia do Legume',
         isShot: false,
@@ -245,7 +225,6 @@ export const CARDS = [
         level: 4
     },{
         id: 21,
-        idPack: 1,
         number: 21,
         name: 'Dj Vomitado',
         isShot: false,
@@ -256,7 +235,6 @@ export const CARDS = [
         level: 3
     },{
         id: 22,
-        idPack: 1,
         number: 22,
         name: 'Jogos Desnecessários',
         isShot: false,
@@ -269,7 +247,6 @@ export const CARDS = [
         level: 4
     },{
         id: 23,
-        idPack: 1,
         number: 23,
         name: 'Tô Out',
         isShot: false,
@@ -281,7 +258,6 @@ export const CARDS = [
         level: 2
     },{
         id: 24,
-        idPack: 1,
         number: 24,
         name: 'Abraço na Árvore',
         isShot: true,
@@ -293,7 +269,6 @@ export const CARDS = [
         level: 3
     },{
         id: 25,
-        idPack: 1,
         number: 25,
         name: 'Viagem no Porta-Malas',
         isShot: false,
@@ -305,7 +280,6 @@ export const CARDS = [
         level: 1
     },{
         id: 26,
-        idPack: 1,
         number: 26,
         name: 'Que Mentira!',
         isShot: false,
@@ -318,7 +292,6 @@ export const CARDS = [
         level: 4
     },{
         id: 27,
-        idPack: 1,
         number: 27,
         name: 'Papai Noel',
         isShot: true,
@@ -329,7 +302,6 @@ export const CARDS = [
         level: 1
     },{
         id: 28,
-        idPack: 1,
         number: 28,
         name: 'Luvas no Chão',
         isShot: true,
@@ -340,7 +312,6 @@ export const CARDS = [
         level: 1
     },{
         id: 29,
-        idPack: 1,
         number: 29,
         name: 'É Aquela Velha História',
         isShot: true,
@@ -351,7 +322,6 @@ export const CARDS = [
         level: 2
     },{
         id: 30,
-        idPack: 1,
         number: 30,
         name: 'Peitos',
         isShot: true,
@@ -363,7 +333,6 @@ export const CARDS = [
         level: 1
     },{
         id: 31,
-        idPack: 1,
         number: 31,
         name: 'Bêbado de Shoyu',
         isShot: true,
@@ -375,7 +344,6 @@ export const CARDS = [
         level: 3
     },{
         id: 32,
-        idPack: 1,
         number: 32,
         name: 'Quando Eu Fui pra Austrália...',
         isShot: false,
@@ -388,7 +356,6 @@ export const CARDS = [
         level: 3
     },{
         id: 33,
-        idPack: 1,
         number: 33,
         name: 'O Robin Brasileiro',
         isShot: false,
@@ -401,7 +368,6 @@ export const CARDS = [
         level: 4
     },{
         id: 34,
-        idPack: 1,
         number: 34,
         name: 'Vamos pra Baleia',
         isShot: false,
@@ -413,7 +379,6 @@ export const CARDS = [
         level: 3
     },{
         id: 35,
-        idPack: 1,
         number: 35,
         name: 'Disco de Duelo',
         isShot: false,
@@ -425,7 +390,6 @@ export const CARDS = [
         level: 3
     },{
         id: 36,
-        idPack: 1,
         number: 36,
         name: 'Cuidadron',
         isShot: false,
@@ -435,17 +399,65 @@ export const CARDS = [
             jogada contra você.
         `,
         level: 3
+    },{
+        id: 37,
+        number: 37,
+        name: 'Caipa Dupla do Céu',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Hoje a caipa é dupla no Céu! Escolha 1 jogador para beber 1 shot com você.
+        `,
+        level: 1
+    },{
+        id: 38,
+        number: 38,
+        name: 'Rolê',
+        isShot: true,
+        type: CardType.investigation,
+        text: `
+            Brasa, Jv e Jp estão no vip do Rolê, bebendo muita tequila. Os jogadores Swarley, Smichaels e 
+            Sauzburg deverão beber 1 shot cada, mas sem revelar suas identidades.
+        `,
+        level: 3
+    },{
+        id: 39,
+        number: 39,
+        name: 'A Luta do Século',
+        isShot: true,
+        type: CardType.investigation,
+        text: `
+            Foi marcada a luta para finalmente decidir quem ganhou a briga na casa do Yuri. Para assistir 
+            esse duelo, todos os jogadores, com exceção de Sauzburg e Swarley, devem beber 1 shot.
+        `,
+        level: 3
+    },{
+        id: 40,
+        number: 40,
+        name: 'Filtro do Snapchat',
+        isShot: false,
+        type: CardType.investigation,
+        text: `
+            Brasa e Jp adoram brincar com as novas tecnologias e se mamar depois. Sem revelar suas identidades, 
+            Swarley e Sauzburg deverão trocar suas missões um com o outro.
+        `,
+        level: 3
+    },{
+        id: 41,
+        number: 41,
+        name: 'Show das Drags',
+        isShot: false,
+        type: CardType.investigation,
+        text: `
+            João Vitor e Brasa foram a um show de Drags na Cucko e se surpreenderam ao ver que seus amigos que
+            eram as Drags. Os jogadores Sauzburg, Stanley e Sjehnsens deverão trocar de missão entre si, sem 
+            revelar suas identidades.
+        `,
+        level: 3
     }
 ]
 
 /*
-    grupo
-    caipao 14 v shot
-    role 20 v inv
-    luta 65 v inv
-    filtro 21 f inv
-    drags 44 f inv
-
     outros
     client 10 v shot
     milton 12 v shot
