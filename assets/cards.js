@@ -454,20 +454,107 @@ export const CARDS = [
             revelar suas identidades.
         `,
         level: 3
+    },{
+        id: 42,
+        number: 42,
+        name: 'Client Perfeito',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Escolha 1 jogador para beber 2 shots. Era pra ser 1, mas o client bugou.
+        `,
+        level: 1
+    },{
+        id: 43,
+        number: 43,
+        name: 'Piada do Milton',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            O Senhor Milton é um piadista nato e, para homenagea-lo, o jogador anterior deve contar uma piada 
+            ou beber 2 shots.
+        `,
+        level: 2
+    },{
+        id: 44,
+        number: 44,
+        name: 'Vamo virar? Vamo!',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Alguém lançou a ordem. Todos os jogadores bebem 1 shot. Simples.
+        `,
+        level: 2
+    },{
+        id: 45,
+        number: 45,
+        name: 'Promoshare',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Você foi o grande sorteado da promoshare da Cucko, parabéns! Você e 2 acompanhantes ganharão free 
+            e 1 shot cada. Escolha 2 jogadores para beberem 1 shot com você.
+        `,
+        level: 2
+    },{
+        id: 46,
+        number: 46,
+        name: 'Mãozinha',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Ao jogar esta carta, o último jogador desatento deverá beber 2 shots.
+        `,
+        level: 2
+    },{
+        id: 47,
+        number: 47,
+        name: 'Ventilador Assassino',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            O fim do ano chegou e mais um ventilador do Anne Frank caiu. Dessa vez, ele caiu no próximo jogador
+            a jogar e ele deverá beber 1 shot para se curar.
+        `,
+        level: 1
+    },{
+        id: 48,
+        number: 48,
+        name: 'Prisão',
+        isShot: true,
+        type: CardType.effect,
+        text: `
+            Assim como o sor de artes, um dos jogadores é um bandido. Escolha 1 jogador para ficar preso e sem 
+            poder jogar por 3 turnos completos, ou até que ele beba 2 shots.
+        `,
+        level: 3
+    },{
+        id: 49,
+        number: 49,
+        name: 'Gemidinha',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Ain!. Dê um gemidinho e anule qualquer jogada de qualquer jogador. Caso essa carta for usada fora da 
+            sua vez, o jogo continuará pelo jogador seguinte a você.
+        `,
+        level: 4
+    },{
+        id: 50,
+        number: 50,
+        name: 'Modo Deus',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Você acaba de ativar o "Modo Deus", um hack para jogadores medianos. Escolha 1 jogador e veja sua 
+            missão em segredo. Caso queira, você poderá trocar de missão com este jogador.
+        `,
+        level: 4
     }
 ]
 
 /*
     outros
-    client 10 v shot
-    milton 12 v shot
-    virar 15 v shot
-    promo 16 v shot
-    mao 52 v shot
-    ventilador 60 v shot
-    prisao 57 v efe
-    gemidinha 37 f efe
-    modo deus 38 f efe
     louca 41 f efe
     cigarro 50 f efe
     gelson 55 f efe
