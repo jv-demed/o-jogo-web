@@ -550,16 +550,65 @@ export const CARDS = [
             missão em segredo. Caso queira, você poderá trocar de missão com este jogador.
         `,
         level: 4
+    },{
+        id: 51,
+        number: 51,
+        name: 'Sou Louca Sim!',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            O Jax duvidou, mas a vó Chucha mostrou pra ele quem é que manda, tirando este joguinho da tomada. 
+            A partir da ativação desta carta, o jogo durará mais 2 turnos completos e então terminará.
+        `,
+        level: 4
+    },{
+        id: 52,
+        number: 52,
+        name: 'Cigarro no Olho',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Se você quer foder seu adversário, apague um cigarro no olho dele. Escolha 1 jogador para roubar 
+            uma carta, sem vê-la. A carta será jogada imediatamente.
+        `,
+        level: 3
+    },{
+        id: 53,
+        number: 53,
+        name: 'Xis do Gelson',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            O próximo jogador a jogar comeu um xis do Gelson e está de barriga cheia. Ele ficará sem jogar por 2 
+            turnos completos para fazer a digestão.
+        `,
+        level: 3
+    },{
+        id: 54,
+        number: 54,
+        name: 'Peido do Exequiel',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Exequiel soltou um peido tão fedido que acabou confundindo os jogadores. A ordem de jogo será invertida.
+        `,
+        level: 2
+    },{
+        id: 55,
+        number: 55,
+        name: 'A Queda',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            O Cauê caiu da escada e acabou levando junto 2 shots de alguém. Escolha 1 jogador para perder 2 shots 
+            de sua contagem.
+        `,
+        level: 3
     }
 ]
 
 /*
     outros
-    louca 41 f efe
-    cigarro 50 f efe
-    gelson 55 f efe
-    peido 56 f efe
-    caue 58 f efe
     politico 59 f efe
     prova 61 f efe
     joaquim 63 f efe
