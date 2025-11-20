@@ -691,35 +691,222 @@ export const CARDS = [
             o número de shots de um jogador qualquer, com outro jogador qualquer.
         `,
         level: 5
+    },{
+        id: 64,
+        number: 1,
+        name: 'Bitrix',
+        isShot: false,
+        type: CardType.equip,
+        text: `
+            Um relógio esquisito grudou no seu pulso vindo lá do infinito, o Bitrix! Com ele você poderá escolher 
+            para si qualquer missão existente na partida, tendo esse efeito duradouro até o final do jogo ou até 
+            esta carta ser destruída. Sua carta de missão ainda poderá ser trocada.
+        `,
+        level: 4
+    },{
+        id: 65,
+        number: 2,
+        name: 'Baguga ou Morte?',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Um náufrago azarado acaba de se deparar com uma tribo. Defina 1 jogador para escolher entre baguga 
+            ou morte. Baguga: beber 1 shot para cada adversário jogando. Morte: ficar sem jogar por 2 turnos 
+            completos, mas antes, baguga!
+        `,
+        level: 4
+    },{
+        id: 66,
+        number: 3,
+        name: 'Que Papinho',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Quando começarem de conversa mansa para cima de você, diga "que papinho". Isso negará o efeito de 
+            de um equipamento jogado por outro jogador, o destruindo.
+        `,
+        level: 3
+    },{
+        id: 67,
+        number: 4,
+        name: 'Ricardo Goleiro 1',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Como bom pelotense, o Ricardo adora agarrar bolas. Ao ser alvejado por algum efeito divino, jogue 
+            esta carta e seja defendido pelo melhor goleiro do Brasil. O efeito contra você será anulado.
+        `,
+        level: 3
+    },{
+        id: 68,
+        number: 5,
+        name: 'Uma Noite de Fúria',
+        isShot: false,
+        type: CardType.investigation,
+        text: `
+            Cuidado! João Vitor está drogado na noite e está distribuindo socos! Selecione 2 jogadores e, se 
+            algum deles for Smichaels, na rodada do fim, Smichaels ganhará caso todos os outros tenham perdido. 
+            A carta perde o efeito após uma troca de missão de Smichaels.
+        `,
+        level: 3
+    },{
+        id: 69,
+        number: 6,
+        name: 'Tchouameni',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Faça como João Vitor e diga "Tchouameni". Essa ação pulará a jogada de qualquer jogador que estiver 
+            prestes a jogar.
+        `,
+        level: 2
+    },{
+        id: 70,
+        number: 7,
+        name: 'Alelo do Dron',
+        isShot: true,
+        type: CardType.equip,
+        text: `
+            Você adquiriu o cartão Alelo infinito do Dron e poderá pagar shots para si e para seus amigos. Uma 
+            vez por turno, em sua vez, você poderá escolher entre beber 1 shot extra ou escolher outro jogador 
+            para beber este shot extra.
+        `,
+        level: 3
+    },{
+        id: 71,
+        number: 8,
+        name: 'Argentina Campeã',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            A Argentina acaba de ser campeã da Copa do Mundo e o Rafa enlouqueceu. Swelcows jogou tudo pro alto 
+            e, ao chegar na rodada do fim, vencerá o Jogo. A carta perde o efeito após uma troca de missão de 
+            Swelcows.
+        `,
+        level: 3
+    },{
+        id: 72,
+        number: 9,
+        name: 'Boludos',
+        isShot: true,
+        type: CardType.investigation,
+        text: `
+            Argentinos são boludos e, por isso, Sjehnsens e Swelcows deverão beber 1 shot cada, sem revelar suas 
+            identidades.
+        `,
+        level: 3
+    },{
+        id: 73,
+        number: 10,
+        name: 'Pixuco',
+        isShot: true,
+        type: CardType.equip,
+        text: `
+            Um cachorro controverso. Equipe Pixuco a 1 jogador. Se este for Sjehnsens ou Swelcows, Pixuco cortará 
+            pela metade seus futuros shots, arredondando para cima. Caso seja um dos outros jogadores, Pixuco o 
+            obrigará a beber 1 shot extra a cada turno.
+        `,
+        level: 3
+    },{
+        id: 74,
+        number: 11,
+        name: 'Extreme Zero',
+        isShot: true,
+        type: CardType.investigation,
+        text: `
+            A Extreme Zero voltou! Monte seu squad escolhendo 3 jogadores, pelas missões, para beber 1 shot com você. 
+            Os jogadores que estiverem com as missões escolhidas devem beber 1 shot, mas sem revelar suas identidades.
+        `,
+        level: 3
+    },{
+        id: 75,
+        number: 12,
+        name: 'Vai Virar Uma Carta',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            O grupo possui infinitas histórias. Sendo assim, invente uma nova carta que te permita escolher 1 jogador 
+            para beber 2 shots. Caso os outros jogadores achem uma carta ruim, você que bebe os 2 shots.
+        `,
+        level: 2
+    },{
+        id: 76,
+        number: 13,
+        name: 'Divide e Multiplica',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Como bons alunos da Ana Ilha, todos nós sabemos que quem divide, multiplica. Beba 1 shot e escolha outro 
+            jogador para beber também. Este jogador deverá escolher mais 1 jogador para beber outro shot.
+        `,
+        level: 2
+    },{
+        id: 77,
+        number: 14,
+        name: 'Atirador de Feijão do Gil',
+        isShot: true,
+        type: CardType.equip,
+        text: `
+            Gil aprimorou seu atirador de feijão e agora ele atira shots. Uma vez por turno, na vez do jogador 
+            equipado com esta carta, ele poderá escolher qualquer jogador para beber 1 shot extra.
+        `,
+        level: 3
+    },{
+        id: 78,
+        number: 15,
+        name: 'O Senhor dos Anéis',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Emersauron surgiu no rolê e está falando do seu precioso. Escolha 1 jogador para ser amaldiçoado 
+            pelas palavras malignas de Emersauron e, por dois turnos completos, todo shot que ele beber, não 
+            contará em sua contagem.
+        `,
+        level: 3
+    },{
+        id: 79,
+        number: 16,
+        name: 'Largando a Medicina',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Que tristeza, parece que o Inhos largou a medicina. Para consolá-lo, você deverá dar metade dos 
+            shots de algum jogador para ele. Os shots remanescentes deverão ser arredondados para cima.
+        `,
+        level: 4
+    },{
+        id: 80,
+        number: 17,
+        name: 'Bocejada da Fátima',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            A Fátima bocejou e acabou soprando o equipamento de um jogador. Transfira a posse de um equipamento 
+            de qualquer jogador para qualquer outro jogador.
+        `,
+        level: 3
+    },{
+        id: 81,
+        number: 18,
+        name: 'A Árvore da Berlim',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            Apesar de todas as intempéries do mundo: violência, guerras, desastres e a ganância da humanidade, 
+            a grande Árvore da Berlim continua de pé, distribuindo seu poder de resiliência. Ao jogar esta 
+            carta, anule todos os efeitos de ação prolongada ativas no momento.
+        `,
+        level: 5
+    },{
+        id: 82,
+        number: 19,
+        name: 'FUDEU',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            Dron foi resgatar o soldado Ryan em pleno Dia D, contudo, fudeu: uma bomba estourou e destruiu 
+            todos os equipamentos ativos no momento.
+        `,
+        level: 5
     }
 ]
-
-/*
-    bitrix - equip 77 f
-
-    baguga - shot 72 t
-    que papinho - def 83 f
-    goleiro - def 87 f
-    
-    noite - invest 78 f
-    tchou - def 82 f
-    
-    alelo - equip 88 t
-    
-    argentina - efe 74 f
-    
-    pixuco - equip 75 v
-    boludos - inv 71 t
-    extreme - invest 86 t
-    
-    metacarta - shot 80 t
-    divide e mult - shot 73 t
-    feijão - equip 85 t
-    sauron - efe 79 f
-    medicina - efe 81 f
-    fatima - efe 84 f
-    
-    arvore - div 76 f
-    fudeu - divino 89 f
-
-*/
