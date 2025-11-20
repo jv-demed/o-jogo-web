@@ -5,7 +5,7 @@ import { usePersistentState } from '@/hooks/usePersistentState';
 import { userHaveCard } from '@/presenters/usersPresenter';
 import { ICONS } from '@/assets/icons';
 import { CARDS } from '@/assets/cards';
-import { Box } from '@/components/containers/Box';
+import { PACKS } from '@/assets/packs';
 import { Main } from '@/components/containers/Main';
 import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
@@ -27,48 +27,64 @@ export default function Colecao(){
         setCopyList(filteredList);
     }, [search]);
 
-    const userCards = CARDS.filter(card => userHaveCard(user, card.number));
+    const userCards = CARDS.filter(card => userHaveCard(user, card.id));
 
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
 
     function onPressCard(selectedCard) {
-        const cardIndex = userCards.findIndex(userCard => userCard.number === selectedCard.number);
+        const cardIndex = userCards.findIndex(userCard => userCard.id === selectedCard.id);
         setSelectedCardIndex(cardIndex);
     }
 
     return (
         <Main>
-            <Box>
-                <PageHeader title='Coleção' />  
-                <div className='flex flex-col gap-3'>
-                    <TextInput value={search}
-                        setValue={setSearch}
-                        placeholder='Buscar carta...'
-                    />
-                    <div className='flex justify-between text-sm'>
-                        <span>
-                            Obtidas: {userCards.length || 0}/{CARDS.length}
-                        </span>
-                        <button className='text-xl' 
-                            onClick={() => setIsListMode(!isListMode)}  
-                        >
-                            {isListMode ? <ICONS.list /> : <ICONS.blocks />}
-                        </button>
+            <PageHeader title='Coleção' />  
+            <div className='flex flex-col gap-2 w-full'>
+                <TextInput value={search}
+                    setValue={setSearch}
+                    placeholder='Buscar carta...'
+                />
+                <div className='flex items-center justify-between text-sm'>
+                    <span>
+                        Obtidas: {userCards.length || 0}/{CARDS.length}
+                    </span>
+                    <button className='text-2xl' 
+                        onClick={() => setIsListMode(!isListMode)}  
+                    >
+                        {isListMode ? <ICONS.list /> : <ICONS.blocks />}
+                    </button>
+                </div>
+            </div>
+            <div className={`
+                flex flex-col gap-4
+                flex-1 pb-4 w-full
+                overflow-y-auto scrollbar-custom 
+            `}>
+                {PACKS.map((pack, i) => <div key={`collection-${pack.id}`}>
+                    <div className='flex items-center justify-between mb-2'>
+                        <h3 className='underline'>
+                            {pack.name}
+                        </h3>
+                        <div className='flex justify-between text-sm'>
+                            <span>
+                                {userCards.filter(cards => cards.idPack == i+1).length || 0}/{CARDS.filter(cards => cards.idPack == i+1).length}
+                            </span>
+                        </div>
                     </div>
                     {isListMode
                         ? <ListCollection 
                             user={user}
-                            cards={copyList}
+                            cards={copyList.filter(cards => cards.idPack == i+1)}
                             onPressCard={onPressCard}
                         />
                         : <GridCollection 
                             user={user}
-                            cards={copyList}
+                            cards={copyList.filter(cards => cards.idPack == i+1)}
                             onPressCard={onPressCard}
                         />
                     }
-                </div> 
-            </Box>
+                </div>)}
+            </div>
             <CardDetailsModal
                 cards={userCards}
                 selectedCardIndex={selectedCardIndex}

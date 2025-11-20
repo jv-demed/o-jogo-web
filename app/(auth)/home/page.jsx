@@ -5,7 +5,6 @@ import { useDataObj } from '@/hooks/useDataObj';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { createMatch } from '@/actions/controls/matchActions';
-import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { ActionButton } from '@/components/buttons/ActionButton';
 
@@ -29,27 +28,25 @@ export default function Home(){
 
     return (
         <Main>
-            <Box>
-                {/* <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
-                    action={async () => await createMatch({
-                        user: user,
-                        match: match.obj,
-                        router: router
-                    })}
-                /> */}
-                <ActionButton text='Jogar (em breve)'
-                    disabled
-                />
-                <ActionButton text='Decks' 
-                    action={() => router.push('/decks')}
-                />
-                <ActionButton text='Coleção'
-                    action={() => router.push('/colecao')}
-                />
-                <ActionButton text='Loja'
-                    action={() => router.push('/loja')}
-                />
-            </Box>
+            {/* <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
+                action={async () => await createMatch({
+                    user: user,
+                    match: match.obj,
+                    router: router
+                })}
+            /> */}
+            <ActionButton text='Jogar (em breve)'
+                disabled
+            />
+            <ActionButton text='Decks' 
+                action={() => router.push('/decks')}
+            />
+            <ActionButton text='Coleção'
+                action={() => router.push('/colecao')}
+            />
+            <ActionButton text='Loja'
+                action={() => router.push('/loja')}
+            />
         </Main>
     );
 }

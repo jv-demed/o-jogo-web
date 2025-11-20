@@ -3,6 +3,7 @@ import { CardType } from '@/types/CardType';
 export const CARDS = [
     {
         id: 1,
+        idPack: 1,
         number: 1,
         name: 'A Bebida Infinita',
         isShot: true,
@@ -14,6 +15,7 @@ export const CARDS = [
         level: 2
     },{
         id: 2,
+        idPack: 1,
         number: 2,
         name: 'Festinha de Sexta',
         isShot: true,
@@ -25,6 +27,7 @@ export const CARDS = [
         level: 2
     },{
         id: 3,
+        idPack: 1,
         number: 3,
         name: 'Um Bom Companheiro',
         isShot: true,
@@ -35,6 +38,7 @@ export const CARDS = [
         level: 1
     },{
         id: 4,
+        idPack: 1,
         number: 4,
         name: 'Kitumbras',
         isShot: true,
@@ -46,6 +50,7 @@ export const CARDS = [
         level: 3
     },{
         id: 5,
+        idPack: 1,
         number: 5,
         name: 'Cabeça Rachada',
         isShot: false,
@@ -58,6 +63,7 @@ export const CARDS = [
         level: 3
     },{
         id: 6,
+        idPack: 1,
         number: 6,
         name: 'É, Deve Ser',
         isShot: false,
@@ -70,6 +76,7 @@ export const CARDS = [
         level: 2
     },{
         id: 7,
+        idPack: 1,
         number: 7,
         name: 'Livro do Brasa',
         isShot: true,
@@ -81,6 +88,7 @@ export const CARDS = [
         level: 2
     },{
         id: 8,
+        idPack: 1,
         number: 8,
         name: 'O Pai do Grupo',
         isShot: true,
@@ -93,6 +101,7 @@ export const CARDS = [
         level: 2
     },{
         id: 9,
+        idPack: 1,
         number: 9,
         name: 'Brasa Negrão',
         isShot: true,
@@ -104,6 +113,7 @@ export const CARDS = [
         level: 4
     },{
         id: 10,
+        idPack: 1,
         number: 10,
         name: 'César que Destruiu o Império',
         isShot: false,
@@ -117,6 +127,7 @@ export const CARDS = [
         level: 4
     },{
         id: 11,
+        idPack: 1,
         number: 11,
         name: 'Não Posso, Tenho que Codar',
         isShot: false,
@@ -128,6 +139,7 @@ export const CARDS = [
         level: 1
     },{
         id: 12,
+        idPack: 1,
         number: 12,
         name: 'Renekton de Rei Destruído',
         isShot: true,
@@ -139,6 +151,7 @@ export const CARDS = [
         level: 2
     },{
         id: 13,
+        idPack: 1,
         number: 13,
         name: 'Roubando a Jurupinga',
         isShot: true,
@@ -150,6 +163,7 @@ export const CARDS = [
         level: 2
     },{
         id: 14,
+        idPack: 1,
         number: 14,
         name: 'Cortador de Unhas',
         isShot: false,
@@ -161,6 +175,7 @@ export const CARDS = [
         level: 2
     },{
         id: 15,
+        idPack: 1,
         number: 15,
         name: 'O Guerreiro Entregue',
         isShot: false,
@@ -171,6 +186,7 @@ export const CARDS = [
         level: 3
     },{
         id: 16,
+        idPack: 1,
         number: 16,
         name: 'Não Dá Pra Tetudo',
         isShot: false,
@@ -181,6 +197,7 @@ export const CARDS = [
         level: 4
     },{
         id: 17,
+        idPack: 1,
         number: 17,
         name: 'Vão Chegar uns Amigos Aqui em Casa',
         isShot: true,
@@ -191,6 +208,7 @@ export const CARDS = [
         level: 2
     },{
         id: 18,
+        idPack: 1,
         number: 18,
         name: 'Todos a Bordo!',
         isShot: true,
@@ -202,6 +220,7 @@ export const CARDS = [
         level: 2
     },{
         id: 19,
+        idPack: 1,
         number: 19,
         name: 'Cebola Amiga',
         isShot: true,
@@ -213,6 +232,7 @@ export const CARDS = [
         level: 4
     },{
         id: 20,
+        idPack: 1,
         number: 20,
         name: 'Dia do Legume',
         isShot: false,
@@ -225,6 +245,7 @@ export const CARDS = [
         level: 4
     },{
         id: 21,
+        idPack: 1,
         number: 21,
         name: 'Dj Vomitado',
         isShot: false,
@@ -235,6 +256,7 @@ export const CARDS = [
         level: 3
     },{
         id: 22,
+        idPack: 1,
         number: 22,
         name: 'Jogos Desnecessários',
         isShot: false,
@@ -247,6 +269,7 @@ export const CARDS = [
         level: 4
     },{
         id: 23,
+        idPack: 1,
         number: 23,
         name: 'Tô Out',
         isShot: false,
@@ -258,6 +281,7 @@ export const CARDS = [
         level: 2
     },{
         id: 24,
+        idPack: 1,
         number: 24,
         name: 'Abraço na Árvore',
         isShot: true,
@@ -269,6 +293,7 @@ export const CARDS = [
         level: 3
     },{
         id: 25,
+        idPack: 1,
         number: 25,
         name: 'Viagem no Porta-Malas',
         isShot: false,
@@ -280,6 +305,7 @@ export const CARDS = [
         level: 1
     },{
         id: 26,
+        idPack: 1,
         number: 26,
         name: 'Que Mentira!',
         isShot: false,
@@ -292,6 +318,7 @@ export const CARDS = [
         level: 4
     },{
         id: 27,
+        idPack: 1,
         number: 27,
         name: 'Papai Noel',
         isShot: true,
@@ -302,6 +329,7 @@ export const CARDS = [
         level: 1
     },{
         id: 28,
+        idPack: 1,
         number: 28,
         name: 'Luvas no Chão',
         isShot: true,
@@ -312,6 +340,7 @@ export const CARDS = [
         level: 1
     },{
         id: 29,
+        idPack: 1,
         number: 29,
         name: 'É Aquela Velha História',
         isShot: true,
@@ -322,6 +351,7 @@ export const CARDS = [
         level: 2
     },{
         id: 30,
+        idPack: 1,
         number: 30,
         name: 'Peitos',
         isShot: true,
@@ -333,6 +363,7 @@ export const CARDS = [
         level: 1
     },{
         id: 31,
+        idPack: 1,
         number: 31,
         name: 'Bêbado de Shoyu',
         isShot: true,
@@ -344,6 +375,7 @@ export const CARDS = [
         level: 3
     },{
         id: 32,
+        idPack: 1,
         number: 32,
         name: 'Quando Eu Fui pra Austrália...',
         isShot: false,
@@ -356,6 +388,7 @@ export const CARDS = [
         level: 3
     },{
         id: 33,
+        idPack: 1,
         number: 33,
         name: 'O Robin Brasileiro',
         isShot: false,
@@ -368,6 +401,7 @@ export const CARDS = [
         level: 4
     },{
         id: 34,
+        idPack: 1,
         number: 34,
         name: 'Vamos pra Baleia',
         isShot: false,
@@ -379,6 +413,7 @@ export const CARDS = [
         level: 3
     },{
         id: 35,
+        idPack: 1,
         number: 35,
         name: 'Disco de Duelo',
         isShot: false,
@@ -390,6 +425,7 @@ export const CARDS = [
         level: 3
     },{
         id: 36,
+        idPack: 1,
         number: 36,
         name: 'Cuidadron',
         isShot: false,
@@ -401,6 +437,7 @@ export const CARDS = [
         level: 3
     },{
         id: 37,
+        idPack: 1,
         number: 37,
         name: 'Caipa Dupla do Céu',
         isShot: true,
@@ -411,6 +448,7 @@ export const CARDS = [
         level: 1
     },{
         id: 38,
+        idPack: 1,
         number: 38,
         name: 'Rolê',
         isShot: true,
@@ -422,6 +460,7 @@ export const CARDS = [
         level: 3
     },{
         id: 39,
+        idPack: 1,
         number: 39,
         name: 'A Luta do Século',
         isShot: true,
@@ -433,6 +472,7 @@ export const CARDS = [
         level: 3
     },{
         id: 40,
+        idPack: 1,
         number: 40,
         name: 'Filtro do Snapchat',
         isShot: false,
@@ -444,6 +484,7 @@ export const CARDS = [
         level: 3
     },{
         id: 41,
+        idPack: 1,
         number: 41,
         name: 'Show das Drags',
         isShot: false,
@@ -456,6 +497,7 @@ export const CARDS = [
         level: 3
     },{
         id: 42,
+        idPack: 1,
         number: 42,
         name: 'Client Perfeito',
         isShot: true,
@@ -466,6 +508,7 @@ export const CARDS = [
         level: 1
     },{
         id: 43,
+        idPack: 1,
         number: 43,
         name: 'Piada do Milton',
         isShot: true,
@@ -477,6 +520,7 @@ export const CARDS = [
         level: 2
     },{
         id: 44,
+        idPack: 1,
         number: 44,
         name: 'Vamo virar? Vamo!',
         isShot: true,
@@ -487,6 +531,7 @@ export const CARDS = [
         level: 2
     },{
         id: 45,
+        idPack: 1,
         number: 45,
         name: 'Promoshare',
         isShot: true,
@@ -498,6 +543,7 @@ export const CARDS = [
         level: 2
     },{
         id: 46,
+        idPack: 1,
         number: 46,
         name: 'Mãozinha',
         isShot: true,
@@ -508,6 +554,7 @@ export const CARDS = [
         level: 2
     },{
         id: 47,
+        idPack: 1,
         number: 47,
         name: 'Ventilador Assassino',
         isShot: true,
@@ -519,6 +566,7 @@ export const CARDS = [
         level: 1
     },{
         id: 48,
+        idPack: 1,
         number: 48,
         name: 'Prisão',
         isShot: true,
@@ -530,6 +578,7 @@ export const CARDS = [
         level: 3
     },{
         id: 49,
+        idPack: 1,
         number: 49,
         name: 'Gemidinha',
         isShot: false,
@@ -541,6 +590,7 @@ export const CARDS = [
         level: 4
     },{
         id: 50,
+        idPack: 1,
         number: 50,
         name: 'Modo Deus',
         isShot: false,
@@ -552,6 +602,7 @@ export const CARDS = [
         level: 4
     },{
         id: 51,
+        idPack: 1,
         number: 51,
         name: 'Sou Louca Sim!',
         isShot: false,
@@ -563,6 +614,7 @@ export const CARDS = [
         level: 4
     },{
         id: 52,
+        idPack: 1,
         number: 52,
         name: 'Cigarro no Olho',
         isShot: false,
@@ -574,6 +626,7 @@ export const CARDS = [
         level: 3
     },{
         id: 53,
+        idPack: 1,
         number: 53,
         name: 'Xis do Gelson',
         isShot: false,
@@ -585,6 +638,7 @@ export const CARDS = [
         level: 3
     },{
         id: 54,
+        idPack: 1,
         number: 54,
         name: 'Peido do Exequiel',
         isShot: false,
@@ -595,6 +649,7 @@ export const CARDS = [
         level: 2
     },{
         id: 55,
+        idPack: 1,
         number: 55,
         name: 'A Queda',
         isShot: false,
@@ -606,6 +661,7 @@ export const CARDS = [
         level: 3
     },{
         id: 56,
+        idPack: 1,
         number: 56,
         name: 'O Político',
         isShot: false,
@@ -617,6 +673,7 @@ export const CARDS = [
         level: 4
     },{
         id: 57,
+        idPack: 1,
         number: 57,
         name: 'A Prova Comida',
         isShot: false,
@@ -628,6 +685,7 @@ export const CARDS = [
         level: 4
     },{
         id: 58,
+        idPack: 1,
         number: 58,
         name: 'Tábua do Joaquim',
         isShot: false,
@@ -639,6 +697,7 @@ export const CARDS = [
         level: 3
     },{
         id: 59,
+        idPack: 1,
         number: 59,
         name: 'O Que?',
         isShot: false,
@@ -650,6 +709,7 @@ export const CARDS = [
         level: 3
     },{
         id: 60,
+        idPack: 1,
         number: 60,
         name: 'Ah Meu, Para!',
         isShot: false,
@@ -660,6 +720,7 @@ export const CARDS = [
         level: 2
     },{
         id: 61,
+        idPack: 1,
         number: 61,
         name: 'O Fio Vermelho',
         isShot: true,
@@ -671,6 +732,7 @@ export const CARDS = [
         level: 5
     },{
         id: 62,
+        idPack: 1,
         number: 62,
         name: 'Quinta Dimensão',
         isShot: false,
@@ -682,6 +744,7 @@ export const CARDS = [
         level: 5
     },{
         id: 63,
+        idPack: 1,
         number: 63,
         name: 'Benção de Gladstone',
         isShot: false,
@@ -693,6 +756,7 @@ export const CARDS = [
         level: 5
     },{
         id: 64,
+        idPack: 2,
         number: 1,
         name: 'Bitrix',
         isShot: false,
@@ -705,6 +769,7 @@ export const CARDS = [
         level: 4
     },{
         id: 65,
+        idPack: 2,
         number: 2,
         name: 'Baguga ou Morte?',
         isShot: true,
@@ -717,6 +782,7 @@ export const CARDS = [
         level: 4
     },{
         id: 66,
+        idPack: 2,
         number: 3,
         name: 'Que Papinho',
         isShot: false,
@@ -728,6 +794,7 @@ export const CARDS = [
         level: 3
     },{
         id: 67,
+        idPack: 2,
         number: 4,
         name: 'Ricardo Goleiro 1',
         isShot: false,
@@ -739,6 +806,7 @@ export const CARDS = [
         level: 3
     },{
         id: 68,
+        idPack: 2,
         number: 5,
         name: 'Uma Noite de Fúria',
         isShot: false,
@@ -751,6 +819,7 @@ export const CARDS = [
         level: 3
     },{
         id: 69,
+        idPack: 2,
         number: 6,
         name: 'Tchouameni',
         isShot: false,
@@ -762,6 +831,7 @@ export const CARDS = [
         level: 2
     },{
         id: 70,
+        idPack: 2,
         number: 7,
         name: 'Alelo do Dron',
         isShot: true,
@@ -774,6 +844,7 @@ export const CARDS = [
         level: 3
     },{
         id: 71,
+        idPack: 2,
         number: 8,
         name: 'Argentina Campeã',
         isShot: false,
@@ -786,6 +857,7 @@ export const CARDS = [
         level: 3
     },{
         id: 72,
+        idPack: 2,
         number: 9,
         name: 'Boludos',
         isShot: true,
@@ -797,6 +869,7 @@ export const CARDS = [
         level: 3
     },{
         id: 73,
+        idPack: 2,
         number: 10,
         name: 'Pixuco',
         isShot: true,
@@ -809,6 +882,7 @@ export const CARDS = [
         level: 3
     },{
         id: 74,
+        idPack: 2,
         number: 11,
         name: 'Extreme Zero',
         isShot: true,
@@ -820,6 +894,7 @@ export const CARDS = [
         level: 3
     },{
         id: 75,
+        idPack: 2,
         number: 12,
         name: 'Vai Virar Uma Carta',
         isShot: true,
@@ -831,6 +906,7 @@ export const CARDS = [
         level: 2
     },{
         id: 76,
+        idPack: 2,
         number: 13,
         name: 'Divide e Multiplica',
         isShot: true,
@@ -842,6 +918,7 @@ export const CARDS = [
         level: 2
     },{
         id: 77,
+        idPack: 2,
         number: 14,
         name: 'Atirador de Feijão do Gil',
         isShot: true,
@@ -853,6 +930,7 @@ export const CARDS = [
         level: 3
     },{
         id: 78,
+        idPack: 2,
         number: 15,
         name: 'O Senhor dos Anéis',
         isShot: false,
@@ -865,6 +943,7 @@ export const CARDS = [
         level: 3
     },{
         id: 79,
+        idPack: 2,
         number: 16,
         name: 'Largando a Medicina',
         isShot: false,
@@ -876,6 +955,7 @@ export const CARDS = [
         level: 4
     },{
         id: 80,
+        idPack: 2,
         number: 17,
         name: 'Bocejada da Fátima',
         isShot: false,
@@ -887,6 +967,7 @@ export const CARDS = [
         level: 3
     },{
         id: 81,
+        idPack: 2,
         number: 18,
         name: 'A Árvore da Berlim',
         isShot: false,
@@ -899,6 +980,7 @@ export const CARDS = [
         level: 5
     },{
         id: 82,
+        idPack: 2,
         number: 19,
         name: 'FUDEU',
         isShot: false,

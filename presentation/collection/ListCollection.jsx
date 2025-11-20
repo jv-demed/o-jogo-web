@@ -5,9 +5,9 @@ export function ListCollection({ user, cards, onPressCard }) {
     return (
         <ul className='flex flex-col gap-2'>
             {cards.map(card => {
-                const haveCard = userHaveCard(user, card.number);
+                const haveCard = userHaveCard(user, card.id);
                 return (
-                    <li key={`card-${card.number}`}>
+                    <li key={`card-${card.id}`}>
                         <div 
                             className={`
                                 flex items-center

@@ -9,7 +9,10 @@ export function PageHeader({
     const router = useRouter();
 
     return (
-        <header className='flex items-center gap-2 mb-2'>
+        <header className={`
+            flex items-center gap-2 
+            w-full pt-4
+        `}>
             <div className='text-xl cursor-pointer'
                 onClick={() => router.push(returnTo)}
             >
