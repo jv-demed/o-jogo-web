@@ -604,18 +604,122 @@ export const CARDS = [
             de sua contagem.
         `,
         level: 3
+    },{
+        id: 56,
+        number: 56,
+        name: 'O Político',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Faça como o Fabrício e filie-se a um partido. A sua escolha, todos os jogadores deverão passar sua 
+            missão para o jogador anterior ou o seguinte.
+        `,
+        level: 4
+    },{
+        id: 57,
+        number: 57,
+        name: 'A Prova Comida',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Algumas pessoas resolveram comer sua prova. Escolha 1 jogador para perder o jogo, mesmo que ele 
+            cumpra sua missão. A carta perde o efeito após 2 turnos a partir do momento em que foi jogada.
+        `,
+        level: 4
+    },{
+        id: 58,
+        number: 58,
+        name: 'Tábua do Joaquim',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Os guris pilharam de comprar mais uma tábua, mas a divisão do custo sairá cara. Escolha 3 jogadores 
+            para descartarem 1 carta de suas mãos.
+        `,
+        level: 3
+    },{
+        id: 59,
+        number: 59,
+        name: 'O Que?',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Você acaba de ser confrontado, contudo está protegido perante sua total incredulidade. Anule até 2 
+            shots que mandem você beber.
+        `,
+        level: 3
+    },{
+        id: 60,
+        number: 60,
+        name: 'Ah Meu, Para!',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Alguém já bebeu demais. Jogue está carta para bloquear 1 shot de qualquer jogador.
+        `,
+        level: 2
+    },{
+        id: 61,
+        number: 61,
+        name: 'O Fio Vermelho',
+        isShot: true,
+        type: CardType.divine,
+        text: `
+            O Fio Vermelho é um grande mistério, mas definitivamente poderoso. Use o poder do Fio para conectar 2 
+            jogadores. Sempre que um beber um número de shots, o outro deverá beber também o mesmo número de shots.
+        `,
+        level: 5
+    },{
+        id: 62,
+        number: 62,
+        name: 'Quinta Dimensão',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            A partir da ativação desta carta, o próximo jogador a beber 5 shots, abrirá o portal para a Quinta 
+            Dimensão, ocasionando no encerramento da jornada quadridimensional e do jogo.
+        `,
+        level: 5
+    },{
+        id: 63,
+        number: 63,
+        name: 'Benção de Gladstone',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            "Nem Gladstone muda este game". As palavras mágicas foram ditas e agora você tem o poder de trocar 
+            o número de shots de um jogador qualquer, com outro jogador qualquer.
+        `,
+        level: 5
     }
 ]
 
 /*
-    outros
-    politico 59 f efe
-    prova 61 f efe
-    joaquim 63 f efe
-    o que 68 f efe
-    para 30 f def
+    bitrix - equip 77 f
 
-    fio 36 v div
-    quinta 39 f div
-    benção 43 f div
+    baguga - shot 72 t
+    que papinho - def 83 f
+    goleiro - def 87 f
+    
+    noite - invest 78 f
+    tchou - def 82 f
+    
+    alelo - equip 88 t
+    
+    argentina - efe 74 f
+    
+    pixuco - equip 75 v
+    boludos - inv 71 t
+    extreme - invest 86 t
+    
+    metacarta - shot 80 t
+    divide e mult - shot 73 t
+    feijão - equip 85 t
+    sauron - efe 79 f
+    medicina - efe 81 f
+    fatima - efe 84 f
+    
+    arvore - div 76 f
+    fudeu - divino 89 f
+
 */
