@@ -15,7 +15,7 @@ import { GridCollection } from '@/presentation/collection/GridCollection';
 
 export default function Colecao(){
 
-    const { user } = useUser();
+    const { user } = useUser(); 
 
     const [isListMode, setIsListMode] = usePersistentState('isListModeInCollection', true);
 
