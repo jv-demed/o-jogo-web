@@ -49,7 +49,7 @@ export function UserProvider({ children }){
     if(isLoading){
         return (
             <Main $justifyContent='center'>
-                <SpinLoader />
+                <SpinLoader marginTop='20px' />
             </Main>
         );
     }

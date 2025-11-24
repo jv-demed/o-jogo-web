@@ -66,7 +66,7 @@ export default function Colecao(){
                             {pack.name}
                         </h3>
                         <div className='flex justify-between text-sm'>
-                            <span>
+                            <span className='pr-1'>
                                 {userCards.filter(cards => cards.idPack == i+1).length || 0}/{CARDS.filter(cards => cards.idPack == i+1).length}
                             </span>
                         </div>

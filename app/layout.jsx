@@ -20,7 +20,7 @@ export const viewport = {
 export default function RootLayout({ children }){
     return (
         <html lang='pt-br'>
-            <body>
+            <body className='bg-[#212121] '>
                 {children}
             </body>
         </html>

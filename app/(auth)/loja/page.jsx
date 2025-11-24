@@ -33,8 +33,7 @@ export default function StorePage(){
 
     return (
         <Main>
-            <Box>
-                <PageHeader title='Loja' />  
+            <PageHeader title='Loja' />  
                 {isLoading 
                     ? <SpinLoader /> 
                     : <div className='flex flex-col gap-6'>
@@ -73,7 +72,6 @@ export default function StorePage(){
                         ))}
                     </div> 
                 }
-            </Box>
             <PackDetailsModal 
                 user={user}
                 refresh={refreshUser}

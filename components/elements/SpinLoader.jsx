@@ -2,13 +2,19 @@ import { ICONS } from '@/assets/icons';
 
 export function SpinLoader({ 
     color = 'text-primary', 
-    width = '1.5rem' 
+    width = '1.5rem', 
+    marginTop = '0'
 }) {
     return (
-        <div className='flex items-center justify-center w-full h-auto'>
+        <div className={`
+            flex items-center justify-center w-full h-auto
+        `}>
             <ICONS.spinLoader
                 className={`animate-[spin_0.4s_linear_infinite] ${color}`} 
-                style={{ fontSize: width }}
+                style={{ 
+                    fontSize: width,
+                    marginTop: marginTop
+                 }}
             />
         </div>
     );
