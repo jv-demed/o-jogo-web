@@ -92,7 +92,7 @@ export function Card({
                     `}>
                         <Image
                             className='object-contain'
-                            src={`/cards/${card.number}.png`}
+                            src={`/cards/${card.id}.png`}
                             alt={card.name}
                             width={250}
                             height={250}
