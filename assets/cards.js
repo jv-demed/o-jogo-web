@@ -60,7 +60,7 @@ export const CARDS = [
             Ao jogar, a missão de Sauzburg passa a ser ter menos shots entre todos 
             os jogadores. A carta perde o efeito após uma troca de missão de Sauzburg.
         `,
-        level: 3
+        level: 4
     },{
         id: 6,
         idPack: 1,
@@ -266,7 +266,7 @@ export const CARDS = [
             escolher 2 cartas, necessárias, que já foram usadas por você, e recolocar no seu baralho.
             Após a escolha, o baralho será embaralhado.
         `,
-        level: 4
+        level: 3
     },{
         id: 23,
         idPack: 1,
@@ -422,7 +422,7 @@ export const CARDS = [
             O Dron nunca entregou o disco de duelo que ele nos vendeu. Como indenização, você pode olhar
             a última carta do seu baralho e decidir se quer compra-la ou comprar a do topo.
         `,
-        level: 3
+        level: 2
     },{
         id: 36,
         idPack: 1,
@@ -434,7 +434,7 @@ export const CARDS = [
             Faça como o Dron e seja sempre safe nos jogos. Jogue esta carta e anule uma carta de efeito
             jogada contra você.
         `,
-        level: 3
+        level: 2
     },{
         id: 37,
         idPack: 1,
@@ -706,7 +706,7 @@ export const CARDS = [
             Você acaba de ser confrontado, contudo está protegido perante sua total incredulidade. Anule até 2 
             shots que mandem você beber.
         `,
-        level: 3
+        level: 2
     },{
         id: 60,
         idPack: 1,
@@ -816,7 +816,7 @@ export const CARDS = [
             algum deles for Smichaels, na rodada do fim, Smichaels ganhará caso todos os outros tenham perdido. 
             A carta perde o efeito após uma troca de missão de Smichaels.
         `,
-        level: 3
+        level: 4
     },{
         id: 69,
         idPack: 2,

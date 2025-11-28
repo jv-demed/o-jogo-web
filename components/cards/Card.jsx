@@ -1,7 +1,9 @@
 'use client'
-import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
 import Image from 'next/image'
 import { useRef } from 'react'
+import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
+import { AutoFitText } from '@/components/elements/AutoFitText';
+import { ICONS } from '@/assets/icons';
 
 export function Card({ 
     card, 
@@ -66,11 +68,21 @@ export function Card({
                         className='object-cover'
                         fill
                     />
-                    <div className={`
-                        absolute top-[24px] left-[20px] 
-                        text-sm font-bold text-black text-center    
-                    `}>
+                    <AutoFitText 
+                        className={`
+                            absolute top-[25px] left-[20px] right-[20px] 
+                             text-left text-black
+                        `}
+                    >
                         {card.name}
+                    </AutoFitText>
+                    <div className={`
+                        absolute top-[56px] left-[20px] 
+                        flex text-black text-xs    
+                    `}>
+                        {Array.from({ length: card.level }).map((_, i) => (
+                            <ICONS.star key={i} />
+                        ))}
                     </div>
                     <div className={`
                         absolute top-[56px] right-[42px] 
@@ -98,12 +110,16 @@ export function Card({
                             height={250}
                         />
                     </div>
-                    <div className={`
-                        absolute bottom-[26px] left-[25px] right-[25px] 
-                        h-[82px] overflow-hidden text-xs text-black    
-                    `}>
+                    <AutoFitText 
+                        maxHeight={82}
+                        className={`
+                            absolute bottom-[29px] left-[25px] right-[26px] 
+                            h-[78px] overflow-hidden 
+                            text-black text-justify leading-tight
+                        `}
+                    >
                         {card.text}
-                    </div>
+                    </AutoFitText>
                     <span className={`
                         absolute bottom-[7px] right-[9px]
                         text-gray-800 text-[0.56rem]
