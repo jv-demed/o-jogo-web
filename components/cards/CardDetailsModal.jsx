@@ -20,10 +20,10 @@ export function CardDetailsModal({
                 px-6 py-1 max-w-lg w-full 
                 relative shadow-xl
             `}>
-                <header className='flex justify-end w-full'>
-                    <button onClick={() => setSelectedCardIndex(null)} 
-                        className={` text-4xl hover:text-red-400`}
-                    >
+                <header onClick={() => setSelectedCardIndex(null)}
+                    className='flex justify-end w-full' 
+                >
+                    <button className={` text-4xl hover:text-red-400`}>
                         <ICONS.close />
                     </button>
                 </header>

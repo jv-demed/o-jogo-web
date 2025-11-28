@@ -8,22 +8,26 @@ export function CardNavigation({
     setIndex
 }) {
     return (
-        <div className='flex items-center gap-1'>
-            <ICONS.chevronBack className='text-3xl' 
+        <div className='flex gap-1 h-full'>
+            <div className='flex items-center'
                 onClick={() => {
-                    if(index > 0) {
-                        setIndex(index - 1);
-                    }
+                    if(index > 0) setIndex(index - 1);
                 }}
-            />
+            >
+                <ICONS.chevronBack 
+                    className={`text-3xl ${index == 0 && 'invisible'}`}
+                />
+            </div>
             <Card card={cards[index]} />
-            <ICONS.chevronForward className='text-3xl'
+            <div className='flex items-center'
                 onClick={() => {
-                    if(index < cards.length - 1) {
-                        setIndex(index + 1);
-                    }
+                    if(index < cards.length - 1) setIndex(index + 1);
                 }}
-            />
+            >
+                <ICONS.chevronForward 
+                    className={`text-3xl ${index == cards.length - 1 && 'invisible'}`}
+                />
+            </div>
         </div>
     )
 }

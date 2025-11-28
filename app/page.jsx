@@ -34,30 +34,30 @@ export default function LoginPage(){
     }
 
     return (
-        <Main>
-            <Box>
-                <Form>
-                    <TextInput name='E-mail' 
-                        type='email'
-                        value={auth.email}
-                        setValue={e => setAuth({...auth, email: e})}
+        <Main style={{
+            marginTop: '30px'
+        }}>
+            <Form>
+                <TextInput name='E-mail' 
+                    type='email'
+                    value={auth.email}
+                    setValue={e => setAuth({...auth, email: e})}
+                />
+                <PasswordInput name='Senha' 
+                    value={auth.password}
+                    setValue={e => setAuth({...auth, password: e})}
+                />
+                <Actions>
+                    <ActionButton text='Entrar' 
+                        type='submit'
+                        icon={ICONS.login}
+                        action={handleSubmit}
                     />
-                    <PasswordInput name='Senha' 
-                        value={auth.password}
-                        setValue={e => setAuth({...auth, password: e})}
-                    />
-                    <Actions>
-                        <ActionButton text='Entrar' 
-                            type='submit'
-                            icon={ICONS.login}
-                            action={handleSubmit}
-                        />
-                    </Actions>
-                    {error && <ErrorMessage 
-                        error={error}
-                    />}
-                </Form>
-            </Box>
+                </Actions>
+                {error && <ErrorMessage 
+                    error={error}
+                />}
+            </Form>
         </Main>
     );
 }

@@ -27,7 +27,9 @@ export default function Home(){
     // }, []);
 
     return (
-        <Main>
+        <Main style={{
+            marginTop: '30px'
+        }}>
             {/* <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
                 action={async () => await createMatch({
                     user: user,
