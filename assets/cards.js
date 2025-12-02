@@ -1026,22 +1026,38 @@ export const CARDS = [
             Este efeito durará até o momento em que o número de cartas em sua mão se estabilize.
         `,
         level: 2
+    },{
+        id: 86,
+        idPack: 3,
+        number: 4,
+        name: 'Caipirinha de Banana',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            A Caipirinha de Banana do Jax é traiçoeira: doce por fora e horrível por dentro. O jogador com o maior número 
+            de shots fornecidos deve beber 2 shots extras.
+        `,
+        level: 1
+    },{
+        id: 87,
+        idPack: 3,
+        number: 5,
+        name: 'Ao Infinito e Além',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Buzz Lightyear levantou voo, rumo ao infinito e além. Escolha um jogador para ter sua contagem de shots elevada 
+            ao infinito por 2 turnos completos.
+        `,
+        level: 4
     }
 ]
 
 
 /*
 
-    jp
-
-    jax
-    caipirinha de banana
-    buzz
-
     ricardo
     tu diz
-    paz terrível
-    petricor
     foto do frango
     sorteio
     menzinho
@@ -1068,11 +1084,16 @@ export const CARDS = [
     maionese vencida
     vamos pra argentina
     valeu valeu
+    Leo Noites
     Gladsxódia
 
     outros
     eu sou o lucas
     boina
     vendedor de drogas
+
+    divinas
+    paz terrível
+    petricor
 
 */
