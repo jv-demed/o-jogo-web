@@ -990,5 +990,89 @@ export const CARDS = [
             todos os equipamentos ativos no momento.
         `,
         level: 5
+    },{
+        id: 83,
+        idPack: 3,
+        number: 1,
+        name: 'Pó de Pirlimpimpim',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            A sininho enlouqueceu e quer jogar pó de pirlimpimpim (5 shots) em alguém. Escolha 1 jogador para 
+            beber 5 shots.
+        `,
+        level: 3
+    },{
+        id: 84,
+        idPack: 3,
+        number: 2,
+        name: 'Freio de Ouro',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Em plena segunda feira você está entendiado e resolveu, sem mais nem menos, ir na Freio de Ouro. Fique 
+            sem jogar por 2 turnos, mas imune à qualquer jogada.
+        `,
+        level: 3
+    },{
+        id: 85,
+        idPack: 3,
+        number: 3,
+        name: 'Jp da Ganância',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Compre 2 cartas. Nas próximas rodadas, haverá uma chance de 50% de você não poder comprar uma nova carta. 
+            Este efeito durará até o momento em que o número de cartas em sua mão se estabilize.
+        `,
+        level: 2
     }
 ]
+
+
+/*
+
+    jp
+
+    jax
+    caipirinha de banana
+    buzz
+
+    ricardo
+    tu diz
+    paz terrível
+    petricor
+    foto do frango
+    sorteio
+    menzinho
+
+    jv
+    slides
+    #crise na diretoria
+
+    dron
+    cama embaixo da mesa
+    boleto do dron
+    
+    rafa
+    fazer enem
+    maldição do jogador
+
+    gurias
+    comendo uvas
+    melhores amigos
+    pedido de casamento
+    exército de gabis
+
+    grupo
+    maionese vencida
+    vamos pra argentina
+    valeu valeu
+    Gladsxódia
+
+    outros
+    eu sou o lucas
+    boina
+    vendedor de drogas
+
+*/

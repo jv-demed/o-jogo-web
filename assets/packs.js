@@ -13,6 +13,6 @@ export const PACKS = [
         id: 3,
         name: 'Amigue Secrete 2025',
         dateRealease: new Date('2025-12-22'),
-        quantity: 3
+        quantity: 4
     }
 ];
