@@ -1087,16 +1087,35 @@ export const CARDS = [
             ou outro jogador, reverta os shots para o jogador que utilizou a carta.
         `,
         level: 2
+    },{
+        id: 91,
+        idPack: 3,
+        number: 9,
+        name: '#CriseNaDiretoria',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Parece que o JV não conseguiu organizar o futebol de novo e o grupo está claramente em crise. Por conta disso, todos 
+            os jogadores que que possuam 5 ou mais shots, devem beber mais 1 shot.
+        `,
+        level: 2
+    },{
+        id: 92,
+        idPack: 3,
+        number: 10,
+        name: 'Slides?',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Finalmente rolará o tão pedido rolê de slides! Todos os jogadores mostrarão uma carta aleatória de sua mão para todos 
+            os outros jogadores.
+        `,
+        level: 2
     }
 ]
 
 
 /*
-
-    jv
-    slides
-    #crise na diretoria
-
     dron
     cama embaixo da mesa
     boleto do dron
