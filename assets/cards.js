@@ -1050,17 +1050,48 @@ export const CARDS = [
             ao infinito por 2 turnos completos.
         `,
         level: 4
+    },{
+        id: 88,
+        idPack: 3,
+        number: 6,
+        name: 'Vamos Fazer um Sorteio?',
+        isShot: false,
+        type: CardType.investigation,
+        text: `
+            Stanley quis criar uma dinâmica diferente pro amigue secrete e acabou levando um boleto pra pagar. Ao utilizar 
+            essa carta, escolha 1 jogador para trocar de missão com ele. Este jogador escolherá outro jogador para trocar de 
+            missão e assim sucessivamente. As trocas pararão até alguém tentar realizar uma troca com Stanley.
+        `,
+        level: 4
+    },{
+        id: 89,
+        idPack: 3,
+        number: 7,
+        name: 'Foto do Frango',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            A foto do seu frango fez sucesso e ganhou muitos likes. Escolha um jogador para lhe entregar uma carta, à escolha 
+            dele. Em seguida, você poderá jogar outra carta.
+        `,
+        level: 2
+    },{
+        id: 90,
+        idPack: 3,
+        number: 8,
+        name: 'Tu Diz?',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Ninguém entende direito essa expressão, mas ela tem poderes. Quando alguém usar alguma carta de shot contra você 
+            ou outro jogador, reverta os shots para o jogador que utilizou a carta.
+        `,
+        level: 2
     }
 ]
 
 
 /*
-
-    ricardo
-    tu diz
-    foto do frango
-    sorteio
-    menzinho
 
     jv
     slides
@@ -1079,6 +1110,7 @@ export const CARDS = [
     melhores amigos
     pedido de casamento
     exército de gabis
+    menzinho
 
     grupo
     maionese vencida
