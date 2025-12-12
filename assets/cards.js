@@ -1058,7 +1058,7 @@ export const CARDS = [
         isShot: false,
         type: CardType.investigation,
         text: `
-            Stanley quis criar uma dinâmica diferente pro amigue secrete e acabou levando um boleto pra pagar. Ao utilizar 
+            Ricardo quis criar uma dinâmica diferente pro amigue secrete e acabou levando um boleto pra pagar. Ao utilizar 
             essa carta, escolha 1 jogador para trocar de missão com ele. Este jogador escolherá outro jogador para trocar de 
             missão e assim sucessivamente. As trocas pararão até alguém tentar realizar uma troca com Stanley.
         `,
@@ -1111,24 +1111,76 @@ export const CARDS = [
             os outros jogadores.
         `,
         level: 2
+    },{
+        id: 93,
+        idPack: 3,
+        number: 11,
+        name: 'Boleto do Dron',
+        isShot: true,
+        type: CardType.equip,
+        text: `
+            O Dron passou um boleto de presente para alguém. Equipe esta carta a 1 jogador. Este jogador deverá beber 1 shot extra 
+            a cada turno. Após o primeiro shot, ele terá 50% de chance de beber outro. Caso beba o segundo, terá 25% de chance de 
+            beber o terceiro. Se o jogador beber 3 shots, o boleto será quitado e a carta destruída.
+        `,
+        level: 3
+    },{
+        id: 94,
+        idPack: 3,
+        number: 12,
+        name: 'Cama Embaixo da Mesa',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            O Dron sabe muito bem que o melhor lugar para se dormir é embaixo de uma mesa. Ao jogar esta carta, você dormirá por 1 
+            turno completo, não podendo jogar. Contudo, ao retornar ao jogo, você estará tão descansado que poderá jogar 2 cartas 
+            de uma vez.
+        `,
+        level: 1
+    },{
+        id: 95,
+        idPack: 3,
+        number: 13,
+        name: 'Tatuagem de Shuriken',
+        isShot: true,
+        type: CardType.investigation,
+        text: `
+            O Rafa estava trovando uma menina, mas após ver sua tatuagem de otaku, resolveu pular fora. Por conta disso, Rafael 
+            irá beber. Swelcows e mais outro jogador, escolhido aleatoriamente (pois estava com sede no momento), beberão 1 shot.
+        `,
+        level: 2
+    },{
+        id: 96,
+        idPack: 3,
+        number: 14,
+        name: 'Enem',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Hoje não é dia de beber, pois amanhã tem Enem! Escolha 1 jogador para sofrer uma penalidade caso beba algum shot 
+            pelos próximos 2 turnos completos. Ao beber 1 shot, o jogador perderá aleatoriamente 1 carta de sua mão.
+        `,
+        level: 3
+    },{
+        id: 97,
+        idPack: 3,
+        number: 15,
+        name: 'Maldição do Jogador',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Não importa o quanto o Rafa se esforce, ele sempre acaba perdendo no futebol. Escolha 1 jogador para ser contaminado 
+            pela maldição do Rafa e, até uma troca de missão deste jogador, ele perderá caso o jogo acabe.
+        `,
+        level: 3
     }
 ]
 
 
-/*
-    dron
-    cama embaixo da mesa
-    boleto do dron
-    
-    rafa
-    fazer enem
-    maldição do jogador
-
+/*    
     gurias
     comendo uvas
-    melhores amigos
     pedido de casamento
-    exército de gabis
     menzinho
 
     grupo
@@ -1136,6 +1188,7 @@ export const CARDS = [
     vamos pra argentina
     valeu valeu
     Leo Noites
+    Vendedor de Drogas
     Gladsxódia
 
     outros
