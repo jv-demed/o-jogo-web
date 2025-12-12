@@ -1173,16 +1173,48 @@ export const CARDS = [
             pela maldição do Rafa e, até uma troca de missão deste jogador, ele perderá caso o jogo acabe.
         `,
         level: 3
+    },{
+        id: 98,
+        idPack: 3,
+        number: 16,
+        name: 'Separar e Procurar Pistas',
+        isShot: false,
+        type: CardType.investigation,
+        text: `
+            Daphne e Fred (Menzinho) resolveram se separar do grupo para "procurar pistas". Escolha 1 jogador para descobrir a 
+            missão dele em segredo.
+        `,
+        level: 3
+    },{
+        id: 99,
+        idPack: 3,
+        number: 17,
+        name: 'Pedido de Casamento',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Iniciou-se a operação secreta do pedido de casamento! Escolha 1 jogador, em segredo, para se casar com você. Ao terminar 
+            a partida, o jogador escolhido vencerá ou perderá de acordo com o seu resultado. O efeito desta carta perdurará até que 
+            a morte os separem ou até que o efeito seja anulado por outra carta.
+        `,
+        level: 4
+    },{
+        id: 100,
+        idPack: 3,
+        number: 18,
+        name: 'Uvas para Ressaca',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Parece que alguém bebeu demais e está precisando dos poderes curativos das uvas. Escolha 1 jogador para perder metade de 
+            sua contagem de shots, arredondando para cima.
+        `,
+        level: 3
     }
 ]
 
 
 /*    
-    gurias
-    comendo uvas
-    pedido de casamento
-    menzinho
-
     grupo
     maionese vencida
     vamos pra argentina
