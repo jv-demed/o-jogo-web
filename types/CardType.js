@@ -6,6 +6,7 @@ export const CardType = Object.freeze({
     effect: 'efeito',
     equip: 'equipamento',
     investigation: 'investigacao',
+    quick: 'rápido',
     shot: 'shot',
 });
 
@@ -29,6 +30,10 @@ export const CARD_TYPE_DATA = {
     [CardType.investigation]: { 
         name: 'Investigação', 
         icon: <ICONS.investigation /> 
+    },
+    [CardType.quick]: { 
+        name: 'Rápido', 
+        icon: <ICONS.quick /> 
     },
     [CardType.shot]: { 
         name: 'Shot', 

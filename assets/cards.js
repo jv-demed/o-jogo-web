@@ -582,7 +582,7 @@ export const CARDS = [
         number: 49,
         name: 'Gemidinha',
         isShot: false,
-        type: CardType.effect,
+        type: CardType.quick,
         text: `
             Ain!. Dê um gemidinho e anule qualquer jogada de qualquer jogador. Caso essa carta for usada fora da 
             sua vez, o jogo continuará pelo jogador seguinte a você.
@@ -1181,7 +1181,7 @@ export const CARDS = [
         isShot: false,
         type: CardType.investigation,
         text: `
-            Daphne e Fred (Menzinho) resolveram se separar do grupo para "procurar pistas". Escolha 1 jogador para descobrir a 
+            Daphne e Fred (Menzinho) resolveram se separar do grupo para "procurar pistas". Escolha 1 jogador e descubra a 
             missão dele em segredo.
         `,
         level: 3
@@ -1210,26 +1210,123 @@ export const CARDS = [
             sua contagem de shots, arredondando para cima.
         `,
         level: 3
+    },{
+        id: 101,
+        idPack: 3,
+        number: 19,
+        name: 'Valeu Valeu',
+        isShot: true,
+        type: CardType.quick,
+        text: `
+            Seu amigo fez uma jogada muito merda, mas não tem problema, pois você está com muito espírito esportivo e quer incentivá-lo.
+            Diga "valeu valeu" e acrescente 1 shot para o alvo, ou alvos, do jogador atual. 
+        `,
+        level: 1
+    },{
+        id: 102,
+        idPack: 3,
+        number: 20,
+        name: 'Condimentos Vencidos',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            A galera foi para a sua casa e percebeu que os condimentos estavam vencidos. Por conta disso, escolha 1 jogador para 
+            expulsar do jogo. Ele não poderá jogar até o momento em que tomar 3 shots.
+        `,
+        level: 3
+    },{
+        id: 103,
+        idPack: 3,
+        number: 21,
+        name: 'Vamos pra Argentina',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            Mais um ano se passou e mais uma viagem pra Argentina não aconteceu. Anule a jogada do jogador anterior a você.
+        `,
+        level: 3
+    },{
+        id: 104,
+        idPack: 3,
+        number: 22,
+        name: 'Leo Noites',
+        isShot: false,
+        type: CardType.effect,
+        text: `
+            O famoso jornalista Leo Noites atacou mais uma vez e descobriu as farras dos jogadores. Escolha 1 efeito prolongado 
+            que esteja ativo no momento e destrua-o.
+        `,
+        level: 3
+    },{
+        id: 105,
+        idPack: 3,
+        number: 23,
+        name: 'Não é o Momento',
+        isShot: false,
+        type: CardType.defense,
+        text: `
+            Todos sabem que a hora da pizza é sagrada e que não é o momento para brigas. Interrompa a jogada de outro 
+            jogador que fizer uma ação contra um outro jogador.
+        `,
+        level: 3
+    },{
+        id: 106,
+        idPack: 3,
+        number: 24,
+        name: 'Eu Sou o Lucas',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Aleatoriamente o Lucas apareceu no rolê e quer beber. 1 jogador aleatório irá beber 1 shot.
+        `,
+        level: 1
+    },{
+        id: 107,
+        idPack: 3,
+        number: 25,
+        name: 'Vendedor de Drogas',
+        isShot: true,
+        type: CardType.effect,
+        text: `
+            Brotou esse mano em Summoners Rift e ninguém sabe direito o que ele faz. Escolha 1 dos seguintes efeitos: 
+            Faça 1 jogador beber 1 shot ou retire 1 shot da contagem de 1 jogador.
+        `,
+        level: 2
+    },{
+        id: 108,
+        idPack: 3,
+        number: 26,
+        name: 'Boina',
+        isShot: false,
+        type: CardType.equip,
+        text: `
+            A boina do Tom Joboina é um item lendário, com incríveis magias de fixação na cabeça. Equipe ela em si mesmo ou 
+            em outro jogador e não será possível alterar a missão do jogador equipado.
+        `,
+        level: 4
+    },{
+        id: 109,
+        idPack: 3,
+        number: 27,
+        name: 'Paz Terrível',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            O jogo está indo muito bem, mas você não está em paz. Jogue esta carta e sinta a paz terrível, pois caso o jogo 
+            encerre dentro das próximas 2 rodadas, todos perderão, exceto você, que vencerá sozinho.
+        `,
+        level: 5
+    },{
+        id: 110,
+        idPack: 3,
+        number: 28,
+        name: 'Petricor',
+        isShot: false,
+        type: CardType.divine,
+        text: `
+            Está sentindo este cheiro de terra molhada e cocô de cachorro? Sim, isso é o Petricor! Um cheiro capaz de mudar os 
+            rumos do jogo! Jogue esta carta e intoxique 1 jogador qualquer, zerando os shots dele.
+        `,
+        level: 5
     }
 ]
-
-
-/*    
-    grupo
-    maionese vencida
-    vamos pra argentina
-    valeu valeu
-    Leo Noites
-    Vendedor de Drogas
-    Gladsxódia
-
-    outros
-    eu sou o lucas
-    boina
-    vendedor de drogas
-
-    divinas
-    paz terrível
-    petricor
-
-*/

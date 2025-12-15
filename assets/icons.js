@@ -1,4 +1,4 @@
-import { BsFire } from 'react-icons/bs';
+import { BsFire, BsLightningCharge } from 'react-icons/bs';
 import { RiErrorWarningLine, RiSpyLine } from 'react-icons/ri';
 import { PiBeerBottleBold, PiSword, PiCross } from 'react-icons/pi';
 import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
@@ -25,6 +25,7 @@ export const ICONS = {
     investigation: RiSpyLine,
     list: FaListUl,
     login: AiOutlineLogin,
+    quick: BsLightningCharge,
     shot: PiBeerBottleBold,
     spinLoader: AiOutlineLoading3Quarters,
     star: FaRegStar,
