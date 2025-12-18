@@ -1328,5 +1328,83 @@ export const CARDS = [
             rumos do jogo! Jogue esta carta e intoxique 1 jogador qualquer, zerando os shots dele.
         `,
         level: 5
+    },{
+        id: 111,
+        idPack: 3,
+        number: 29,
+        name: 'Gladsxódia #1',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Sauzburg está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
+    },{
+        id: 112,
+        idPack: 3,
+        number: 30,
+        name: 'Gladsxódia #2',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Sjamals está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
+    },{
+        id: 113,
+        idPack: 3,
+        number: 31,
+        name: 'Gladsxódia #3',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Smichaels está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
+    },{
+        id: 114,
+        idPack: 3,
+        number: 32,
+        name: 'Gladsxódia #4',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Stanley está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
+    },{
+        id: 115,
+        idPack: 3,
+        number: 33,
+        name: 'Gladsxódia #5',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Swelcows está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
+    },{
+        id: 116,
+        idPack: 3,
+        number: 34,
+        name: 'Gladsxódia #6',
+        isShot: true,
+        type: CardType.shot,
+        text: `
+            Sjehnsens está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você 
+            reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. 
+            O jogo então será finalizado com a fúria de Glads.
+        `,
+        level: 1
     }
 ]
