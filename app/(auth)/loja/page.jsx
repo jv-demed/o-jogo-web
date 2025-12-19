@@ -23,7 +23,7 @@ export default function StorePage(){
                 overflow-y-auto overflow-x-hidden 
                 scrollbar-custom pr-1
             `}>
-                {PACKS.map(pack => (
+                {PACKS.sort((a, b) => b.id - a.id).map(pack => (
                     <li key={`pack-${pack.id}`}>
                         <div className='flex flex-col items-center gap-0.5'
                             onClick={() => setSelectedPack(pack)}
