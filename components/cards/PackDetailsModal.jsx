@@ -80,14 +80,14 @@ export function PackDetailsModal({
                         index={selectedCardIndex}
                         setIndex={setSelectedCardIndex}
                     />  
-                    <ActionButton 
+                    {selectedCardIndex == drawnCards.length-1 && <ActionButton 
                         icon={ICONS.check}
                         width='300px'
                         action={() => {
                             setDrawnCards([]);
                             setSelectedCardIndex(0);
                         }}
-                    />
+                    />}
                 </div>}
             </div>
         </div>
