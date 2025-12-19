@@ -1,13 +1,12 @@
 'use client'
+import Image from 'next/image';
 import { useState } from 'react';
 import { useUser } from '@/providers/UserProvider';
 import { PACKS } from '@/assets/packs';
-import { CARDS } from '@/assets/cards';
 import { Main } from '@/components/containers/Main';
 import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
-import Image from 'next/image';
 
 export default function StorePage(){
 

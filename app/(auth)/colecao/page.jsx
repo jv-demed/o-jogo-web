@@ -15,7 +15,7 @@ import { GridCollection } from '@/presentation/collection/GridCollection';
 
 export default function Colecao(){
 
-    const { user } = useUser(); 
+    const { user, refreshUser } = useUser(); 
 
     const [isListMode, setIsListMode] = usePersistentState('isListModeInCollection', true);
 
@@ -86,6 +86,8 @@ export default function Colecao(){
                 </div>)}
             </div>
             <CardDetailsModal
+                user={user}
+                refresh={refreshUser}
                 cards={userCards}
                 selectedCardIndex={selectedCardIndex}
                 setSelectedCardIndex={setSelectedCardIndex}

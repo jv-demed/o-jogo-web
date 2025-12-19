@@ -1,14 +1,29 @@
 'use client'
+import { sellCard } from '@/presenters/usersPresenter';
 import { ICONS } from '@/assets/icons';
+import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
 
 export function CardDetailsModal({ 
+    user,
+    refresh,
     cards,
     selectedCardIndex,
     setSelectedCardIndex
 }) {
-
+    
     if (selectedCardIndex == null) return null;
+
+    const selectedCard = cards[selectedCardIndex];
+
+    const repetitions = user.cards.filter(
+        cardId => cardId === selectedCard.id
+    ).length;
+
+    async function handleSell() {
+        await sellCard(user, selectedCard);
+        await refresh();
+    }
 
     return (
         <div className={`
@@ -32,6 +47,24 @@ export function CardDetailsModal({
                     index={selectedCardIndex}
                     setIndex={setSelectedCardIndex}
                 />
+                <footer className={`
+                    flex flex-col gap-2 
+                    p-2 w-[300px] rounded    
+                    bg-gray-800/80 
+                `}>
+                    <div className='flex justify-between'>
+                        <span>
+                            Unidades:
+                        </span>
+                        <span>
+                            {repetitions}
+                        </span>
+                    </div>
+                    <ActionButton text={`Vender por ${selectedCard.level * 10} coins`}
+                        disabled={repetitions == 1}
+                        action={handleSell}
+                    />
+                </footer>
             </div>
         </div>
     );

@@ -1,12 +1,12 @@
 'use client'
+import Image from 'next/image';
 import { useState } from 'react';
-import { addCardsInUser } from '@/presenters/usersPresenter';
+import { buyPack } from '@/presenters/usersPresenter';
 import { ICONS } from '@/assets/icons';
 import { CARDS } from '@/assets/cards';
 import { CardForm } from '@/components/cards/CardForm';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
-import Image from 'next/image';
 
 export function PackDetailsModal({ 
     user,
@@ -23,16 +23,24 @@ export function PackDetailsModal({
     const [drawnCards, setDrawnCards] = useState([]);
 
     async function handleBuy() {
+        if(user.coins < pack.price) {
+            alert('Você não tem coins suficientes para comprar este pack.');
+            return;
+        }
         const cardIds = cards.map(c => c.id);
         const shuffled = [...cardIds].sort(() => Math.random() - 0.5);
         const drawnIds = shuffled.slice(0, pack.quantity);
-        await addCardsInUser(user, drawnIds);
-        await refresh();
         const newDrawnCards = cards.filter(card => 
             drawnIds.includes(card.id)
         );
         setDrawnCards(newDrawnCards);
         setSelectedCardIndex(0);
+        await buyPack({
+            userObj: user, 
+            newCardsIds: drawnIds,
+            price: pack.price
+        });
+        await refresh();
     }
 
     return (
@@ -60,7 +68,7 @@ export function PackDetailsModal({
                             height={480}
                         />
                     </CardForm>
-                    <ActionButton text='Comprar' 
+                    <ActionButton text={`Comprar por ${pack.price} coins`} 
                         action={handleBuy}
                     />
                 </div>}
