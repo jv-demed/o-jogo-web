@@ -1145,7 +1145,7 @@ export const CARDS = [
         isShot: true,
         type: CardType.investigation,
         text: `
-            O Rafa estava trovando uma menina, mas após ver sua tatuagem de otaku, resolveu pular fora. Por conta disso, Rafael 
+            O Rafa estava trovando uma menina, mas após ver sua tatuagem de otaku, ela resolveu pular fora. Por conta disso, Rafael 
             irá beber. Swelcows e mais outro jogador, escolhido aleatoriamente (pois estava com sede no momento), beberão 1 shot.
         `,
         level: 2
