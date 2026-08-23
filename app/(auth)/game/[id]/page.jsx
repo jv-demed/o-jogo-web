@@ -1,7 +1,6 @@
 'use client'
 
 import styled from 'styled-components';
-import { useEffect } from 'react';
 import { useDataList } from '@/hooks/useDataList';
 import { useUser } from '@/providers/UserProvider';
 import { Box } from '@/components/containers/Box';

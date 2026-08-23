@@ -1,10 +1,5 @@
 'use client'
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDataObj } from '@/hooks/useDataObj';
-import { useUser } from '@/providers/UserProvider';
-import { getRealtime, removeChannel } from '@/supabase/realtime';
-import { createMatch } from '@/actions/controls/matchActions';
 import { Main } from '@/components/containers/Main';
 import { ActionButton } from '@/components/buttons/ActionButton';
 

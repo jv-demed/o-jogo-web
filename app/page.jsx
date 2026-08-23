@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '@/services/AuthService';
 import { ICONS } from '@/assets/icons';
-import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { Form } from '@/components/containers/Form';
 import { Actions } from '@/components/containers/Actions';

@@ -15,12 +15,12 @@ export function PackDetailsModal({
     onClose
 }) {
 
+    const [selectedCardIndex, setSelectedCardIndex] = useState(0);
+    const [drawnCards, setDrawnCards] = useState([]);
+
     if(pack == null) return null;
 
     const cards = CARDS.filter(c => c.idPack == pack.id);
-
-    const [selectedCardIndex, setSelectedCardIndex] = useState(0);
-    const [drawnCards, setDrawnCards] = useState([]);
 
     async function handleBuy() {
         if(user.coins < pack.price) {
