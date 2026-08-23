@@ -19,5 +19,9 @@
     "styled-components": "^6.1.13",
     "tailwind-scrollbar": "^4.0.2",
     "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.14"
   }
 }
