@@ -21,7 +21,7 @@ const Styled = styled.div`
 
 export default function Game(){
 
-    const user = useUser();
+    const { user } = useUser();
 
     const players = useDataList({
         table: 'game-players',

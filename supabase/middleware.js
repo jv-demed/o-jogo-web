@@ -4,6 +4,13 @@ import { createServerClient } from '@supabase/ssr';
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// Rotas acessiveis sem sessao. Todo o resto vive em app/(auth) e exige login.
+const PUBLIC_PATHS = ['/'];
+
+function isPublicPath(pathname){
+    return PUBLIC_PATHS.includes(pathname);
+}
+
 export async function updateSession(request){
 
     let supabaseResponse = NextResponse.next({
@@ -29,7 +36,7 @@ export async function updateSession(request){
 
     const {data: { user }} = await supabase.auth.getUser();
 
-    if(!user && !request.nextUrl.pathname.startsWith('/')){
+    if(!user && !isPublicPath(request.nextUrl.pathname)){
         const url = request.nextUrl.clone();
         url.pathname = '/';
         return NextResponse.redirect(url);

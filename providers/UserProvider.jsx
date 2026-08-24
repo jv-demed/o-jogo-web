@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
 import { Main } from '@/components/containers/Main';
 import { SpinLoader } from '@/components/elements/SpinLoader';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
 const UserContext = createContext(null);
 
@@ -15,9 +16,12 @@ export function UserProvider({ children }){
 
     const [isLoading, setIsLoading] = useState(true);
 
+    const [error, setError] = useState(null);
+
     async function getUser(){
-        const { data, error } = await supabase.auth.getUser();
-        if(error || !data?.user){
+        const { data, error: authError } = await supabase.auth.getUser();
+        if(authError || !data?.user){
+            setError(authError ?? { message: 'Sessão não encontrada.' });
             router.push('/');
             return;
         }
@@ -27,9 +31,12 @@ export function UserProvider({ children }){
             .eq('idAuth', data.user.id)
             .single();
         if(userError){
+            setError(userError);
             router.push('/');
             return;
-        }return userData;
+        }
+        setError(null);
+        return userData;
     }
 
     async function refreshUser() {
@@ -39,17 +46,25 @@ export function UserProvider({ children }){
     }
     
     useEffect(() => {
-        getUser().then(async res => {
-            if(!res) return;
-            setUser(res);
-            setIsLoading(false);
-        });
+        getUser()
+            .then(res => {
+                if(res) setUser(res);
+            })
+            .catch(err => setError(err))
+            .finally(() => setIsLoading(false));
     }, []);
     
     if(isLoading){
         return (
-            <Main $justifyContent='center'>
+            <Main>
                 <SpinLoader marginTop='20px' />
+            </Main>
+        );
+    }
+    if(!user){
+        return (
+            <Main>
+                <ErrorMessage error={error ?? { message: 'Não foi possível carregar o usuário.' }} />
             </Main>
         );
     }

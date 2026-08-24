@@ -32,10 +32,10 @@ Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 99
 - [ ] **Policies precisam checar participação no jogo**, não só `auth.uid() is not null` — o pool de usuários é compartilhado entre projetos.
 - [ ] **Não usar `service_role` no app.** No banco compartilhado essa chave é mestra de *todos* os projetinhos. Só RPC `SECURITY DEFINER` com anon key.
 
-### 2. Middleware de autenticação não protege nada
+### 2. ~~Middleware de autenticação não protege nada~~ ✅ resolvido
 
-- [ ] `supabase/middleware.js:35` — `!request.nextUrl.pathname.startsWith('/')` é **sempre falso**, porque todo pathname começa com `/`. O redirect nunca dispara; o middleware só renova o cookie. A única proteção real hoje é o redirect client-side do `UserProvider`.
-- [ ] Definir a lista de rotas públicas de verdade (`/` e assets) e redirecionar o resto.
+- [x] `supabase/middleware.js` — a condição sempre-falsa `!pathname.startsWith('/')` virou `!isPublicPath(pathname)`.
+- [x] Lista de rotas públicas explícita: `PUBLIC_PATHS = ['/']` (a tela de login). Todo o resto vive em `app/(auth)` e agora é redirecionado de verdade. Assets já eram excluídos pelo `matcher` do `middleware.js` da raiz.
 
 ### 3. Race condition de leitura-modificação-escrita
 
@@ -55,11 +55,10 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 ## 🟠 Bugs de lógica e React
 
 - [ ] **`usePersistentState` quebra no SSR** — `hooks/usePersistentState.jsx:6` lê `localStorage` no inicializador do `useState`, que roda no server durante o prerender. `ReferenceError` ou hydration mismatch.
-- [ ] **`useUser()` desestruturado errado em lobby e game** — `app/(auth)/lobby/[id]/page.jsx:56` e `app/(auth)/game/[id]/page.jsx:24` fazem `const user = useUser()`, mas o hook retorna `{ user, refreshUser }`. `user.id` e `user.position` são sempre `undefined` → **todo mundo fica preso em "Aguardando o host..."**.
-- [ ] **Comparação de objeto com string** — `lobby/[id]/page.jsx:88`: `match.obj == 'progress'` (deveria ser `match.obj?.status`); e o push é pra `/game` sem id.
-- [ ] **Import inexistente** — o lobby importa `{ Loading }` de `SpinLoader`, que exporta `SpinLoader`. Crash na renderização. ⚠️ **O ESLint não pega isso** (tentamos `import/named`: a regra não dispara com o parser do Next). Quem pega é o `npm run build`: `Attempted import error: 'Loading' is not exported`. Rodar o build no CI, não só o lint.
+- [x] ~~**`useUser()` desestruturado errado em lobby e game**~~ — corrigido para `const { user } = useUser()` nos dois arquivos.- [ ] **Comparação de objeto com string** — `lobby/[id]/page.jsx:88`: `match.obj == 'progress'` (deveria ser `match.obj?.status`); e o push é pra `/game` sem id.
+- [x] ~~**Import inexistente**~~ — o lobby importava `{ Loading }` de `SpinLoader`, que exporta `SpinLoader`. Crash na renderização. **Corrigido**: import e os 3 usos passaram a `SpinLoader`. ⚠️ **O ESLint não pega isso** (tentamos `import/named`: a regra não dispara com o parser do Next). Quem pega é o `npm run build`: `Attempted import error: 'Loading' is not exported`. Rodar o build no CI, não só o lint.
 - [ ] **`CardDetailsModal` sem `user` no editor de deck** — `decks/[id]/page.jsx:216` não passa `user` nem `refresh`, e o modal faz `user.cards.filter(...)` → crash ao abrir detalhe de carta ali.
-- [ ] **Loading eterno** — `providers/UserProvider.jsx:47`: `setIsLoading(false)` só é chamado no caminho de sucesso. Se `getUser()` falhar, o spinner nunca sai.
+- [x] ~~**Loading eterno**~~ — `providers/UserProvider.jsx`: `setIsLoading(false)` agora roda em `.finally()`, e o caminho de falha renderiza `ErrorMessage` em vez de spinner infinito. O erro do Supabase é guardado em estado (`setError`) nos dois pontos de saída de `getUser()`.
 - [ ] **Dois `useEffect` disputando `userCards`** no editor de deck (linhas 28 e 45) — um sobrescreve o outro, causando flicker e ordem imprevisível.
 - [ ] **Cartas repetidas não são suportadas no deck** — `handleAddCard`/`handleRemoveCard` usam `findIndex(c => c.id === card.id)`, apesar de a coleção permitir repetição.
 - [ ] **Filtro por índice em vez de id** — `app/(auth)/colecao/page.jsx:73` usa `cards.idPack == i+1` (índice do `map`) em vez de `pack.id`.
@@ -79,7 +78,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **Apagar `presenters/cardsPresenter.js`** — duplica `getCardTypeName`/`getCardTypeIcon` de `types/CardType.js` usando **id numérico** de tipo, enquanto o resto do projeto usa string. Ninguém importa.
 - [ ] **Consolidar as 3 camadas de dados concorrentes**: `actions/database/databaseActions.js` (antiga), `supabase/crud.js` (nova) e queries inline no `UserProvider`/hooks. Escolher uma: repositórios por entidade.
 - [ ] **Reescrever `lobby`, `game`, `GameTable` e `Opponent`** — usam styled-components com `theme.content`/`theme.primary`, mas **não existe `ThemeProvider`** no projeto, então todas as cores saem `undefined`. Depois, remover styled-components do `package.json`.
-- [ ] **Props fantasma**: `<Box $fullHeight>` (o componente aceita `fullH`), `<Main $justifyContent>` em `UserProvider.jsx:58` (aceita `between`), `ActionButton name=` no lobby (aceita `text`).
+- [ ] **Props fantasma**: `<Box $fullHeight>` (o componente aceita `fullH`) e `ActionButton name=` no lobby (aceita `text`). ~~`<Main $justifyContent>` no `UserProvider`~~ ✅ removida — `Main` só aceita `between` como booleano (`justify-between`/`justify-start`), não existe valor `'center'`.
 - [ ] **Remover `console.log` de debug** — `components/game/GameTable.jsx:30` e `app/(auth)/game/[id]/page.jsx:32`.
 - [ ] **Descomentar ou remover o matchmaking morto** em `app/(auth)/home/page.jsx:10-23`. ⚠️ Os 5 imports que alimentavam esse bloco (`useEffect`, `useDataObj`, `useUser`, `getRealtime`/`removeChannel`, `createMatch`) **já foram removidos** na limpeza do lint — se for descomentar, precisa readicioná-los.
 - [ ] **`PACK_CATEGORIES`, `insertPurchase` e `incPurchase`** em `presenters/packsPresenter.js` são dead code — decidir se o histórico de compras entra de verdade ou some.
@@ -149,6 +148,8 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 ---
 
 ## Já resolvido
+
+- **Bugs de crash em runtime** — middleware sem proteção, `useUser()` desestruturado errado no lobby e no game, import `{ Loading }` inexistente e loading eterno do `UserProvider`. Detalhes marcados como `[x]` nas seções acima. `npm run lint` continua em exit 0 com os mesmos 4 warnings de `exhaustive-deps`.
 
 - **ESLint configurado** (`eec8a83`) — `eslint` + `eslint-config-next` nas devDependencies, `.eslintrc.json` e `.eslintignore`. `npm run lint` sai com **exit 0** (4 warnings de `exhaustive-deps`, listados acima).
 - **Erros do lint corrigidos** (`28cccae`):

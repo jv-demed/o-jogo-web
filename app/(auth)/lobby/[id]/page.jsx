@@ -10,7 +10,7 @@ import { getRealtime, removeChannel } from '@/supabase/realtime';
 import { startMatch } from '@/actions/controls/matchActions';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
-import { Loading } from '@/components/elements/SpinLoader';
+import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ActionButton } from '@/components/buttons/ActionButton';
 
 const Styled = styled.section`
@@ -56,7 +56,7 @@ const Styled = styled.section`
 export default function Lobby(){
 
     const router = useRouter();
-    const user = useUser();
+    const { user } = useUser();
 
     const match = useDataObj({
         table: 'matches',
@@ -113,12 +113,12 @@ export default function Lobby(){
         <Main>
             <Box $fullHeight>
                 <Styled>
-                    {!match.obj ? <Loading /> : <>
+                    {!match.obj ? <SpinLoader /> : <>
                         {user.id !== match.obj.host ? <div className='flexC waiting'>
-                            <Loading />
+                            <SpinLoader />
                             <span>Aguardando o host...</span>
                         </div> : <>
-                            {!playerList ? <Loading /> : <>
+                            {!playerList ? <SpinLoader /> : <>
                                 <div className='content'>
                                     <ul>{playerList.map((player, i) => (
                                         <li key={player.id}
