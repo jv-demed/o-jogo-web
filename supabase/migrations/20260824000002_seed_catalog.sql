@@ -1,11 +1,20 @@
 -- Seed do catalogo, gerado a partir de assets/packs.js e assets/cards.js.
--- Nao editar a mao: a tabela passa a ser a fonte de verdade a partir daqui.
+-- Nao editar a mao: rode scripts/gen-catalog-seed.mjs.
 -- Gerado em 2026-08-24. 3 packs, 116 cartas.
+
+-- Upsert, e nao insert puro: este arquivo e regerado toda vez que uma
+-- carta muda, entao precisa rodar sobre um banco que ja tem o catalogo.
+-- Rodar duas vezes deixa o mesmo estado que rodar uma.
 
 insert into o_jogo.packs (id, name, date_release, quantity, price) values
     (1, 'Amigue Secrete 2023', '2023-12-22', 5, 40),
     (2, 'Amigue Secrete 2024', '2024-12-20', 3, 50),
-    (3, 'Amigue Secrete 2025', '2025-12-22', 4, 60);
+    (3, 'Amigue Secrete 2025', '2025-12-22', 4, 60)
+on conflict (id) do update set
+    name         = excluded.name,
+    date_release = excluded.date_release,
+    quantity     = excluded.quantity,
+    price        = excluded.price;
 
 insert into o_jogo.cards (id, id_pack, number, name, type, is_shot, text, level) values
     (1, 1, 1, 'A Bebida Infinita', 'shot', true, 'Foi descoberta uma fórmula mágica para beber infinitamente! Escolha 1 jogador para beber 1 shot, na vez dele, pelos próximos 3 turnos.', 2),
@@ -123,4 +132,12 @@ insert into o_jogo.cards (id, id_pack, number, name, type, is_shot, text, level)
     (113, 3, 31, 'Gladsxódia #3', 'shot', true, 'Smichaels está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. O jogo então será finalizado com a fúria de Glads.', 1),
     (114, 3, 32, 'Gladsxódia #4', 'shot', true, 'Stanley está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. O jogo então será finalizado com a fúria de Glads.', 1),
     (115, 3, 33, 'Gladsxódia #5', 'shot', true, 'Swelcows está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. O jogo então será finalizado com a fúria de Glads.', 1),
-    (116, 3, 34, 'Gladsxódia #6', 'shot', true, 'Sjehnsens está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. O jogo então será finalizado com a fúria de Glads.', 1);
+    (116, 3, 34, 'Gladsxódia #6', 'shot', true, 'Sjehnsens está tentando invocar o Gladsxódia! Ao jogar esta carta, escolha 1 jogador para beber 1 shot. Caso você reúna todas as cartas de Gladsxódia, dos números 1 ao 6, em sua mão, você vencerá o jogo automaticamente, sozinho. O jogo então será finalizado com a fúria de Glads.', 1)
+on conflict (id) do update set
+    id_pack = excluded.id_pack,
+    number  = excluded.number,
+    name    = excluded.name,
+    type    = excluded.type,
+    is_shot = excluded.is_shot,
+    text    = excluded.text,
+    level   = excluded.level;
