@@ -64,7 +64,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 
 - [ ] `app/(auth)/decks/[id]/page.jsx:101` salva `cards: selectedCards.map(c => c.number)`, mas `user.cards` armazena **`id`**. Na releitura, a linha 48 cruza id com number e traz a carta errada. Qualquer deck com carta de pack 2 ou 3 volta errado.
 - [ ] Padronizar **`id` como chave única global**; `number` vira só o rótulo impresso na arte.
-- [ ] Teste de integridade sobre `assets/cards.js` (id único, imagem existente, pack válido).
+- [x] ~~Teste de integridade sobre `assets/cards.js`~~ — `scripts/gen-catalog-seed.mjs` gera o seed e valida na mesma passada: 116 ids únicos, nenhuma carta sem arte, packs 1–3 válidos, os 7 tipos batendo com o enum. Confirmou também as 53 divergências `id`/`number` e a órfã `Gladsxódia.png`.
 
 ---
 
@@ -109,7 +109,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **Deps de `useDataList`/`useDataObj`** (`useDataList.jsx:40`, `useDataObj.jsx:41`) dependem só de `flag`. ⚠️ O `exhaustive-deps` **não** acusa isso — só analisa hooks nativos e não relaciona o corpo do `useEffect` às variáveis externas ali. Continua sendo revisão manual.
 - [ ] **Separar as camadas**: `domain/` (regras puras e testáveis — economia, deck building, resolução de carta), `data/` (Supabase), `presentation/`. Hoje `presenters/` mistura JSX com `insert`.
   - *Bônus:* com `domain/` puro, extrair um serviço separado depois vira mover uma pasta — por isso a decisão de não criar repo de API agora é barata de reverter.
-- [ ] **Regras de economia para o Postgres** (`buy_pack`, `sell_card`) com as migrations versionadas em `supabase/migrations/`. Hoje não há **nenhum** registro do schema no repo — o banco é conhecimento tácito.
+- [x] ~~**Regras de economia para o Postgres**~~ — `buy_pack` e `sell_card` escritas em `supabase/migrations/20260824000004_rpc_economy.sql`, e o schema agora está versionado em `supabase/migrations/`. ⚠️ **Ainda não aplicadas ao banco** — falta rodar (ver *Como aplicar*).
 - [ ] **`supabase db diff --schema o_jogo`** no fluxo de migration, para não capturar as tabelas dos outros projetinhos.
 - [ ] **Design tokens no Tailwind v4** — `#1b5b82`, `#e2d4b8`, `#171717`, `#212121` hardcoded em ~10 arquivos. Bloco `@theme` em `styles/globals.css`.
 - [ ] **Tratamento de erro visível** — todo `catch` faz `console.log`; a loja usa `alert()`. Criar padrão de toast/estado de erro usando o `ErrorMessage` existente (já consumido por `TextInput` e `PasswordInput`).
@@ -160,6 +160,20 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 4. **Padronizar `id`** e consertar o deck editor.
 5. **Limpar o legado** (`cardsPresenter`, `databaseActions`, styled-components, lobby/game).
 6. **Modelar os efeitos das cartas** — é o que destrava o jogo.
+
+---
+
+## Como aplicar as migrations
+
+Nada foi executado contra o banco ainda — os arquivos existem, mas o Supabase segue com o schema antigo.
+
+1. No painel: *API Settings → Exposed schemas*, adicionar `o_jogo`.
+2. `npx supabase link` e depois `npx supabase db push` (ou colar os 4 arquivos no SQL Editor, na ordem do nome).
+3. Passar `{ db: { schema: 'o_jogo' } }` em `supabase/client.js` e `supabase/server.js`.
+4. Só então rodar `supabase/manual/backfill_from_legacy.sql`, **depois de conferir os nomes de coluna** contra a base real — eles foram deduzidos do código, não lidos do banco.
+5. Trocar `buyPack`/`sellCard` de `presenters/usersPresenter.js` por `supabase.rpc('buy_pack', ...)` / `rpc('sell_card', ...)`, e a leitura de `user.cards` por `o_jogo.user_cards`.
+
+⚠️ Os passos 3 e 5 são o **corte**: até eles, o app continua falando com as tabelas antigas. As migrations não quebram nada sozinhas, mas também não resolvem nada sozinhas.
 
 ---
 
