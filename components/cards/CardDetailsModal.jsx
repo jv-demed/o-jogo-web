@@ -1,8 +1,10 @@
 'use client'
-import { sellCard } from '@/presenters/usersPresenter';
+import { useState } from 'react';
+import { sellCard, cardSellPrice } from '@/presenters/usersPresenter';
 import { ICONS } from '@/assets/icons';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
 export function CardDetailsModal({ 
     user,
@@ -12,6 +14,8 @@ export function CardDetailsModal({
     setSelectedCardIndex
 }) {
     
+    const [error, setError] = useState(null);
+
     if (selectedCardIndex == null) return null;
 
     const selectedCard = cards[selectedCardIndex];
@@ -21,8 +25,15 @@ export function CardDetailsModal({
     ).length;
 
     async function handleSell() {
-        await sellCard(user, selectedCard);
-        await refresh();
+        try{
+            await sellCard(selectedCard.id);
+            // Vender a ultima copia tira a carta da lista: sem isto o indice
+            // continuaria apontando para uma posicao que mudou de dono.
+            if(repetitions == 1) setSelectedCardIndex(null);
+            await refresh();
+        }catch(err){
+            setError(err);
+        }
     }
 
     return (
@@ -60,10 +71,11 @@ export function CardDetailsModal({
                             {repetitions}
                         </span>
                     </div>
-                    <ActionButton text={`Vender por ${selectedCard.level * 10} coins`}
-                        disabled={repetitions == 1}
+                    <ActionButton text={`Vender por ${cardSellPrice(selectedCard.level)} coins`}
+                        disabled={repetitions == 0}
                         action={handleSell}
                     />
+                    {error && <ErrorMessage error={error} />}
                 </footer>
             </div>
         </div>

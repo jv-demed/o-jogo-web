@@ -10,7 +10,7 @@ import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
 
 export default function StorePage(){
 
-    const { user, refreshUser } = useUser();
+    const { refreshUser } = useUser();
 
     const [selectedPack, setSelectedPack] = useState(null);
 
@@ -45,7 +45,6 @@ export default function StorePage(){
                 ))} 
             </ul>
             <PackDetailsModal 
-                user={user}
                 refresh={refreshUser}
                 pack={selectedPack}
                 onClose={() => setSelectedPack(null)} 

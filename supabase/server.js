@@ -7,6 +7,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export function createClient(){
     const cookieStore = cookies();
     return createServerClient(URL, ANON_KEY, {
+        db: { schema: 'o_jogo' },
         cookies: {
             getAll(){
                 return cookieStore.getAll();

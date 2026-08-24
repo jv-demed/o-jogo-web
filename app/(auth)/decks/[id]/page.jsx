@@ -1,9 +1,9 @@
 'use client'
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDataObj } from '@/hooks/useDataObj';
 import { useUser } from '@/providers/UserProvider';
-import { insertDeck, updateDeck } from '@/presenters/decksPresenter';
+import { saveDeck } from '@/presenters/decksPresenter';
 import { ICONS } from '@/assets/icons';
 import { CARDS } from '@/assets/cards';
 import { Card } from '@/components/cards/Card';
@@ -12,63 +12,60 @@ import { TextInput } from '@/components/inputs/TextInput';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
 export default function Deck({ params }){
 
     const router = useRouter();
-    const { user } = useUser();
+    const { user, refreshUser } = useUser();
 
     const deck = useDataObj({
-        table: 'oJogo-decks',
+        table: 'decks',
+        select: 'id, name, deck_cards(id_card, quantity)',
         delay: params.id == 0,
         filter: q => q.eq('id', params.id)
     });
 
+    const byName = (a, b) => a.name.localeCompare(b.name);
+
+    // user.cards e a colecao como array plano de ids, com repeticao.
+    const collection = useMemo(() => user.cards
+        .map(id => CARDS.find(c => c.id === id))
+        .filter(Boolean), [user.cards]);
+
     const [userCards, setUserCards] = useState([]);
-    useEffect(() => {
-        const finalList = user.cards
-            .map(userCard => CARDS.find(c => c.id === userCard))
-            .filter(Boolean);
-        setUserCards(finalList);
-    }, [user.cards]);
-
-    const [search, setSearch] = useState('');
-    const [copyList, setCopyList] = useState([]);
-    useEffect(() => {
-        const filteredList = userCards
-            .filter(card => card.name?.toLowerCase().includes(search.toLowerCase()))
-            .sort((a, b) => a.name.localeCompare(b.name));
-        setCopyList(filteredList);
-    }, [userCards, search]);
-
-    useEffect(() => {
-        if (!deck.obj || !Array.isArray(deck.obj.cards)) return;
-        if (!CARDS.length || !user.cards.length) return;
-        const userFull = user.cards
-            .map(n => CARDS.find(c => String(c.number) === String(n)))
-            .filter(Boolean);
-        const deckNums = deck.obj.cards.map(String);
-        const selected = [];
-        const remaining = [];
-        for(const card of userFull) {
-            const idx = deckNums.indexOf(String(card.number));
-            if(idx !== -1) {
-                selected.push(card);
-                deckNums.splice(idx, 1);
-            }else {
-                remaining.push(card);
-            }
-        }
-        const missingFromUser = deckNums
-            .map(n => CARDS.find(c => String(c.number) === n))
-            .filter(Boolean);
-        setSelectedCards(selected.concat(missingFromUser)); 
-        setUserCards(remaining.sort((a, b) => a.name.localeCompare(b.name)));
-        setDeckName(deck.obj.name ?? '');
-    }, [deck.obj, user.cards]);
-
     const [selectedCards, setSelectedCards] = useState([]);
     const [deckName, setDeckName] = useState('');
+
+    // Um unico efeito reparte a colecao entre "no deck" e "disponivel".
+    // Antes eram dois efeitos gravando userCards, um sobrescrevendo o outro.
+    useEffect(() => {
+        const isNovo = params.id == 0;
+        if(!isNovo && !deck.obj) return;
+
+        const disponiveis = [...collection];
+        const noDeck = [];
+
+        // Cruza por id_card. A versao antiga cruzava id com number e trazia
+        // a carta errada em qualquer deck com carta de pack 2 ou 3.
+        for(const { id_card, quantity } of deck.obj?.deck_cards ?? []) {
+            for(let i = 0; i < quantity; i++) {
+                const idx = disponiveis.findIndex(c => c.id === id_card);
+                if(idx === -1) break; // carta saiu da colecao desde o ultimo save
+                noDeck.push(disponiveis[idx]);
+                disponiveis.splice(idx, 1);
+            }
+        }
+
+        setSelectedCards(noDeck.sort(byName));
+        setUserCards(disponiveis.sort(byName));
+        setDeckName(deck.obj?.name ?? '');
+    }, [deck.obj, collection, params.id]);
+
+    const [search, setSearch] = useState('');
+    const copyList = useMemo(() => userCards
+        .filter(card => card.name?.toLowerCase().includes(search.toLowerCase()))
+        .sort(byName), [userCards, search]);
 
     function handleAddCard(card) {
         setSelectedCards(prev => [...prev, card].sort((a, b) => a.name.localeCompare(b.name)));
@@ -94,21 +91,20 @@ export default function Deck({ params }){
 
     const [saveMode, setSaveMode] = useState(false);
 
+    const [saveError, setSaveError] = useState(null);
+
     async function handleSaveDeck() {
-        if(params.id != 0) {
-            const updatedDeck = {
+        setSaveError(null);
+        try{
+            const idDeck = await saveDeck({
+                idDeck: params.id != 0 ? deck.obj.id : null,
                 idUser: user.id,
                 name: deckName,
-                cards: selectedCards.map(card => card.number)
-            };
-            await updateDeck(deck.obj.id, updatedDeck);
-        } else{
-            const { id } = await insertDeck({
-                idUser: user.id,
-                name: deckName,
-                cards: selectedCards.map(card => card.number)
+                cards: selectedCards
             });
-            router.replace(`/decks/${id}`);
+            if(params.id == 0) router.replace(`/decks/${idDeck}`);
+        }catch(err){
+            setSaveError(err);
         }
     }
 
@@ -212,11 +208,14 @@ export default function Deck({ params }){
                                 disabled={deckName.length == 0}
                                 action={handleSaveDeck}
                             />
+                            {saveError && <ErrorMessage error={saveError} />}
                         </div>}
                     </div>
                 </div>}
             </div> 
             <CardDetailsModal
+                user={user}
+                refresh={refreshUser}
                 cards={selectedCardList}
                 selectedCardIndex={selectedCardIndex}
                 setSelectedCardIndex={setSelectedCardIndex}

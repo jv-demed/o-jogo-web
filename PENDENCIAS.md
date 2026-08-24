@@ -41,9 +41,8 @@ O nome `oJogo-users:packs` tem hífen **e** dois-pontos, exigindo aspas duplas e
 
 Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 999999 })` com a anon key que já está no bundle.
 
-- [ ] **Sorteio do pack acontece no navegador** — `components/cards/PackDetailsModal.jsx:31` faz `sort(() => Math.random() - 0.5)` e manda os ids escolhidos pro banco. O jogador escolhe as cartas que quiser. Virar RPC `SECURITY DEFINER` que sorteia, debita e grava atomicamente.
-- [ ] **Validação de saldo só no cliente** — `PackDetailsModal.jsx:26`. Nada impede coins negativos.
-- [ ] **`buyPack` e `sellCard` fazem UPDATE direto do browser** — `presenters/usersPresenter.js`. O preço de venda (`card.level * 10`) também é calculado no cliente.
+- [x] ~~**Sorteio do pack acontece no navegador**~~ — virou `o_jogo.buy_pack`.- [x] ~~**Validação de saldo só no cliente**~~ — a conferência saiu do modal; quem recusa é a RPC, e `coins` tem `check (coins >= 0)`.
+- [x] ~~**`buyPack` e `sellCard` fazem UPDATE direto do browser**~~ — os dois viraram `supabase.rpc(...)`. O preço mora em `o_jogo.card_sell_price`; `cardSellPrice()` no cliente é só rótulo de botão.
 - [ ] **Auditar RLS** em todas as tabelas do jogo: `SELECT` só do próprio registro; `UPDATE` bloqueado nas colunas `coins`/`cards` — mutação só via RPC.
 - [ ] **Policies precisam checar participação no jogo**, não só `auth.uid() is not null` — o pool de usuários é compartilhado entre projetos.
 - [ ] **Não usar `service_role` no app.** No banco compartilhado essa chave é mestra de *todos* os projetinhos. Só RPC `SECURITY DEFINER` com anon key.
@@ -55,15 +54,15 @@ Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 99
 
 ### 3. Race condition de leitura-modificação-escrita
 
-- [ ] `buyPack`/`sellCard` fazem `{ ...userObj, cards: [...] }` a partir de um snapshot do `UserProvider`. Duas abas, ou compra logo após venda, sobrescrevem uma à outra (lost update). Só resolve com RPC atômica.
+- [x] ~~Lost update em `buyPack`/`sellCard`~~ — não há mais snapshot: as RPCs usam `select ... for update` na linha do jogador, e a coleção virou linhas `(id_card, quantity)` em vez de array reescrito inteiro.
 - [ ] **`generateId` gera id no cliente** (`actions/database/databaseActions.js:29`) pegando o último item de um `select` **sem `order by`**. Não determinístico e colide com concorrência. Substituir por `identity`/`uuid` no banco e apagar a função. É a causa raiz do que estava no `bugs.txt`.
 
 ### 4. Deck editor grava dados corrompidos
 
 Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `number` reinicia a cada pack (a carta `id: 64` tem `number: 1`).
 
-- [ ] `app/(auth)/decks/[id]/page.jsx:101` salva `cards: selectedCards.map(c => c.number)`, mas `user.cards` armazena **`id`**. Na releitura, a linha 48 cruza id com number e traz a carta errada. Qualquer deck com carta de pack 2 ou 3 volta errado.
-- [ ] Padronizar **`id` como chave única global**; `number` vira só o rótulo impresso na arte.
+- [x] ~~Deck salvo por `number`~~ — `deck_cards` guarda `id_card`, e o editor cruza por id. `saveDeck` em `presenters/decksPresenter.js`.
+- [x] ~~Padronizar **`id` como chave única global**~~ — feito no schema: `cards.id` é PK, `number` só tem `unique (id_pack, number)` e está comentado como rótulo.
 - [x] ~~Teste de integridade sobre `assets/cards.js`~~ — `scripts/gen-catalog-seed.mjs` gera o seed e valida na mesma passada: 116 ids únicos, nenhuma carta sem arte, packs 1–3 válidos, os 7 tipos batendo com o enum. Confirmou também as 53 divergências `id`/`number` e a órfã `Gladsxódia.png`.
 
 ---
@@ -73,9 +72,9 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **`usePersistentState` quebra no SSR** — `hooks/usePersistentState.jsx:6` lê `localStorage` no inicializador do `useState`, que roda no server durante o prerender. `ReferenceError` ou hydration mismatch.
 - [x] ~~**`useUser()` desestruturado errado em lobby e game**~~ — corrigido para `const { user } = useUser()` nos dois arquivos.- [ ] **Comparação de objeto com string** — `lobby/[id]/page.jsx:88`: `match.obj == 'progress'` (deveria ser `match.obj?.status`); e o push é pra `/game` sem id.
 - [x] ~~**Import inexistente**~~ — o lobby importava `{ Loading }` de `SpinLoader`, que exporta `SpinLoader`. Crash na renderização. **Corrigido**: import e os 3 usos passaram a `SpinLoader`. ⚠️ **O ESLint não pega isso** (tentamos `import/named`: a regra não dispara com o parser do Next). Quem pega é o `npm run build`: `Attempted import error: 'Loading' is not exported`. Rodar o build no CI, não só o lint.
-- [ ] **`CardDetailsModal` sem `user` no editor de deck** — `decks/[id]/page.jsx:216` não passa `user` nem `refresh`, e o modal faz `user.cards.filter(...)` → crash ao abrir detalhe de carta ali.
+- [x] ~~**`CardDetailsModal` sem `user` no editor de deck**~~ — passa `user` e `refresh` agora.
 - [x] ~~**Loading eterno**~~ — `providers/UserProvider.jsx`: `setIsLoading(false)` agora roda em `.finally()`, e o caminho de falha renderiza `ErrorMessage` em vez de spinner infinito. O erro do Supabase é guardado em estado (`setError`) nos dois pontos de saída de `getUser()`.
-- [ ] **Dois `useEffect` disputando `userCards`** no editor de deck (linhas 28 e 45) — um sobrescreve o outro, causando flicker e ordem imprevisível.
+- [x] ~~**Dois `useEffect` disputando `userCards`**~~ — viraram um só, que reparte a coleção entre "no deck" e "disponível". A lista filtrada virou `useMemo`.
 - [ ] **Cartas repetidas não são suportadas no deck** — `handleAddCard`/`handleRemoveCard` usam `findIndex(c => c.id === card.id)`, apesar de a coleção permitir repetição.
 - [ ] **Filtro por índice em vez de id** — `app/(auth)/colecao/page.jsx:73` usa `cards.idPack == i+1` (índice do `map`) em vez de `pack.id`.
 - [ ] **Loja não ordena os packs** — `app/(auth)/loja/page.jsx:26` itera `PACKS` na ordem literal do array. `dateRealease` (typo) não é usado.
@@ -84,20 +83,19 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **Não existe logout** — `services/AuthService.js` só tem `login`. Falta `signOut` e recuperação de senha. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24).
 - [ ] **Realtime sem filtro e vazando entre projetos** — `supabase/realtime.js` escuta `{ event: '*', schema: 'public' }` com nome de canal fixo. No banco compartilhado, isso é *toda mudança em toda tabela de todos os projetinhos*. Filtrar por schema e por partida.
 - [ ] **Adicionar as tabelas à publication do realtime** — `ALTER PUBLICATION supabase_realtime ADD TABLE o_jogo.matches`.
-- [ ] Após vender a última cópia de uma carta, o `selectedCardIndex` do modal fica apontando pro índice errado (hoje mascarado pelo `disabled={repetitions == 1}`).
+- [x] ~~Índice errado após vender a última cópia~~ — vender a última passou a ser permitido (`disabled={repetitions == 0}`) e fecha o modal, em vez de deixar o índice órfão.
 - [ ] **4 warnings de `exhaustive-deps` sobraram** no lint — `lobby/[id]/page.jsx:83,87,95` (`match.refresh`, `players`, `router`) e `AutoFitText.jsx:20` (`maxHeight`). Não corrigidos de propósito: mexer em array de dependência muda comportamento em runtime, e os 3 do lobby morrem junto com a reescrita do lobby.
 
 ---
 
 ## 🟡 Código legado / dívida técnica
 
-- [ ] **Apagar `presenters/cardsPresenter.js`** — duplica `getCardTypeName`/`getCardTypeIcon` de `types/CardType.js` usando **id numérico** de tipo, enquanto o resto do projeto usa string. Ninguém importa.
-- [ ] **Consolidar as 3 camadas de dados concorrentes**: `actions/database/databaseActions.js` (antiga), `supabase/crud.js` (nova) e queries inline no `UserProvider`/hooks. Escolher uma: repositórios por entidade.
+- [x] ~~**Apagar `presenters/cardsPresenter.js`**~~ — apagado.- [ ] **Consolidar as 3 camadas de dados concorrentes**: `actions/database/databaseActions.js` (antiga), `supabase/crud.js` (nova) e queries inline no `UserProvider`/hooks. Escolher uma: repositórios por entidade.
 - [ ] **Reescrever `lobby`, `game`, `GameTable` e `Opponent`** — usam styled-components com `theme.content`/`theme.primary`, mas **não existe `ThemeProvider`** no projeto, então todas as cores saem `undefined`. Depois, remover styled-components do `package.json`.
 - [ ] **Props fantasma**: `<Box $fullHeight>` (o componente aceita `fullH`) e `ActionButton name=` no lobby (aceita `text`). ~~`<Main $justifyContent>` no `UserProvider`~~ ✅ removida — `Main` só aceita `between` como booleano (`justify-between`/`justify-start`), não existe valor `'center'`.
 - [ ] **Remover `console.log` de debug** — `components/game/GameTable.jsx:30` e `app/(auth)/game/[id]/page.jsx:32`.
 - [ ] **Descomentar ou remover o matchmaking morto** em `app/(auth)/home/page.jsx:10-23`. ⚠️ Os 5 imports que alimentavam esse bloco (`useEffect`, `useDataObj`, `useUser`, `getRealtime`/`removeChannel`, `createMatch`) **já foram removidos** na limpeza do lint — se for descomentar, precisa readicioná-los.
-- [ ] **`PACK_CATEGORIES`, `insertPurchase` e `incPurchase`** em `presenters/packsPresenter.js` são dead code — decidir se o histórico de compras entra de verdade ou some.
+- [x] ~~**`PACK_CATEGORIES`, `insertPurchase` e `incPurchase`**~~ — o arquivo inteiro foi apagado. Ninguém importava, e apontava para `oJogo-users:packs`, que não existe no schema novo. Se o histórico de compras voltar, nasce como tabela `o_jogo.purchases` com RPC.
 - [ ] **Migrar `bugs.txt` para issues** do repositório.
 - [ ] **Imagem órfã** `public/cards/Gladsxódia.png` — não corresponde a nenhuma carta (o loader espera `{id}.png`).
 
@@ -160,6 +158,22 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 4. **Padronizar `id`** e consertar o deck editor.
 5. **Limpar o legado** (`cardsPresenter`, `databaseActions`, styled-components, lobby/game).
 6. **Modelar os efeitos das cartas** — é o que destrava o jogo.
+
+---
+
+## Estado da migração para `o_jogo`
+
+Migrations **aplicadas** ao banco em 2026-08-24. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
+
+**Ainda apontando para tabelas legadas** — parte da reescrita de `lobby`/`game`, que já estava pendente:
+
+- `app/(auth)/lobby/[id]/page.jsx` — `matches`, `users` (sem prefixo)
+- `app/(auth)/game/[id]/page.jsx` — `game-players`
+- `actions/controls/matchActions.js` — `matches`, `game-players`, e ainda usa `generateId`
+
+Como o client agora resolve tudo dentro de `o_jogo`, essas telas **falham na query** até a reescrita. Elas já não funcionavam antes (styled-components sem `ThemeProvider`), então não houve regressão de comportamento — mas o motivo da falha mudou.
+
+⚠️ **O backfill ainda não foi rodado.** Enquanto não rodar, `o_jogo.users` está vazia e ninguém consegue entrar: sem linha lá, `current_player_id()` devolve `null` e toda policy nega. Ver `supabase/manual/backfill_from_legacy.sql`.
 
 ---
 

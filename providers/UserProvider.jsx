@@ -8,6 +8,15 @@ import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
 const UserContext = createContext(null);
 
+// A colecao virou linhas (id_card, quantity) no banco, mas o resto do app
+// espera user.cards como array plano de ids, com a repeticao explicita:
+// [12, 12, 30]. Expandir aqui evita tocar colecao, decks e os modais.
+function expandCollection(rows){
+    return (rows ?? [])
+        .flatMap(({ id_card, quantity }) => Array(quantity).fill(id_card))
+        .sort((a, b) => a - b);
+}
+
 export function UserProvider({ children }){
 
     const router = useRouter();
@@ -25,10 +34,12 @@ export function UserProvider({ children }){
             router.push('/');
             return;
         }
+        // A colecao vem embutida: user_cards tem FK para users, entao o
+        // PostgREST resolve o join numa chamada so.
         const { data: userData, error: userError } = await supabase
-            .from('oJogo-users')
-            .select('*')
-            .eq('idAuth', data.user.id)
+            .from('users')
+            .select('id, id_auth, name, coins, user_cards(id_card, quantity)')
+            .eq('id_auth', data.user.id)
             .single();
         if(userError){
             setError(userError);
@@ -36,7 +47,7 @@ export function UserProvider({ children }){
             return;
         }
         setError(null);
-        return userData;
+        return { ...userData, cards: expandCollection(userData.user_cards) };
     }
 
     async function refreshUser() {

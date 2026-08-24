@@ -7,9 +7,9 @@ import { CARDS } from '@/assets/cards';
 import { CardForm } from '@/components/cards/CardForm';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
 export function PackDetailsModal({ 
-    user,
     refresh,
     pack,
     onClose
@@ -17,30 +17,23 @@ export function PackDetailsModal({
 
     const [selectedCardIndex, setSelectedCardIndex] = useState(0);
     const [drawnCards, setDrawnCards] = useState([]);
+    const [error, setError] = useState(null);
 
     if(pack == null) return null;
 
-    const cards = CARDS.filter(c => c.idPack == pack.id);
-
     async function handleBuy() {
-        if(user.coins < pack.price) {
-            alert('Você não tem coins suficientes para comprar este pack.');
-            return;
+        setError(null);
+        try{
+            // O sorteio acontece no servidor. Aqui so recebemos os ids e
+            // buscamos a arte no bundle para exibir.
+            const drawnIds = await buyPack(pack.id);
+            setDrawnCards(drawnIds.map(id => CARDS.find(c => c.id === id)).filter(Boolean));
+            setSelectedCardIndex(0);
+            await refresh();
+        }catch(err){
+            // Saldo insuficiente agora e decisao do banco, nao do cliente.
+            setError(err);
         }
-        const cardIds = cards.map(c => c.id);
-        const shuffled = [...cardIds].sort(() => Math.random() - 0.5);
-        const drawnIds = shuffled.slice(0, pack.quantity);
-        const newDrawnCards = cards.filter(card => 
-            drawnIds.includes(card.id)
-        );
-        setDrawnCards(newDrawnCards);
-        setSelectedCardIndex(0);
-        await buyPack({
-            userObj: user, 
-            newCardsIds: drawnIds,
-            price: pack.price
-        });
-        await refresh();
     }
 
     return (
@@ -68,9 +61,10 @@ export function PackDetailsModal({
                             height={480}
                         />
                     </CardForm>
-                    <ActionButton text={`Comprar por ${pack.price} coins`} 
+                    <ActionButton text={`Comprar por ${pack.price} coins`}
                         action={handleBuy}
                     />
+                    {error && <ErrorMessage error={error} />}
                 </div>}
                 {drawnCards.length > 0 && <div 
                     className='flex flex-col items-center gap-2'

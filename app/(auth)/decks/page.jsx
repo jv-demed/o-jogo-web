@@ -16,9 +16,10 @@ export default function Deck(){
     const { user } = useUser();
 
     const decks = useDataList({
-        table: 'oJogo-decks',
+        table: 'decks',
+        select: 'id, name, deck_cards(quantity)',
         order: 'name',
-        filter: e => e.eq('idUser', user.id)
+        filter: e => e.eq('id_user', user.id)
     });
 
     const [search, setSearch] = useState('');
@@ -67,7 +68,7 @@ export default function Deck(){
                                         >
                                             <span>{deck.name}</span>
                                             <span className='text-xs'>
-                                                N. Cartas: {deck.cards.length}
+                                                N. Cartas: {deck.deck_cards.reduce((n, c) => n + c.quantity, 0)}
                                             </span>
                                         </div>
                                     </li>
