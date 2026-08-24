@@ -8,14 +8,30 @@ Levantamento completo dos problemas da base existente, feito antes de retomar o 
 
 ---
 
-## Decisões em aberto
+## Decisões fechadas (2026-08-24)
 
-Precisam ser fechadas antes de mexer no banco, porque tudo depois depende delas.
+Estavam bloqueando o trabalho de banco. Fechadas; tudo abaixo depende delas.
 
-- [ ] **Namespace das tabelas.** Recomendado: schema dedicado (`o_jogo.users`, `o_jogo.decks`, ...), que permite `supabase db diff --schema o_jogo` e isola dos outros projetinhos. Alternativa: prefixo no `public` — nesse caso usar `o_jogo_users` (underscore) em vez de `o_jogo-users`, para evitar aspas duplas em toda referência SQL.
-- [ ] **Colunas em snake_case?** Hoje são camelCase (`idAuth`, `idUser`, `dateRealease` — com typo). Mesma dor de aspas do hífen. A renomeação sai barata agora, junto com a migração das tabelas.
-- [ ] **Cadastro aberto ou por convite?** Como o `auth.users` é compartilhado, qualquer pessoa cadastrada em outro projetinho já tem JWT válido aqui.
-- [ ] **Onde as cartas moram** — bundle JS (hoje) ou tabela no Postgres. O servidor precisa conhecê-las para validar jogadas.
+- [x] **Namespace: schema dedicado `o_jogo`.** `o_jogo.users`, `o_jogo.decks`, `o_jogo.matches`, `o_jogo.cards`. Permite `supabase db diff --schema o_jogo` sem capturar os outros projetinhos, e isola RLS/grants. ⚠️ Exige expor o schema em *API Settings → Exposed schemas* no painel do Supabase, e passar `{ db: { schema: 'o_jogo' } }` na criação do client.
+- [x] **Colunas em snake_case.** `idAuth` → `id_auth`, `idUser` → `id_user`, `dateRealease` → `date_release` (corrige o typo de quebra). Feito junto com a migração das tabelas, enquanto é barato.
+- [x] **Cadastro: fechado, usuários criados manualmente pelo dono.** Não existe fluxo de signup no app. **Consequência:** o item "falta `signUp`" mais abaixo sai de escopo — só `signOut` e recuperação de senha continuam necessários. As policies precisam checar participação no jogo (linha em `o_jogo.users`), nunca só `auth.uid() is not null`, já que o `auth.users` é compartilhado.
+- [x] **Cartas: tabela `o_jogo.cards` como fonte única.** Id, nível, preço, tipo, pack e efeito no Postgres, para o servidor validar jogada e preço de venda dentro da RPC. A arte **continua estática** em `public/cards/{id}.png` via `next/image` — nunca passou pelo banco e não passa a passar, então isso não afeta o tempo de exibição da carta. `assets/cards.js` deixa de ser fonte de verdade.
+  - *Nota:* a lentidão ao abrir a carta não vinha daqui — vem dos PNGs em tamanho cheio renderizados a `scale={0.24}`, item da seção Visual e UX.
+
+### Renomeações implicadas
+
+Nomes atuais → destino. Os três últimos hoje **não têm prefixo nenhum**, o que num banco compartilhado é um risco real de colidir com tabela de outro projetinho:
+
+| Hoje | Destino |
+|---|---|
+| `oJogo-users` | `o_jogo.users` |
+| `oJogo-decks` | `o_jogo.decks` |
+| `oJogo-users:packs` | `o_jogo.user_packs` |
+| `matches` (sem prefixo) | `o_jogo.matches` |
+| `users` (sem prefixo, no lobby) | `o_jogo.users` |
+| `game-players` (sem prefixo) | `o_jogo.match_players` |
+
+O nome `oJogo-users:packs` tem hífen **e** dois-pontos, exigindo aspas duplas em toda referência SQL — some com a migração.
 
 ---
 
@@ -65,7 +81,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **Loja não ordena os packs** — `app/(auth)/loja/page.jsx:26` itera `PACKS` na ordem literal do array. `dateRealease` (typo) não é usado.
 - [ ] **`insertRecord` estoura em erro** — `supabase/crud.js:9` faz `return data[0]` sem checar `error`.
 - [ ] **Login não funciona no Enter** — `components/containers/Form.jsx` recebe `onSubmit`, mas `app/page.jsx` não passa nenhum; o botão `type='submit'` dispara via `onClick`.
-- [ ] **Não existe logout nem cadastro** — `services/AuthService.js` só tem `login`. Falta `signOut`, `signUp` e recuperação de senha.
+- [ ] **Não existe logout** — `services/AuthService.js` só tem `login`. Falta `signOut` e recuperação de senha. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24).
 - [ ] **Realtime sem filtro e vazando entre projetos** — `supabase/realtime.js` escuta `{ event: '*', schema: 'public' }` com nome de canal fixo. No banco compartilhado, isso é *toda mudança em toda tabela de todos os projetinhos*. Filtrar por schema e por partida.
 - [ ] **Adicionar as tabelas à publication do realtime** — `ALTER PUBLICATION supabase_realtime ADD TABLE o_jogo.matches`.
 - [ ] Após vender a última cópia de uma carta, o `selectedCardIndex` do modal fica apontando pro índice errado (hoje mascarado pelo `disabled={repetitions == 1}`).
@@ -139,7 +155,7 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 ## Ordem sugerida de ataque
 
 1. ~~**ESLint**~~ — ✅ feito. Sobrou o **TypeScript**, que é o item caro e o que realmente fecha os buracos que o lint não cobre.
-2. **Fechar as decisões em aberto** (namespace, snake_case).
+2. ~~**Fechar as decisões em aberto**~~ — ✅ feito em 2026-08-24: schema `o_jogo`, snake_case, cadastro fechado, cartas no Postgres. Ver a seção *Decisões fechadas*.
 3. **Migrations + RLS + RPCs** de economia — resolve segurança e races de uma vez.
 4. **Padronizar `id`** e consertar o deck editor.
 5. **Limpar o legado** (`cardsPresenter`, `databaseActions`, styled-components, lobby/game).
