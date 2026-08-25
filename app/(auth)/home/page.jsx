@@ -1,41 +1,39 @@
 'use client'
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createMatch } from '@/presenters/matchesPresenter';
 import { Main } from '@/components/containers/Main';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
 
 export default function Home(){
 
     const router = useRouter();
 
-    // const match = useDataObj({
-    //     table: 'matches',
-    //     filter: e => e.eq('status', 'waiting')
-    // });
+    const [error, setError] = useState(null);
 
-    // useEffect(() => {
-    //     const channel = getRealtime({ 
-    //         name: 'matches realtime',
-    //         table: 'matches',
-    //         callback: match.refresh
-    //     });
-    //     return () => removeChannel(channel);
-    // }, []);
+    // O bloco de matchmaking que morava comentado aqui procurava "a" partida
+    // em espera - uma so, global. Nao sobrevive a RLS: matches_read_participant
+    // so mostra partida de que o jogador ja participa, entao nao ha como
+    // descobrir a sala de outra pessoa. Quem entra, entra pelo link do lobby.
+    async function handlePlay(){
+        setError(null);
+        try{
+            const idMatch = await createMatch();
+            router.push(`/lobby/${idMatch}`);
+        }catch(err){
+            setError(err);
+        }
+    }
 
     return (
         <Main style={{
             marginTop: '30px'
         }}>
-            {/* <ActionButton name={`Jogar${match.obj ? ` (${match.obj.players.length} esperando)` : ''}`}
-                action={async () => await createMatch({
-                    user: user,
-                    match: match.obj,
-                    router: router
-                })}
-            /> */}
             <ActionButton text='Jogar'
-                disabled
+                action={handlePlay}
             />
-            <ActionButton text='Decks' 
+            <ActionButton text='Decks'
                 action={() => router.push('/decks')}
                 disabled
             />
@@ -45,6 +43,7 @@ export default function Home(){
             <ActionButton text='Loja'
                 action={() => router.push('/loja')}
             />
+            {error && <ErrorMessage error={error} />}
         </Main>
     );
 }

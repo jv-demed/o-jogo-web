@@ -1,42 +1,35 @@
-import styled from 'styled-components';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Opponent } from './Opponent';
 
-const Styled = styled.section`
-    border: 1px solid red;
-    display: flex;
-    flex-grow: 1;
-    .list{
-        gap: 5px;
-    }
-`;
+/**
+ * Adversarios em ordem de turno a partir de quem esta jogando: o proximo a
+ * jogar aparece primeiro.
+ *
+ * `player` e a linha do jogador atual em match_players - e de la que vem a
+ * `position`, que nao existe no perfil.
+ */
+export function GameTable({ player, players }){
 
-export function GameTable({ user, players }){
-
-    const [opponents, setOpponents] = useState([]);
-
-    useEffect(() => {
-        const userPosition = user.position;
-        const sortedOpponents = players
-            .filter(p => p.id !== user.id)
+    const opponents = useMemo(() => {
+        if(!player || players.length === 0) return [];
+        return players
+            .filter(other => other.id !== player.id)
             .sort((a, b) => {
-                const relativePositionA = (a.position - userPosition + players.length) % players.length;
-                const relativePositionB = (b.position - userPosition + players.length) % players.length;
-                return relativePositionA - relativePositionB;
+                const relativeA = (a.position - player.position + players.length) % players.length;
+                const relativeB = (b.position - player.position + players.length) % players.length;
+                return relativeA - relativeB;
             });
-        setOpponents(sortedOpponents);
-    }, [user, players]);
-
+    }, [player, players]);
 
     return (
-        <Styled>
-            <ul className='flexC list'>
-                {opponents.map(op => (
-                    <li key={op.id}>
-                        <Opponent player={op} />
+        <section className='flex flex-1 justify-center w-full'>
+            <ul className='flex flex-col items-center gap-1.5'>
+                {opponents.map(opponent => (
+                    <li key={opponent.id}>
+                        <Opponent player={opponent} />
                     </li>
                 ))}
             </ul>
-        </Styled>
+        </section>
     );
 }

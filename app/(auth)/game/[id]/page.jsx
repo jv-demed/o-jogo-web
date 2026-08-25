@@ -1,47 +1,64 @@
 'use client'
-
-import styled from 'styled-components';
-import { useDataList } from '@/hooks/useDataList';
+import { useEffect, useState } from 'react';
 import { useUser } from '@/providers/UserProvider';
+import { getMatchPlayers } from '@/presenters/matchesPresenter';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { GameTable } from '@/components/game/GameTable';
+import { SpinLoader } from '@/components/elements/SpinLoader';
+import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
-const Styled = styled.div`
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    height: 100%;
-    justify-content: space-between;
-    .hand{
-        border: 1px solid blue;
-        height: 200px;
-    }
-`;
-
-export default function Game(){
+/**
+ * Esqueleto da partida.
+ *
+ * Continua esqueleto de proposito: nao existem regras definidas (turnos, mao,
+ * compra, resolucao, condicao de vitoria) nem os efeitos das cartas como dados
+ * estruturados - os dois itens estao em PENDENCIAS.md. O que esta reescrito
+ * aqui e so a camada de dados: antes esta tela consultava `game-players`, uma
+ * tabela sem prefixo que sumiu na migracao para o schema o_jogo, e estilizava
+ * com styled-components sem ThemeProvider.
+ */
+export default function Game({ params }){
 
     const { user } = useUser();
 
-    const players = useDataList({
-        table: 'game-players',
-        select: '*',
-        order: 'position'
-    });
+    const idMatch = Number(params.id);
 
+    const [players, setPlayers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        getMatchPlayers(idMatch)
+            .then(list => isMounted && setPlayers(list))
+            .catch(err => isMounted && setError(err))
+            .finally(() => isMounted && setIsLoading(false));
+        return () => { isMounted = false; };
+    }, [idMatch]);
+
+    const player = players.find(row => row.id === user.id);
 
     return (
         <Main>
-            <Box $fullHeight>
-                {!players.loading && <Styled>
-                    <GameTable 
-                        user={user}
-                        players={players.list}
-                    />
-                    <section className='flexC hand'>
-                        oi
-                    </section>
-                </Styled>}
+            <Box fullH>
+                {isLoading
+                    ? <SpinLoader marginTop='20px' />
+                    : <div className='flex flex-col justify-between gap-4 h-full'>
+                        {error && <ErrorMessage error={error} />}
+                        <GameTable
+                            player={player}
+                            players={players}
+                        />
+                        <section className={`
+                            flex items-center justify-center
+                            h-[200px] w-full
+                            rounded border border-dashed border-gray-600
+                            text-sm text-gray-400
+                        `}>
+                            Mão do jogador — depende das regras da partida.
+                        </section>
+                    </div>}
             </Box>
         </Main>
     );

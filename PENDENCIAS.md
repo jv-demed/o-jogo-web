@@ -55,7 +55,7 @@ Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 99
 ### 3. Race condition de leitura-modificação-escrita
 
 - [x] ~~Lost update em `buyPack`/`sellCard`~~ — não há mais snapshot: as RPCs usam `select ... for update` na linha do jogador, e a coleção virou linhas `(id_card, quantity)` em vez de array reescrito inteiro.
-- [ ] **`generateId` gera id no cliente** (`actions/database/databaseActions.js:29`) pegando o último item de um `select` **sem `order by`**. Não determinístico e colide com concorrência. Substituir por `identity`/`uuid` no banco e apagar a função. É a causa raiz do que estava no `bugs.txt`.
+- [x] ~~**`generateId` gera id no cliente**~~ — a pasta `actions/` inteira foi apagada. `matches` e `decks` já nasciam com `identity` no schema novo; quem cria a partida agora é a RPC `create_match`, que devolve o id gerado pelo Postgres.
 
 ### 4. Deck editor grava dados corrompidos
 
@@ -70,7 +70,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 ## 🟠 Bugs de lógica e React
 
 - [x] ~~**`usePersistentState` quebra no SSR**~~ — o estado nasce com `initialValue` e a leitura do `localStorage` foi para um `useEffect`; um `useRef` de hidratação impede que o primeiro render sobrescreva o valor salvo. Leitura e escrita em `try/catch` (modo privativo bloqueia storage).
-- [x] ~~**`useUser()` desestruturado errado em lobby e game**~~ — corrigido para `const { user } = useUser()` nos dois arquivos.- [ ] **Comparação de objeto com string** — `lobby/[id]/page.jsx:88`: `match.obj == 'progress'` (deveria ser `match.obj?.status`); e o push é pra `/game` sem id.
+- [x] ~~**`useUser()` desestruturado errado em lobby e game**~~ — corrigido para `const { user } = useUser()` nos dois arquivos.- [x] ~~**Comparação de objeto com string**~~ — some com a reescrita do lobby: o efeito observa `match?.status` e navega para `/game/${idMatch}`.
 - [x] ~~**Import inexistente**~~ — o lobby importava `{ Loading }` de `SpinLoader`, que exporta `SpinLoader`. Crash na renderização. **Corrigido**: import e os 3 usos passaram a `SpinLoader`. ⚠️ **O ESLint não pega isso** (tentamos `import/named`: a regra não dispara com o parser do Next). Quem pega é o `npm run build`: `Attempted import error: 'Loading' is not exported`. Rodar o build no CI, não só o lint.
 - [x] ~~**`CardDetailsModal` sem `user` no editor de deck**~~ — passa `user` e `refresh` agora.
 - [x] ~~**Loading eterno**~~ — `providers/UserProvider.jsx`: `setIsLoading(false)` agora roda em `.finally()`, e o caminho de falha renderiza `ErrorMessage` em vez de spinner infinito. O erro do Supabase é guardado em estado (`setError`) nos dois pontos de saída de `getUser()`.
@@ -81,20 +81,21 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [x] ~~**`insertRecord` estoura em erro**~~ — `insertRecord` e `updateRecord` agora dão `throw error` em vez de `console.log` + `data[0]` sobre `null`.
 - [x] ~~**Login não funciona no Enter**~~ — `app/page.jsx` passa `onSubmit={handleSubmit}` ao `Form`; o `action=` do `ActionButton` saiu, senão o submit e o `onClick` disparariam o login duas vezes.
 - [ ] **Não existe logout no header** — `services/AuthService.js` só tem `login`. Falta expor `signOut` como serviço e a recuperação de senha. Já existe um `supabase.auth.signOut()` inline na tela de "sem perfil de jogador" do `UserProvider`, que era um beco sem saída; consolidar no `AuthService` quando o header ganhar navegação. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24).
-- [ ] **Realtime sem filtro e vazando entre projetos** — `supabase/realtime.js` escuta `{ event: '*', schema: 'public' }` com nome de canal fixo. No banco compartilhado, isso é *toda mudança em toda tabela de todos os projetinhos*. Filtrar por schema e por partida.
-- [ ] **Adicionar as tabelas à publication do realtime** — `ALTER PUBLICATION supabase_realtime ADD TABLE o_jogo.matches`.
+- [x] ~~**Realtime sem filtro e vazando entre projetos**~~ — `getRealtime` passou a receber `filter` e a escutar `schema: 'o_jogo'`, com nome de canal derivado de `(tabela, filtro)` em vez de fixo. O lobby abre dois canais, ambos presos a esta partida (`id_match=eq.{id}` e `id=eq.{id}`).
+- [x] ~~**Adicionar as tabelas à publication do realtime**~~ — `matches` e `match_players` entram na `supabase_realtime` na migration 0007, num bloco idempotente (não existe `add table if not exists`). `match_players` ganhou `replica identity full`, senão o evento de saída não diz quem saiu.
 - [x] ~~Índice errado após vender a última cópia~~ — vender a última passou a ser permitido (`disabled={repetitions == 0}`) e fecha o modal, em vez de deixar o índice órfão.
-- [ ] **4 warnings de `exhaustive-deps` sobraram** no lint — `lobby/[id]/page.jsx:83,87,95` (`match.refresh`, `players`, `router`) e `AutoFitText.jsx:20` (`maxHeight`). Não corrigidos de propósito: mexer em array de dependência muda comportamento em runtime, e os 3 do lobby morrem junto com a reescrita do lobby.
+- [ ] **1 warning de `exhaustive-deps`** no lint — `AutoFitText.jsx:20` (`maxHeight`). Os 3 do lobby morreram com a reescrita, como previsto; os loaders agora são `useCallback` e entram nas dependências de verdade. Este último sai junto da reescrita do `AutoFitText` (seção *Visual e UX*).
+- [x] ~~**`no-undef` não enxergava os globais de ES2015+**~~ — achado durante a reescrita: `Promise`, `Map` e `Set` eram erro de lint, porque o `.eslintrc.json` ligava `no-undef` sem declarar `env`. `"env": { "browser": true, "node": true, "es2022": true }` resolve. Estava mascarado porque nenhum arquivo usava esses nomes diretamente.
 
 ---
 
 ## 🟡 Código legado / dívida técnica
 
-- [x] ~~**Apagar `presenters/cardsPresenter.js`**~~ — apagado.- [ ] **Consolidar as 3 camadas de dados concorrentes**: `actions/database/databaseActions.js` (antiga), `supabase/crud.js` (nova) e queries inline no `UserProvider`/hooks. Escolher uma: repositórios por entidade.
-- [ ] **Reescrever `lobby`, `game`, `GameTable` e `Opponent`** — usam styled-components com `theme.content`/`theme.primary`, mas **não existe `ThemeProvider`** no projeto, então todas as cores saem `undefined`. Depois, remover styled-components do `package.json`.
-- [ ] **Props fantasma**: `<Box $fullHeight>` (o componente aceita `fullH`) e `ActionButton name=` no lobby (aceita `text`). ~~`<Main $justifyContent>` no `UserProvider`~~ ✅ removida — `Main` só aceita `between` como booleano (`justify-between`/`justify-start`), não existe valor `'center'`.
+- [x] ~~**Apagar `presenters/cardsPresenter.js`**~~ — apagado.- [ ] **Consolidar as camadas de dados** — `actions/` foi apagada e a partida virou `presenters/matchesPresenter.js`, junto de `usersPresenter` e `decksPresenter`. Sobraram `supabase/crud.js` (genérico, sem consumidor hoje) e as queries inline no `UserProvider` e nos hooks `useDataObj`/`useDataList`, que ainda seguram a tela de decks.
+- [x] ~~**Reescrever `lobby`, `game`, `GameTable` e `Opponent`**~~ — os quatro passaram para Tailwind e `styled-components` saiu do `package.json`. O `lobby` foi reescrito de verdade (entrar pelo link, realtime filtrado, host reordena e começa); `game`, `GameTable` e `Opponent` **continuam esqueleto** — trocaram a camada de dados e o estilo, mas regra de partida não existe ainda.
+- [x] ~~**Props fantasma**~~: `<Box $fullHeight>` e `ActionButton name=` sumiram na reescrita do lobby e do game — os dois arquivos eram os únicos que erravam o nome. ~~`<Main $justifyContent>` no `UserProvider`~~ ✅ removida — `Main` só aceita `between` como booleano (`justify-between`/`justify-start`), não existe valor `'center'`.
 - [x] ~~**Remover `console.log` de debug**~~ — os dois removidos. Os que sobram são de tratamento de erro (`databaseActions`, hooks), que morrem junto com a consolidação das camadas de dados.
-- [ ] **Descomentar ou remover o matchmaking morto** em `app/(auth)/home/page.jsx:10-23`. ⚠️ Os 5 imports que alimentavam esse bloco (`useEffect`, `useDataObj`, `useUser`, `getRealtime`/`removeChannel`, `createMatch`) **já foram removidos** na limpeza do lint — se for descomentar, precisa readicioná-los.
+- [x] ~~**Descomentar ou remover o matchmaking morto**~~ — removido, e o botão *Jogar* voltou a funcionar por outro caminho. O bloco antigo procurava *a* partida em espera, uma só e global; isso não sobrevive à RLS, porque `matches_read_participant` só mostra partida de que o jogador já participa. Agora *Jogar* cria a partida (`create_match`, idempotente) e quem entra, entra pelo link `/lobby/{id}`.
 - [x] ~~**`PACK_CATEGORIES`, `insertPurchase` e `incPurchase`**~~ — o arquivo inteiro foi apagado. Ninguém importava, e apontava para `oJogo-users:packs`, que não existe no schema novo. Se o histórico de compras voltar, nasce como tabela `o_jogo.purchases` com RPC.
 - [ ] **Migrar `bugs.txt` para issues** do repositório.
 - [x] ~~**Imagem órfã** `public/cards/Gladsxódia.png`~~ — apagada. `scripts/gen-catalog-seed.mjs` agora reporta `arquivos orfaos: []`.
@@ -163,15 +164,9 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 
 ## Estado da migração para `o_jogo`
 
-Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. A `0005` corrigiu um `42P17` (recursão infinita) nas policies da 0003, que derrubava até o login. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
+Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. ⚠️ **Pendente: `20260824000007_rpc_match.sql`** — as RPCs de partida (`create_match`, `join_match`, `reorder_match_players`, `start_match`) e a entrada das tabelas na publication do realtime. Sem ela o botão *Jogar* e o lobby não funcionam. A `0005` corrigiu um `42P17` (recursão infinita) nas policies da 0003, que derrubava até o login. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
 
-**Ainda apontando para tabelas legadas** — parte da reescrita de `lobby`/`game`, que já estava pendente:
-
-- `app/(auth)/lobby/[id]/page.jsx` — `matches`, `users` (sem prefixo)
-- `app/(auth)/game/[id]/page.jsx` — `game-players`
-- `actions/controls/matchActions.js` — `matches`, `game-players`, e ainda usa `generateId`
-
-Como o client agora resolve tudo dentro de `o_jogo`, essas telas **falham na query** até a reescrita. Elas já não funcionavam antes (styled-components sem `ThemeProvider`), então não houve regressão de comportamento — mas o motivo da falha mudou.
+**Nenhuma tela aponta mais para tabela legada.** `lobby` e `game` foram reescritos sobre `o_jogo.matches`/`o_jogo.match_players`, e `actions/controls/matchActions.js` foi apagado junto de `actions/database/databaseActions.js`.
 
 ✅ **O backfill não será usado.** Optou-se por resetar: os dados legados foram descartados e o jogador é criado do zero. `supabase/manual/backfill_from_legacy.sql` fica no repositório como registro do que existia, mas não deve ser executado — as tabelas legadas foram renomeadas para `*_legacy` e seus `idAuth` foram zerados pela FK `set null`, então o join dele não encontraria ninguém.
 
@@ -203,6 +198,8 @@ Nada foi executado contra o banco ainda — os arquivos existem, mas o Supabase 
 ---
 
 ## Já resolvido
+
+- **Reescrita do lobby (2026-08-24)** — fecha o último bloqueador 🔴 (`generateId`), o realtime vazando entre projetinhos, as tabelas legadas nas telas de partida, as props fantasma, o matchmaking morto do home e 3 dos 4 warnings de `exhaustive-deps`. `styled-components` saiu do projeto. `game` continua esqueleto de propósito: falta regra de partida.
 
 - **Auditoria de RLS (2026-08-24)** — as 8 tabelas do `o_jogo` conferidas policy a policy. O desenho da 0003/0005 se sustentou: economia fechada para escrita do cliente, nenhuma policy contente com JWT válido, nenhum `service_role` no repositório. Os 4 furos achados estão na migration 0006, aplicada em 2026-08-24. Auditoria repetível em `supabase/manual/audit_rls.sql`.
 

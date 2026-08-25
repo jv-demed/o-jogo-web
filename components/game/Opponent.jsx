@@ -1,19 +1,12 @@
-import styled from 'styled-components';
-
-const Styled = styled.div`
-    align-items: center;
-    border: 1px solid white;
-    border-radius: 4px;
-    display: flex;
-    height: 40px;
-    justify-content: center;
-    width: 70px;
-`;
-
 export function Opponent({ player }){
     return (
-        <Styled>
+        <div className={`
+            flex items-center justify-center
+            h-10 w-[70px] px-1
+            rounded border border-white
+            text-xs text-center truncate
+        `}>
             {player.name}
-        </Styled>
+        </div>
     );
 }
