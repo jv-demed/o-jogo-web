@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/supabase/client';
+import { signOut } from '@/services/AuthService';
 import { Main } from '@/components/containers/Main';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
@@ -85,7 +86,7 @@ export function UserProvider({ children }){
     if(!user){
         // Sem perfil de jogador nao ha para onde navegar: a sessao continua
         // valida, entao voltar para '/' so traria de volta para ca. A saida
-        // e encerrar a sessao.
+        // e encerrar a sessao, pelo mesmo signOut que o Header usa.
         return (
             <Main>
                 <div className='flex flex-col items-center gap-4 pt-8'>
@@ -93,8 +94,9 @@ export function UserProvider({ children }){
                     <ActionButton text='Sair'
                         width='200px'
                         action={async () => {
-                            await supabase.auth.signOut();
-                            router.push('/');
+                            await signOut();
+                            router.replace('/');
+                            router.refresh();
                         }}
                     />
                 </div>

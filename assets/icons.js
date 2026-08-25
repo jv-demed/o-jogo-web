@@ -1,9 +1,9 @@
 import { BsFire, BsLightningCharge } from 'react-icons/bs';
 import { RiErrorWarningLine, RiSpyLine } from 'react-icons/ri';
 import { PiBeerBottleBold, PiSword, PiCross } from 'react-icons/pi';
-import { AiOutlineLogin, AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { AiOutlineLogin, AiOutlineLogout, AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl, FaShieldAlt, FaRegStar } from 'react-icons/fa';
-import { IoEyeOutline, IoEyeOffOutline, IoClose, IoAddOutline, IoChevronDown, IoChevronUp, IoChevronBack, IoChevronForward, IoList, IoAppsSharp } from 'react-icons/io5';
+import { IoEyeOutline, IoEyeOffOutline, IoClose, IoAddOutline, IoChevronDown, IoChevronUp, IoChevronBack, IoChevronForward, IoList, IoAppsSharp, IoMenu } from 'react-icons/io5';
 
 export const ICONS = {
     add: IoAddOutline,
@@ -25,6 +25,8 @@ export const ICONS = {
     investigation: RiSpyLine,
     list: FaListUl,
     login: AiOutlineLogin,
+    logout: AiOutlineLogout,
+    menu: IoMenu,
     quick: BsLightningCharge,
     shot: PiBeerBottleBold,
     spinLoader: AiOutlineLoading3Quarters,

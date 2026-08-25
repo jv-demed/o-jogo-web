@@ -43,8 +43,8 @@ Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 99
 
 - [x] ~~**Sorteio do pack acontece no navegador**~~ — virou `o_jogo.buy_pack`.- [x] ~~**Validação de saldo só no cliente**~~ — a conferência saiu do modal; quem recusa é a RPC, e `coins` tem `check (coins >= 0)`.
 - [x] ~~**`buyPack` e `sellCard` fazem UPDATE direto do browser**~~ — os dois viraram `supabase.rpc(...)`. O preço mora em `o_jogo.card_sell_price`; `cardSellPrice()` no cliente é só rótulo de botão.
-- [x] ~~**Auditar RLS**~~ — auditadas as 8 tabelas. `coins` e `user_cards` são select-only de fato: não existe policy nem grant de `UPDATE` em `o_jogo.users`, então toda mutação de economia só entra por RPC. Os 4 furos achados viraram `supabase/migrations/20260824000006_rls_audit_fixes.sql`, **aplicada**. `supabase/manual/audit_rls.sql` reexecuta a auditoria contra o banco a qualquer momento.
-- [x] ~~**Policies precisam checar participação no jogo**~~ — confirmado: nenhuma das 12 policies usa `auth.uid() is not null`; todas passam por `o_jogo.current_player_id()`, que exige linha em `o_jogo.users`. O bloco 3 do `audit_rls.sql` vigia isso.
+- [x] ~~**Auditar RLS**~~ — auditadas as 8 tabelas. `coins` e `user_cards` são select-only de fato: não existe policy nem grant de `UPDATE` em `o_jogo.users`, então toda mutação de economia só entra por RPC. Os 4 furos achados viraram a migration `0006`, **aplicada**. O script repetível `audit_rls.sql` reexecutava a auditoria contra o banco; saiu do repositório com o resto do SQL e vive em `885c83c`.
+- [x] ~~**Policies precisam checar participação no jogo**~~ — confirmado: nenhuma das 12 policies usa `auth.uid() is not null`; todas passam por `o_jogo.current_player_id()`, que exige linha em `o_jogo.users`. O bloco 3 do `audit_rls.sql` vigiava isso (script hoje só no histórico).
 - [x] ~~**Não usar `service_role` no app**~~ — confirmado: a string não aparece em nenhum arquivo do repositório fora de um comentário de migration. `supabase/client.js` e `supabase/server.js` usam só `NEXT_PUBLIC_SUPABASE_ANON_KEY`, e o `.env.example` documenta as duas chaves como públicas.
 
 ### 2. ~~Middleware de autenticação não protege nada~~ ✅ resolvido
@@ -75,12 +75,12 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [x] ~~**`CardDetailsModal` sem `user` no editor de deck**~~ — passa `user` e `refresh` agora.
 - [x] ~~**Loading eterno**~~ — `providers/UserProvider.jsx`: `setIsLoading(false)` agora roda em `.finally()`, e o caminho de falha renderiza `ErrorMessage` em vez de spinner infinito. O erro do Supabase é guardado em estado (`setError`) nos dois pontos de saída de `getUser()`.
 - [x] ~~**Dois `useEffect` disputando `userCards`**~~ — viraram um só, que reparte a coleção entre "no deck" e "disponível". A lista filtrada virou `useMemo`.
-- [ ] **Cartas repetidas não são suportadas no deck** — `handleAddCard`/`handleRemoveCard` usam `findIndex(c => c.id === card.id)`, apesar de a coleção permitir repetição.
+- [x] ~~**Cartas repetidas não são suportadas no deck**~~ — item desatualizado, fechado na conferência de 2026-08-24. `userCards` e `selectedCards` são arrays planos **com** repetição, então `findIndex` + `splice(index, 1)` move exatamente uma cópia de uma lista para a outra, que é o comportamento correto. O `findIndex` só seria bug sobre uma coleção agregada `(id, quantity)`, que não é a forma usada aqui.
 - [x] ~~**Filtro por índice em vez de id**~~ — as 4 ocorrências de `idPack == i+1` viraram `idPack == pack.id`, e o índice do `map` saiu da assinatura.
 - [x] ~~**Loja não ordena os packs**~~ — `ORDERED_PACKS` ordena por data de lançamento (mais recente primeiro). O typo `dateRealease` virou `dateRelease` em `assets/packs.js` e em `scripts/gen-catalog-seed.mjs` — o seed continua gerando idêntico.
 - [x] ~~**`insertRecord` estoura em erro**~~ — `insertRecord` e `updateRecord` agora dão `throw error` em vez de `console.log` + `data[0]` sobre `null`.
 - [x] ~~**Login não funciona no Enter**~~ — `app/page.jsx` passa `onSubmit={handleSubmit}` ao `Form`; o `action=` do `ActionButton` saiu, senão o submit e o `onClick` disparariam o login duas vezes.
-- [ ] **Não existe logout no header** — `services/AuthService.js` só tem `login`. Falta expor `signOut` como serviço e a recuperação de senha. Já existe um `supabase.auth.signOut()` inline na tela de "sem perfil de jogador" do `UserProvider`, que era um beco sem saída; consolidar no `AuthService` quando o header ganhar navegação. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24).
+- [x] ~~**Não existe logout no header**~~ — `signOut` virou server action em `services/AuthService.js`, espelhando o `login`. Feito no servidor de propósito: revoga o refresh token e limpa os cookies na mesma resposta; só no browser, o auto-refresh do client reescreveria o cookie. O `supabase.auth.signOut()` inline da tela de "sem perfil de jogador" do `UserProvider` passou a chamar o mesmo serviço, e os dois pontos usam `router.replace('/')` + `refresh()` — com `push`, o botão de voltar do celular devolvia para uma tela autenticada e já sem sessão. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24). **Falta ainda a recuperação de senha.**
 - [x] ~~**Realtime sem filtro e vazando entre projetos**~~ — `getRealtime` passou a receber `filter` e a escutar `schema: 'o_jogo'`, com nome de canal derivado de `(tabela, filtro)` em vez de fixo. O lobby abre dois canais, ambos presos a esta partida (`id_match=eq.{id}` e `id=eq.{id}`).
 - [x] ~~**Adicionar as tabelas à publication do realtime**~~ — `matches` e `match_players` entram na `supabase_realtime` na migration 0007, num bloco idempotente (não existe `add table if not exists`). `match_players` ganhou `replica identity full`, senão o evento de saída não diz quem saiu.
 - [x] ~~Índice errado após vender a última cópia~~ — vender a última passou a ser permitido (`disabled={repetitions == 0}`) e fecha o modal, em vez de deixar o índice órfão.
@@ -108,7 +108,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **Deps de `useDataList`/`useDataObj`** (`useDataList.jsx:40`, `useDataObj.jsx:41`) dependem só de `flag`. ⚠️ O `exhaustive-deps` **não** acusa isso — só analisa hooks nativos e não relaciona o corpo do `useEffect` às variáveis externas ali. Continua sendo revisão manual.
 - [ ] **Separar as camadas**: `domain/` (regras puras e testáveis — economia, deck building, resolução de carta), `data/` (Supabase), `presentation/`. Hoje `presenters/` mistura JSX com `insert`.
   - *Bônus:* com `domain/` puro, extrair um serviço separado depois vira mover uma pasta — por isso a decisão de não criar repo de API agora é barata de reverter.
-- [x] ~~**Regras de economia para o Postgres**~~ — `buy_pack` e `sell_card` escritas em `supabase/migrations/20260824000004_rpc_economy.sql`, e o schema agora está versionado em `supabase/migrations/`. ⚠️ **Ainda não aplicadas ao banco** — falta rodar (ver *Como aplicar*).
+- [x] ~~**Regras de economia para o Postgres**~~ — `buy_pack` e `sell_card` escritas em `supabase/migrations/20260824000004_rpc_economy.sql`, e o schema agora está versionado em `supabase/migrations/`. Aplicadas ao banco em 2026-08-24. Os arquivos SQL saíram do repositório depois disso (ver *SQL: onde mora agora*).
 - [ ] **`supabase db diff --schema o_jogo`** no fluxo de migration, para não capturar as tabelas dos outros projetinhos.
 - [ ] **Design tokens no Tailwind v4** — `#1b5b82`, `#e2d4b8`, `#171717`, `#212121` hardcoded em ~10 arquivos. Bloco `@theme` em `styles/globals.css`.
 - [ ] **Tratamento de erro visível** — todo `catch` faz `console.log`; a loja usa `alert()`. Criar padrão de toast/estado de erro usando o `ErrorMessage` existente (já consumido por `TextInput` e `PasswordInput`).
@@ -133,7 +133,7 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 - [ ] **Interação inconsistente** — long-press abre o detalhe na grid (`GridCollection.jsx:21`) mas a lista usa clique simples. E não há feedback visual durante os 450ms do press.
 - [ ] **Modais sem fechar por backdrop nem `Esc`**, sem trap de foco e sem travar o scroll do body (`CardDetailsModal`, `PackDetailsModal`).
 - [ ] **`next/font`** em vez de `font-[verdana]` inline em `Main.jsx:11`.
-- [ ] **Header sem navegação** — só nome e coins; falta logout/perfil.
+- [x] ~~**Header sem navegação**~~ — `components/containers/Header.jsx` ganhou um menu com Início, Coleção e Loja, mais *Sair*. Decks fica de fora enquanto o botão da home estiver `disabled`. O painel fecha por `Esc`, por clique fora e na troca de rota (o `Header` vive no layout e não remonta sozinho). Tudo em `<button>` de 48px, já dentro do item *Alvos de toque e semântica*. Falta perfil — não existe tela.
 - [ ] **Sem estado de erro nem empty state** na compra de pack (só o `alert`).
 - [ ] **PWA** — o `manifest.json` está comentado em `app/layout.jsx:6`. Se a ideia é rodar no celular (o CSS todo aponta pra isso), fechar o suporte.
 
@@ -164,11 +164,11 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 
 ## Estado da migração para `o_jogo`
 
-Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. ⚠️ **Pendente: `20260824000007_rpc_match.sql`** — as RPCs de partida (`create_match`, `join_match`, `reorder_match_players`, `start_match`) e a entrada das tabelas na publication do realtime. Sem ela o botão *Jogar* e o lobby não funcionam. A `0005` corrigiu um `42P17` (recursão infinita) nas policies da 0003, que derrubava até o login. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
+Migrations 0001–0007 **todas aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS e a `0007` das RPCs de partida (`create_match`, `join_match`, `reorder_match_players`, `start_match`) com a entrada das tabelas na publication do realtime. Os arquivos SQL saíram do repositório depois disso (ver *SQL: onde mora agora*). A `0005` corrigiu um `42P17` (recursão infinita) nas policies da 0003, que derrubava até o login. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
 
 **Nenhuma tela aponta mais para tabela legada.** `lobby` e `game` foram reescritos sobre `o_jogo.matches`/`o_jogo.match_players`, e `actions/controls/matchActions.js` foi apagado junto de `actions/database/databaseActions.js`.
 
-✅ **O backfill não será usado.** Optou-se por resetar: os dados legados foram descartados e o jogador é criado do zero. `supabase/manual/backfill_from_legacy.sql` fica no repositório como registro do que existia, mas não deve ser executado — as tabelas legadas foram renomeadas para `*_legacy` e seus `idAuth` foram zerados pela FK `set null`, então o join dele não encontraria ninguém.
+✅ **O backfill não será usado.** Optou-se por resetar: os dados legados foram descartados e o jogador é criado do zero. `backfill_from_legacy.sql` foi removido junto do resto do SQL e fica só no histórico (`885c83c`); não deve ser executado — as tabelas legadas foram renomeadas para `*_legacy` e seus `idAuth` foram zerados pela FK `set null`, então o join dele não encontraria ninguém.
 
 ---
 
@@ -183,25 +183,28 @@ Coisas que não se descobre lendo o repositório, e que custaram algumas horas e
 
 ---
 
-## Como aplicar as migrations
+## SQL: onde mora agora
 
-Nada foi executado contra o banco ainda — os arquivos existem, mas o Supabase segue com o schema antigo.
+Os arquivos `supabase/migrations/` e `supabase/manual/` foram **removidos do repositório** em 2026-08-24, depois que o schema já estava aplicado. Eles continuam recuperáveis pelo git — nada foi perdido:
 
-1. No painel: *API Settings → Exposed schemas*, adicionar `o_jogo`.
-2. `npx supabase link` e depois `npx supabase db push` (ou colar os 4 arquivos no SQL Editor, na ordem do nome).
-3. Passar `{ db: { schema: 'o_jogo' } }` em `supabase/client.js` e `supabase/server.js`.
-4. Só então rodar `supabase/manual/backfill_from_legacy.sql`, **depois de conferir os nomes de coluna** contra a base real — eles foram deduzidos do código, não lidos do banco.
-5. Trocar `buyPack`/`sellCard` de `presenters/usersPresenter.js` por `supabase.rpc('buy_pack', ...)` / `rpc('sell_card', ...)`, e a leitura de `user.cards` por `o_jogo.user_cards`.
+```
+git show 885c83c:supabase/migrations/20260824000007_rpc_match.sql
+git show 885c83c --stat -- supabase/
+```
 
-⚠️ Os passos 3 e 5 são o **corte**: até eles, o app continua falando com as tabelas antigas. As migrations não quebram nada sozinhas, mas também não resolvem nada sozinhas.
+✅ **A `0007` (`rpc_match`) foi aplicada em 2026-08-24**, junto das demais. `create_match`, `join_match`, `reorder_match_players` e `start_match` existem no banco, e `matches`/`match_players` estão na publication do realtime. **Não há migration pendente** — foi por isso que apagar os arquivos ficou seguro.
+
+Sem os arquivos versionados, o item **`supabase db diff --schema o_jogo`** abaixo deixa de ser "ajustar o fluxo" e passa a ser "recriar o fluxo do zero", se algum dia o schema voltar a ser versionado.
 
 ---
 
 ## Já resolvido
 
+- **Header com navegação e logout (2026-08-24)** — `signOut` virou server action no `AuthService`, e o `supabase.auth.signOut()` inline do `UserProvider` passou a chamá-la. O header ganhou menu (Início, Coleção, Loja, *Sair*) fechando por `Esc`, clique fora e troca de rota. Fecha o 🟠 do logout e o 🎨 do header sem navegação. Na mesma passada, o item "cartas repetidas no deck" foi conferido e fechado: estava desatualizado desde a reescrita. `npm run lint` em exit 0 com 1 warning (`AutoFitText`), `npm run build` passa.
+
 - **Reescrita do lobby (2026-08-24)** — fecha o último bloqueador 🔴 (`generateId`), o realtime vazando entre projetinhos, as tabelas legadas nas telas de partida, as props fantasma, o matchmaking morto do home e 3 dos 4 warnings de `exhaustive-deps`. `styled-components` saiu do projeto. `game` continua esqueleto de propósito: falta regra de partida.
 
-- **Auditoria de RLS (2026-08-24)** — as 8 tabelas do `o_jogo` conferidas policy a policy. O desenho da 0003/0005 se sustentou: economia fechada para escrita do cliente, nenhuma policy contente com JWT válido, nenhum `service_role` no repositório. Os 4 furos achados estão na migration 0006, aplicada em 2026-08-24. Auditoria repetível em `supabase/manual/audit_rls.sql`.
+- **Auditoria de RLS (2026-08-24)** — as 8 tabelas do `o_jogo` conferidas policy a policy. O desenho da 0003/0005 se sustentou: economia fechada para escrita do cliente, nenhuma policy contente com JWT válido, nenhum `service_role` no repositório. Os 4 furos achados estão na migration 0006, aplicada em 2026-08-24. Auditoria repetível em `audit_rls.sql`, hoje só no histórico do git.
 
 - **Faxina de bugs de cliente (2026-08-24)** — 9 itens fechados de uma vez, todos locais e sem dependência do painel do Supabase: `usePersistentState` no SSR, login no Enter, filtro por índice na coleção, ordenação da loja (+ typo `dateRealease`), `insertRecord` sem checar `error`, `console.log` de debug, imagem órfã, `.env.example` e `next.config.mjs`. `npm run lint` em exit 0 com os mesmos 4 warnings; `npm run build` passa.
 
