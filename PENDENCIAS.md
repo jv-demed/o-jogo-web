@@ -173,7 +173,18 @@ Migrations **aplicadas** ao banco em 2026-08-24. ⚠️ A `20260824000005_fix_rl
 
 Como o client agora resolve tudo dentro de `o_jogo`, essas telas **falham na query** até a reescrita. Elas já não funcionavam antes (styled-components sem `ThemeProvider`), então não houve regressão de comportamento — mas o motivo da falha mudou.
 
-⚠️ **O backfill ainda não foi rodado.** Enquanto não rodar, `o_jogo.users` está vazia e ninguém consegue entrar: sem linha lá, `current_player_id()` devolve `null` e toda policy nega. Ver `supabase/manual/backfill_from_legacy.sql`.
+✅ **O backfill não será usado.** Optou-se por resetar: os dados legados foram descartados e o jogador é criado do zero. `supabase/manual/backfill_from_legacy.sql` fica no repositório como registro do que existia, mas não deve ser executado — as tabelas legadas foram renomeadas para `*_legacy` e seus `idAuth` foram zerados pela FK `set null`, então o join dele não encontraria ninguém.
+
+---
+
+## Pegadinhas da instância compartilhada
+
+Coisas que não se descobre lendo o repositório, e que custaram algumas horas em 2026-08-24.
+
+- **`o_jogo` precisa estar em *Project Settings → API → Exposed schemas*.** Sem isso o PostgREST rejeita toda request com **406 / `PGRST106`**, antes de tocar em tabela, RLS ou usuário. O SQL Editor **não** passa pelo PostgREST, então migrations rodam normalmente e escondem o problema. Foi a causa raiz do login quebrado — e o sintoma é idêntico ao de "zero linhas", o que despista.
+- **Havia um trigger `on_auth_user_created` em `auth.users`**, de outro projetinho, chamando `public.handle_new_user()` para inserir em `public.users (id, display_name)`. A tabela não existia mais, então **toda** criação de usuário na instância falhava com `42P01` → 500 "Database error creating new user". O trigger foi removido; a função `public.handle_new_user()` ficou. Nenhum projeto perdeu comportamento: sem a tabela, ele já não funcionava para ninguém.
+- **Criar jogador é sempre em dois passos**, justamente porque não há mais trigger: criar em *Authentication → Users* (com **Auto Confirm User**), depois `insert into o_jogo.users (id_auth, name, coins)`. Se isso virar rotina, vale um trigger próprio apontando para `o_jogo.users`.
+- **FK legada com `on delete set null`.** `public."oJogo-users"."idAuth"` apontava para `auth.users` com `SET NULL` — apagar usuários no auth **zerou o vínculo** de todas as linhas legadas em vez de bloquear ou cascatear. As nossas FKs usam `cascade`, mas fica o alerta para qualquer tabela antiga que sobre.
 
 ---
 
