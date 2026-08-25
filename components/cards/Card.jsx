@@ -58,6 +58,7 @@ export function Card({
                         alt='Card frame'
                         className='object-cover'
                         fill
+                        sizes='300px'
                     />
                     <AutoFitText 
                         className={`
@@ -95,7 +96,7 @@ export function Card({
                     `}>
                         <Image
                             className='object-contain'
-                            src={`/cards/${card.id}.png`}
+                            src={`/cards/${card.id}.webp`}
                             alt={card.name}
                             width={250}
                             height={250}

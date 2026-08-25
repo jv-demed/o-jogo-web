@@ -45,7 +45,7 @@ export function PackDetailsModal({
                 <CardForm factor={1}>
                     <Image
                         className='object-contain rounded'
-                        src={`/packs/${pack.id}.png`}
+                        src={`/packs/${pack.id}.webp`}
                         alt={pack.name}
                         width={300}
                         height={480}

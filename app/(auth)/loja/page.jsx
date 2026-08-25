@@ -40,7 +40,7 @@ export default function StorePage(){
                             <CardForm factor={0.40}>
                                 <Image
                                     className='object-contain rounded'
-                                    src={`/packs/${pack.id}.png`}
+                                    src={`/packs/${pack.id}.webp`}
                                     alt={pack.name}
                                     width={300}
                                     height={480}
