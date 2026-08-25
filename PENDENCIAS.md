@@ -69,17 +69,17 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 
 ## 🟠 Bugs de lógica e React
 
-- [ ] **`usePersistentState` quebra no SSR** — `hooks/usePersistentState.jsx:6` lê `localStorage` no inicializador do `useState`, que roda no server durante o prerender. `ReferenceError` ou hydration mismatch.
+- [x] ~~**`usePersistentState` quebra no SSR**~~ — o estado nasce com `initialValue` e a leitura do `localStorage` foi para um `useEffect`; um `useRef` de hidratação impede que o primeiro render sobrescreva o valor salvo. Leitura e escrita em `try/catch` (modo privativo bloqueia storage).
 - [x] ~~**`useUser()` desestruturado errado em lobby e game**~~ — corrigido para `const { user } = useUser()` nos dois arquivos.- [ ] **Comparação de objeto com string** — `lobby/[id]/page.jsx:88`: `match.obj == 'progress'` (deveria ser `match.obj?.status`); e o push é pra `/game` sem id.
 - [x] ~~**Import inexistente**~~ — o lobby importava `{ Loading }` de `SpinLoader`, que exporta `SpinLoader`. Crash na renderização. **Corrigido**: import e os 3 usos passaram a `SpinLoader`. ⚠️ **O ESLint não pega isso** (tentamos `import/named`: a regra não dispara com o parser do Next). Quem pega é o `npm run build`: `Attempted import error: 'Loading' is not exported`. Rodar o build no CI, não só o lint.
 - [x] ~~**`CardDetailsModal` sem `user` no editor de deck**~~ — passa `user` e `refresh` agora.
 - [x] ~~**Loading eterno**~~ — `providers/UserProvider.jsx`: `setIsLoading(false)` agora roda em `.finally()`, e o caminho de falha renderiza `ErrorMessage` em vez de spinner infinito. O erro do Supabase é guardado em estado (`setError`) nos dois pontos de saída de `getUser()`.
 - [x] ~~**Dois `useEffect` disputando `userCards`**~~ — viraram um só, que reparte a coleção entre "no deck" e "disponível". A lista filtrada virou `useMemo`.
 - [ ] **Cartas repetidas não são suportadas no deck** — `handleAddCard`/`handleRemoveCard` usam `findIndex(c => c.id === card.id)`, apesar de a coleção permitir repetição.
-- [ ] **Filtro por índice em vez de id** — `app/(auth)/colecao/page.jsx:73` usa `cards.idPack == i+1` (índice do `map`) em vez de `pack.id`.
-- [ ] **Loja não ordena os packs** — `app/(auth)/loja/page.jsx:26` itera `PACKS` na ordem literal do array. `dateRealease` (typo) não é usado.
-- [ ] **`insertRecord` estoura em erro** — `supabase/crud.js:9` faz `return data[0]` sem checar `error`.
-- [ ] **Login não funciona no Enter** — `components/containers/Form.jsx` recebe `onSubmit`, mas `app/page.jsx` não passa nenhum; o botão `type='submit'` dispara via `onClick`.
+- [x] ~~**Filtro por índice em vez de id**~~ — as 4 ocorrências de `idPack == i+1` viraram `idPack == pack.id`, e o índice do `map` saiu da assinatura.
+- [x] ~~**Loja não ordena os packs**~~ — `ORDERED_PACKS` ordena por data de lançamento (mais recente primeiro). O typo `dateRealease` virou `dateRelease` em `assets/packs.js` e em `scripts/gen-catalog-seed.mjs` — o seed continua gerando idêntico.
+- [x] ~~**`insertRecord` estoura em erro**~~ — `insertRecord` e `updateRecord` agora dão `throw error` em vez de `console.log` + `data[0]` sobre `null`.
+- [x] ~~**Login não funciona no Enter**~~ — `app/page.jsx` passa `onSubmit={handleSubmit}` ao `Form`; o `action=` do `ActionButton` saiu, senão o submit e o `onClick` disparariam o login duas vezes.
 - [ ] **Não existe logout no header** — `services/AuthService.js` só tem `login`. Falta expor `signOut` como serviço e a recuperação de senha. Já existe um `supabase.auth.signOut()` inline na tela de "sem perfil de jogador" do `UserProvider`, que era um beco sem saída; consolidar no `AuthService` quando o header ganhar navegação. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono. ~~`signUp`~~ saiu de escopo: os usuários são criados manualmente pelo dono (decisão de 2026-08-24).
 - [ ] **Realtime sem filtro e vazando entre projetos** — `supabase/realtime.js` escuta `{ event: '*', schema: 'public' }` com nome de canal fixo. No banco compartilhado, isso é *toda mudança em toda tabela de todos os projetinhos*. Filtrar por schema e por partida.
 - [ ] **Adicionar as tabelas à publication do realtime** — `ALTER PUBLICATION supabase_realtime ADD TABLE o_jogo.matches`.
@@ -93,11 +93,11 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [x] ~~**Apagar `presenters/cardsPresenter.js`**~~ — apagado.- [ ] **Consolidar as 3 camadas de dados concorrentes**: `actions/database/databaseActions.js` (antiga), `supabase/crud.js` (nova) e queries inline no `UserProvider`/hooks. Escolher uma: repositórios por entidade.
 - [ ] **Reescrever `lobby`, `game`, `GameTable` e `Opponent`** — usam styled-components com `theme.content`/`theme.primary`, mas **não existe `ThemeProvider`** no projeto, então todas as cores saem `undefined`. Depois, remover styled-components do `package.json`.
 - [ ] **Props fantasma**: `<Box $fullHeight>` (o componente aceita `fullH`) e `ActionButton name=` no lobby (aceita `text`). ~~`<Main $justifyContent>` no `UserProvider`~~ ✅ removida — `Main` só aceita `between` como booleano (`justify-between`/`justify-start`), não existe valor `'center'`.
-- [ ] **Remover `console.log` de debug** — `components/game/GameTable.jsx:30` e `app/(auth)/game/[id]/page.jsx:32`.
+- [x] ~~**Remover `console.log` de debug**~~ — os dois removidos. Os que sobram são de tratamento de erro (`databaseActions`, hooks), que morrem junto com a consolidação das camadas de dados.
 - [ ] **Descomentar ou remover o matchmaking morto** em `app/(auth)/home/page.jsx:10-23`. ⚠️ Os 5 imports que alimentavam esse bloco (`useEffect`, `useDataObj`, `useUser`, `getRealtime`/`removeChannel`, `createMatch`) **já foram removidos** na limpeza do lint — se for descomentar, precisa readicioná-los.
 - [x] ~~**`PACK_CATEGORIES`, `insertPurchase` e `incPurchase`**~~ — o arquivo inteiro foi apagado. Ninguém importava, e apontava para `oJogo-users:packs`, que não existe no schema novo. Se o histórico de compras voltar, nasce como tabela `o_jogo.purchases` com RPC.
 - [ ] **Migrar `bugs.txt` para issues** do repositório.
-- [ ] **Imagem órfã** `public/cards/Gladsxódia.png` — não corresponde a nenhuma carta (o loader espera `{id}.png`).
+- [x] ~~**Imagem órfã** `public/cards/Gladsxódia.png`~~ — apagada. `scripts/gen-catalog-seed.mjs` agora reporta `arquivos orfaos: []`.
 
 ---
 
@@ -111,8 +111,8 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [ ] **`supabase db diff --schema o_jogo`** no fluxo de migration, para não capturar as tabelas dos outros projetinhos.
 - [ ] **Design tokens no Tailwind v4** — `#1b5b82`, `#e2d4b8`, `#171717`, `#212121` hardcoded em ~10 arquivos. Bloco `@theme` em `styles/globals.css`.
 - [ ] **Tratamento de erro visível** — todo `catch` faz `console.log`; a loja usa `alert()`. Criar padrão de toast/estado de erro usando o `ErrorMessage` existente (já consumido por `TextInput` e `PasswordInput`).
-- [ ] **`.env.example`** com as duas chaves públicas (o `.env.local` já está fora do git).
-- [ ] **`next.config.mjs` está vazio** — configurar `images` (webp/avif) e `reactStrictMode`.
+- [x] ~~**`.env.example`**~~ — criado com `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`, mais o lembrete do *Exposed schemas*.
+- [x] ~~**`next.config.mjs` está vazio**~~ — `reactStrictMode: true` e `images.formats: ['image/avif','image/webp']`. Converter as artes e passar `sizes` continua pendente na seção *Visual e UX*.
 - [ ] **Testes**: nenhum hoje. Começar pelas regras puras (`domain/`) com Vitest.
 
 ### Decisão registrada: sem repo de API separado
@@ -203,6 +203,8 @@ Nada foi executado contra o banco ainda — os arquivos existem, mas o Supabase 
 ---
 
 ## Já resolvido
+
+- **Faxina de bugs de cliente (2026-08-24)** — 9 itens fechados de uma vez, todos locais e sem dependência do painel do Supabase: `usePersistentState` no SSR, login no Enter, filtro por índice na coleção, ordenação da loja (+ typo `dateRealease`), `insertRecord` sem checar `error`, `console.log` de debug, imagem órfã, `.env.example` e `next.config.mjs`. `npm run lint` em exit 0 com os mesmos 4 warnings; `npm run build` passa.
 
 - **Bugs de crash em runtime** — middleware sem proteção, `useUser()` desestruturado errado no lobby e no game, import `{ Loading }` inexistente e loading eterno do `UserProvider`. Detalhes marcados como `[x]` nas seções acima. `npm run lint` continua em exit 0 com os mesmos 4 warnings de `exhaustive-deps`.
 

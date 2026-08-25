@@ -29,7 +29,6 @@ export default function Game(){
         order: 'position'
     });
 
-    console.log(players);
 
     return (
         <Main>

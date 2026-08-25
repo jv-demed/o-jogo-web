@@ -36,7 +36,7 @@ export default function LoginPage(){
         <Main style={{
             marginTop: '30px'
         }}>
-            <Form>
+            <Form onSubmit={handleSubmit}>
                 <TextInput name='E-mail' 
                     type='email'
                     value={auth.email}
@@ -50,7 +50,6 @@ export default function LoginPage(){
                     <ActionButton text='Entrar' 
                         type='submit'
                         icon={ICONS.login}
-                        action={handleSubmit}
                     />
                 </Actions>
                 {error && <ErrorMessage 

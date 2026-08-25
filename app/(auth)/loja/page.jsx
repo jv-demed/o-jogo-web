@@ -8,6 +8,9 @@ import { CardForm } from '@/components/cards/CardForm';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { PackDetailsModal } from '@/components/cards/PackDetailsModal';
 
+// Lancamento mais recente primeiro. Trocar por (a - b) para ordem cronologica.
+const ORDERED_PACKS = [...PACKS].sort((a, b) => b.dateRelease - a.dateRelease);
+
 export default function StorePage(){
 
     const { refreshUser } = useUser();
@@ -23,7 +26,7 @@ export default function StorePage(){
                 overflow-y-auto overflow-x-hidden 
                 scrollbar-custom pr-1
             `}>
-                {PACKS.map(pack => (
+                {ORDERED_PACKS.map(pack => (
                     <li key={`pack-${pack.id}`}>
                         <div className='flex flex-col items-center gap-0.5'
                             onClick={() => setSelectedPack(pack)}

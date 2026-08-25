@@ -60,26 +60,26 @@ export default function Colecao(){
                 flex-1 pb-4 w-full
                 overflow-y-auto scrollbar-custom 
             `}>
-                {PACKS.map((pack, i) => <div key={`collection-${pack.id}`}>
+                {PACKS.map(pack => <div key={`collection-${pack.id}`}>
                     <div className='flex items-center justify-between mb-2'>
                         <h3 className='underline'>
                             {pack.name}
                         </h3>
                         <div className='flex justify-between text-sm'>
                             <span className='pr-1'>
-                                {userCards.filter(cards => cards.idPack == i+1).length || 0}/{CARDS.filter(cards => cards.idPack == i+1).length}
+                                {userCards.filter(cards => cards.idPack == pack.id).length || 0}/{CARDS.filter(cards => cards.idPack == pack.id).length}
                             </span>
                         </div>
                     </div>
                     {isListMode
                         ? <ListCollection 
                             user={user}
-                            cards={copyList.filter(cards => cards.idPack == i+1)}
+                            cards={copyList.filter(cards => cards.idPack == pack.id)}
                             onPressCard={onPressCard}
                         />
                         : <GridCollection 
                             user={user}
-                            cards={copyList.filter(cards => cards.idPack == i+1)}
+                            cards={copyList.filter(cards => cards.idPack == pack.id)}
                             onPressCard={onPressCard}
                         />
                     }

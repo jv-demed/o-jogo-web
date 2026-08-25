@@ -5,7 +5,7 @@ export async function insertRecord(table, obj){
         .from(table)
         .insert(obj)
         .select('*');
-    if(error) console.log(error);
+    if(error) throw error;
     return data[0];
 }
 
@@ -15,6 +15,6 @@ export async function updateRecord(table, id, updatedObj) {
         .update(updatedObj)
         .eq('id', id)
         .select('*');
-    if(error) console.log(error);
+    if(error) throw error;
     return data;
 }

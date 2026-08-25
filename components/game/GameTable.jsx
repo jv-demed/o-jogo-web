@@ -27,7 +27,6 @@ export function GameTable({ user, players }){
         setOpponents(sortedOpponents);
     }, [user, players]);
 
-    console.log(opponents);
 
     return (
         <Styled>

@@ -30,7 +30,7 @@ lines.push('-- Rodar duas vezes deixa o mesmo estado que rodar uma.');
 lines.push('');
 lines.push('insert into o_jogo.packs (id, name, date_release, quantity, price) values');
 lines.push(PACKS.map(p =>
-    `    (${p.id}, ${q(p.name)}, ${q(p.dateRealease.toISOString().slice(0,10))}, ${p.quantity}, ${p.price})`
+    `    (${p.id}, ${q(p.name)}, ${q(p.dateRelease.toISOString().slice(0,10))}, ${p.quantity}, ${p.price})`
 ).join(',\n'));
 lines.push([
     'on conflict (id) do update set',
