@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react';
 import { sellCard, cardSellPrice } from '@/presenters/usersPresenter';
-import { ICONS } from '@/assets/icons';
+import { Modal } from '@/components/containers/Modal';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
@@ -37,47 +37,33 @@ export function CardDetailsModal({
     }
 
     return (
-        <div className={`
-            fixed inset-0 bg-black/60 px-4
-            flex items-center justify-center z-50
-        `}>
-            <div className={`
-                flex flex-col justify-center items-center gap-2
-                px-6 py-1 max-w-lg w-full 
-                relative shadow-xl
+        <Modal onClose={() => setSelectedCardIndex(null)}
+            label={selectedCard.name}
+        >
+            <CardNavigation 
+                cards={cards}
+                index={selectedCardIndex}
+                setIndex={setSelectedCardIndex}
+            />
+            <footer className={`
+                flex flex-col gap-2 
+                p-2 w-[300px] rounded    
+                bg-gray-800/80 
             `}>
-                <header onClick={() => setSelectedCardIndex(null)}
-                    className='flex justify-end w-full' 
-                >
-                    <button className={` text-4xl hover:text-red-400`}>
-                        <ICONS.close />
-                    </button>
-                </header>
-                <CardNavigation 
-                    cards={cards}
-                    index={selectedCardIndex}
-                    setIndex={setSelectedCardIndex}
+                <div className='flex justify-between'>
+                    <span>
+                        Unidades:
+                    </span>
+                    <span>
+                        {repetitions}
+                    </span>
+                </div>
+                <ActionButton text={`Vender por ${cardSellPrice(selectedCard.level)} coins`}
+                    disabled={repetitions == 0}
+                    action={handleSell}
                 />
-                <footer className={`
-                    flex flex-col gap-2 
-                    p-2 w-[300px] rounded    
-                    bg-gray-800/80 
-                `}>
-                    <div className='flex justify-between'>
-                        <span>
-                            Unidades:
-                        </span>
-                        <span>
-                            {repetitions}
-                        </span>
-                    </div>
-                    <ActionButton text={`Vender por ${cardSellPrice(selectedCard.level)} coins`}
-                        disabled={repetitions == 0}
-                        action={handleSell}
-                    />
-                    {error && <ErrorMessage error={error} />}
-                </footer>
-            </div>
-        </div>
+                {error && <ErrorMessage error={error} />}
+            </footer>
+        </Modal>
     );
 }

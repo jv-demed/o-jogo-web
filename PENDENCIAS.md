@@ -84,7 +84,7 @@ Confirmado nos dados: **`id` e `number` divergem em 53 das 116 cartas** — o `n
 - [x] ~~**Realtime sem filtro e vazando entre projetos**~~ — `getRealtime` passou a receber `filter` e a escutar `schema: 'o_jogo'`, com nome de canal derivado de `(tabela, filtro)` em vez de fixo. O lobby abre dois canais, ambos presos a esta partida (`id_match=eq.{id}` e `id=eq.{id}`).
 - [x] ~~**Adicionar as tabelas à publication do realtime**~~ — `matches` e `match_players` entram na `supabase_realtime` na migration 0007, num bloco idempotente (não existe `add table if not exists`). `match_players` ganhou `replica identity full`, senão o evento de saída não diz quem saiu.
 - [x] ~~Índice errado após vender a última cópia~~ — vender a última passou a ser permitido (`disabled={repetitions == 0}`) e fecha o modal, em vez de deixar o índice órfão.
-- [ ] **1 warning de `exhaustive-deps`** no lint — `AutoFitText.jsx:20` (`maxHeight`). Os 3 do lobby morreram com a reescrita, como previsto; os loaders agora são `useCallback` e entram nas dependências de verdade. Este último sai junto da reescrita do `AutoFitText` (seção *Visual e UX*).
+- [x] ~~**1 warning de `exhaustive-deps`**~~ — saiu junto da reescrita do `AutoFitText`, como previsto. `maxHeight` entrou nas dependências. **`npm run lint` está limpo: zero warnings, zero erros.**
 - [x] ~~**`no-undef` não enxergava os globais de ES2015+**~~ — achado durante a reescrita: `Promise`, `Map` e `Set` eram erro de lint, porque o `.eslintrc.json` ligava `no-undef` sem declarar `env`. `"env": { "browser": true, "node": true, "es2022": true }` resolve. Estava mascarado porque nenhum arquivo usava esses nomes diretamente.
 
 ---
@@ -126,15 +126,22 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 
 ## 🎨 Visual e UX
 
-- [ ] **`100vh` no mobile** — `components/containers/Main.jsx:10` usa `max-h-[100vh] min-h-[100vh]`; a barra de endereço corta conteúdo. Usar `100dvh`.
-- [ ] **`AutoFitText` força reflow em loop** — `components/elements/AutoFitText.jsx:15`, até 6 medições síncronas de `scrollHeight` por carta. Na grid com 116 cartas trava a rolagem no celular. Alternativas: `clamp()`, container queries, ou memoizar o tamanho por carta. Resolve junto o warning de `maxHeight` na linha 20.
+- [x] ~~**`100vh` no mobile**~~ — `components/containers/Main.jsx:10` usa `max-h-[100dvh] min-h-[100dvh]`. É o único lugar do repositório que fixava altura de viewport.
+- [x] ~~**`AutoFitText` força reflow em loop**~~ — reescrito. Duas mudanças, nesta ordem de impacto:
+  1. **Cache module-level por texto.** A carta é desenhada num box fixo de 300×440 e só depois escalada (`Card.jsx`), então o tamanho de fonte que serve para um texto **nunca muda** — a chave é `(maxHeight, clientWidth, texto)`. Na grid de 116 cartas, cada texto é medido uma vez na vida do bundle; remontar a grid custa zero medição.
+  2. **Busca binária** entre 6px e 12px no lugar do decremento linear: no máximo 3 medições em vez de 6, com resultado idêntico (diminuir a fonte nunca aumenta o `scrollHeight`).
+  Passou também de `useEffect` para `useLayoutEffect` — a medição acontece antes da pintura, então some o flash de texto no tamanho errado que o código antigo tinha. Guardado atrás de um `useIsomorphicLayoutEffect`, porque `useLayoutEffect` avisa no SSR e no servidor não há o que medir.
 - [ ] **Otimizar as artes** — 116 PNGs em tamanho cheio mesmo renderizados a `scale={0.24}`. Converter para WebP e passar `sizes` no `next/image`.
-- [ ] **Alvos de toque e semântica** — vários `onClick` em `<div>`/`<span>` sem `role`/`tabIndex` (`PageHeader.jsx:17`, `CardNavigation.jsx:14`, cards da loja e da coleção). Trocar por `<button>`.
+- [ ] **Alvos de toque e semântica** — vários `onClick` em `<div>`/`<span>` sem `role`/`tabIndex` (`PageHeader.jsx:17`, `CardNavigation.jsx:14`, cards da loja e da coleção). Trocar por `<button>`. ✅ Os headers dos dois modais já saíram, junto do `Modal` compartilhado.
 - [ ] **Interação inconsistente** — long-press abre o detalhe na grid (`GridCollection.jsx:21`) mas a lista usa clique simples. E não há feedback visual durante os 450ms do press.
-- [ ] **Modais sem fechar por backdrop nem `Esc`**, sem trap de foco e sem travar o scroll do body (`CardDetailsModal`, `PackDetailsModal`).
+- [x] ~~**Modais sem fechar por backdrop nem `Esc`**~~ — nasceu `components/containers/Modal.jsx`, o shell que os dois modais agora vestem. Fecha por `Esc` e por clique no backdrop, trava o scroll do body enquanto aberto, prende o `Tab` dentro do diálogo e devolve o foco ao elemento que o abriu. `role='dialog'`, `aria-modal`, `aria-label`.
+  - O backdrop fecha no `mousedown`, não no `click`: arrastar de dentro e soltar fora não deve fechar.
+  - O `onClose` mora num `ref`. Os dois modais passam arrow nova a cada render (`() => setSelectedCardIndex(null)`); como dependência do efeito, ela reaplicaria o foco no diálogo a cada render e roubaria o foco do botão de vender.
+  - De quebra some o `<header onClick>` dos dois (um deles com o ícone de fechar **fora** do `<button>`, que portanto não era focável) — já dentro do item *Alvos de toque e semântica*.
 - [ ] **`next/font`** em vez de `font-[verdana]` inline em `Main.jsx:11`.
 - [x] ~~**Header sem navegação**~~ — `components/containers/Header.jsx` ganhou um menu com Início, Coleção e Loja, mais *Sair*. Decks fica de fora enquanto o botão da home estiver `disabled`. O painel fecha por `Esc`, por clique fora e na troca de rota (o `Header` vive no layout e não remonta sozinho). Tudo em `<button>` de 48px, já dentro do item *Alvos de toque e semântica*. Falta perfil — não existe tela.
 - [ ] **Sem estado de erro nem empty state** na compra de pack (só o `alert`).
+- [ ] **`themeColor` no lugar errado** — achado no build desta rodada: `⚠ Unsupported metadata themeColor is configured in metadata export`. Está no `export const metadata` e o Next quer no `export const viewport`. Não quebra nada hoje, mas polui o build e a linha morre quando o PWA for fechado (item abaixo).
 - [ ] **PWA** — o `manifest.json` está comentado em `app/layout.jsx:6`. Se a ideia é rodar no celular (o CSS todo aponta pra isso), fechar o suporte.
 
 ---
