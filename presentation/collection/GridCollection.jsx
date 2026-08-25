@@ -19,10 +19,7 @@ export function GridCollection({ user, cards, onPressCard }) {
                             {haveCard 
                                 ? <Card card={card} 
                                     scale={0.24}
-                                    onLongPress={() => {
-                                        if(!haveCard) return;
-                                        onPressCard(card);
-                                    }}
+                                    onClick={() => onPressCard(card)}
                                 />   
                                 : <CardForm factor={0.24}>
                                     <span className='text-gray-400'>

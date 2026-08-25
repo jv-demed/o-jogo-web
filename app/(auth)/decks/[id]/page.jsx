@@ -133,21 +133,27 @@ export default function Deck({ params }){
                 `}>
                     {copyList.map((card, i) => (
                         <li key={`card-${i}/${card.id}`}>
-                            <div className='flex flex-col items-center'>
-                                <Card card={card} 
+                                                        <div className='flex flex-col items-center'>
+                                <Card card={card}
                                     scale={0.24}
-                                    onLongPress={() => {
+                                    onClick={() => {
                                         setSelectedCardList(copyList);
                                         setSelectedCardIndex(i);
                                     }}
-                                />   
-                                <ICONS.add 
+                                />
+                                <button type='button'
+                                    aria-label={`Adicionar ${card.name} ao deck`}
                                     onClick={() => handleAddCard(card)}
                                     className={`
-                                        border-b border-r border-l 
-                                        w-full rounded-b-2xl    
-                                    `} 
-                                />       
+                                        flex items-center justify-center
+                                        border-b border-r border-l
+                                        w-full h-8 rounded-b-2xl
+                                        focus:outline-none focus-visible:ring-2
+                                        focus-visible:ring-[#e2d4b8]
+                                    `}
+                                >
+                                    <ICONS.add />
+                                </button>
                             </div>
                         </li>
                     ))}
@@ -160,11 +166,19 @@ export default function Deck({ params }){
                         border-b border-gray-500 
                         w-full rounded-2xl    
                     `}/>
-                    <div className='flex justify-center text-4xl py-1'
+                                        <button type='button'
+                        aria-label={saveMode ? 'Recolher' : 'Expandir'}
+                        aria-expanded={saveMode}
                         onClick={() => setSaveMode(!saveMode)}
+                        className={`
+                            flex justify-center items-center
+                            text-4xl h-12 w-full
+                            focus:outline-none focus-visible:ring-2
+                            focus-visible:ring-[#e2d4b8]
+                        `}
                     >
                         {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
-                    </div>
+                    </button>
                     <div className='flex flex-col gap-2'>
                         {saveMode && <span>
                             Número de cartas: {selectedCards.length}
@@ -180,19 +194,25 @@ export default function Deck({ params }){
                                     className='snap-center shrink-0'
                                 >
                                     <div className='flex flex-col items-center'>
-                                        <Card card={card} 
+                                                                                <Card card={card}
                                             scale={0.24}
-                                            onLongPress={() => {
+                                            onClick={() => {
                                                 setSelectedCardList(selectedCards);
                                                 setSelectedCardIndex(i);
                                             }}
-                                        />  
-                                        <ICONS.close 
+                                        />
+                                        <button type='button'
+                                            aria-label={`Remover ${card.name} do deck`}
                                             onClick={() => handleRemoveCard(card)}
                                             className={`
-                                                w-full rounded-b-2xl bg-red-400 
-                                            `} 
-                                        />      
+                                                flex items-center justify-center
+                                                w-full h-8 rounded-b-2xl bg-red-400
+                                                focus:outline-none focus-visible:ring-2
+                                                focus-visible:ring-[#e2d4b8]
+                                            `}
+                                        >
+                                            <ICONS.close />
+                                        </button>            
                                     </div>
                                 </li>
                             ))}

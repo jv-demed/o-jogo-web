@@ -28,8 +28,14 @@ export default function StorePage(){
             `}>
                 {ORDERED_PACKS.map(pack => (
                     <li key={`pack-${pack.id}`}>
-                        <div className='flex flex-col items-center gap-0.5'
+                        <button type='button'
+                            aria-label={pack.name}
                             onClick={() => setSelectedPack(pack)}
+                            className={`
+                                flex flex-col items-center gap-0.5 w-full
+                                focus:outline-none focus-visible:ring-2
+                                focus-visible:ring-[#e2d4b8]
+                            `}
                         >
                             <CardForm factor={0.40}>
                                 <Image
@@ -43,7 +49,7 @@ export default function StorePage(){
                             <span className='text-gray-400 text-sm text-wrap'>
                                 {pack.name}
                             </span>
-                        </div>
+                        </button>
                     </li>
                 ))} 
             </ul>

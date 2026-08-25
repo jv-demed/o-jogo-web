@@ -8,11 +8,16 @@ export function ListCollection({ user, cards, onPressCard }) {
                 const haveCard = userHaveCard(user, card.id);
                 return (
                     <li key={`card-${card.id}`}>
-                        <div 
+                        <button type='button'
+                            disabled={!haveCard}
+                            onClick={() => onPressCard(card)}
                             className={`
                                 flex items-center
                                 border-2 border-gray-500 rounded-4xl
-                                px-4 py-3 cursor-pointer
+                                px-4 py-3 w-full min-h-12
+                                enabled:cursor-pointer disabled:cursor-default
+                                focus:outline-none focus-visible:ring-2
+                                focus-visible:ring-[#e2d4b8]
                                 ${haveCard 
                                     ? card.isShot 
                                         ? 'border-rose-300' 
@@ -20,10 +25,6 @@ export function ListCollection({ user, cards, onPressCard }) {
                                     : 'border-gray-500'
                                 }
                             `}
-                            onClick={() => {
-                                if(!haveCard) return;
-                                onPressCard(card);
-                            }}
                         >
                             <span className='id'>
                                 {card.number}
@@ -37,7 +38,7 @@ export function ListCollection({ user, cards, onPressCard }) {
                                 </span>
                             </div>
                             {haveCard && getCardTypeIcon(card.type)}
-                        </div>
+                        </button>
                     </li>
                 )
             })}

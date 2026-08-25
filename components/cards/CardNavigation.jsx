@@ -9,25 +9,39 @@ export function CardNavigation({
 }) {
     return (
         <div className='flex gap-1 h-full'>
-            <div className='flex items-center'
-                onClick={() => {
-                    if(index > 0) setIndex(index - 1);
-                }}
+            {/* Nas pontas o botao fica disabled com o icone invisible, e nao
+                removido: some da ordem de foco sem a carta pular de lugar. */}
+            <button type='button'
+                aria-label='Carta anterior'
+                disabled={index == 0}
+                onClick={() => setIndex(index - 1)}
+                className={`
+                    flex items-center justify-center
+                    w-12 shrink-0
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-[#e2d4b8]
+                `}
             >
                 <ICONS.chevronBack 
                     className={`text-3xl ${index == 0 && 'invisible'}`}
                 />
-            </div>
+            </button>
             <Card card={cards[index]} />
-            <div className='flex items-center'
-                onClick={() => {
-                    if(index < cards.length - 1) setIndex(index + 1);
-                }}
+            <button type='button'
+                aria-label='Proxima carta'
+                disabled={index == cards.length - 1}
+                onClick={() => setIndex(index + 1)}
+                className={`
+                    flex items-center justify-center
+                    w-12 shrink-0
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-[#e2d4b8]
+                `}
             >
                 <ICONS.chevronForward 
                     className={`text-3xl ${index == cards.length - 1 && 'invisible'}`}
                 />
-            </div>
+            </button>
         </div>
     )
 }

@@ -1,6 +1,5 @@
 'use client'
 import Image from 'next/image'
-import { useRef } from 'react'
 import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
 import { AutoFitText } from '@/components/elements/AutoFitText';
 import { ICONS } from '@/assets/icons';
@@ -8,47 +7,39 @@ import { ICONS } from '@/assets/icons';
 export function Card({ 
     card, 
     scale = 1,
-    onClick,
-    onLongPress,
-    longPressDelay = 450 
+    onClick
 }) {
 
     const baseWidth = 300;
     const baseHeight = 440;
-    const timeoutRef = useRef(null);
-    const pressedRef = useRef(false);
 
-    function startPress() {
-        pressedRef.current = false;
-        timeoutRef.current = setTimeout(() => {
-            pressedRef.current = true;
-            onLongPress?.(card);
-        }, longPressDelay);
-    };
-
-    function cancelPress() {
-        clearTimeout(timeoutRef.current);
-    };
-
-    function handleRelease() {
-        clearTimeout(timeoutRef.current);
-        if(!pressedRef.current) onClick?.(card);
-    };
+    // Carta sem handler (o visor do CardNavigation) continua sendo uma div:
+    // um <button> ali seria focavel e nao faria nada.
+    const isInteractive = Boolean(onClick);
+    const Root = isInteractive ? 'button' : 'div';
 
     return (
-        <div
-            className='relative origin-top-left select-none'
+        <Root
+            {...(isInteractive && {
+                type: 'button',
+                'aria-label': card.name,
+                onClick: () => onClick(card)
+            })}
+            className={`
+                relative origin-top-left select-none
+                transition-[filter] duration-150
+                ${isInteractive ? `
+                    active:brightness-75
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-[#e2d4b8]
+                ` : ''}
+            `}
             style={{
                 width: baseWidth * scale,
                 height: baseHeight * scale,
                 overflow: 'hidden',
             }}
             onContextMenu={e => e.preventDefault()}
-            onMouseDown={startPress}
-            onMouseUp={handleRelease}
-            onMouseLeave={cancelPress}
-            onTouchStart={startPress}
-            onTouchEnd={handleRelease}
         >
             <div style={{
                 width: baseWidth,
@@ -128,6 +119,6 @@ export function Card({
                     </span>
                 </div>
             </div>
-        </div>
+        </Root>
     )
 }

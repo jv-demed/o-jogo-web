@@ -48,8 +48,15 @@ export default function Colecao(){
                     <span>
                         Obtidas: {userCards.length || 0}/{CARDS.length}
                     </span>
-                    <button className='text-2xl' 
-                        onClick={() => setIsListMode(!isListMode)}  
+                                        <button type='button'
+                        aria-label={isListMode ? 'Ver em grade' : 'Ver em lista'}
+                        onClick={() => setIsListMode(!isListMode)}
+                        className={`
+                            flex items-center justify-center
+                            h-12 w-12 -mr-3 text-2xl
+                            focus:outline-none focus-visible:ring-2
+                            focus-visible:ring-[#e2d4b8]
+                        `}
                     >
                         {isListMode ? <ICONS.list /> : <ICONS.blocks />}
                     </button>

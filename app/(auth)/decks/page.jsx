@@ -59,18 +59,21 @@ export default function Deck(){
                             <ul className='flex flex-col gap-2'>
                                 {copyList.map(deck => (
                                     <li key={deck.id}>
-                                        <div onClick={() => router.push(`/decks/${deck.id}`)}
+                                                                                <button type='button'
+                                            onClick={() => router.push(`/decks/${deck.id}`)}
                                             className={`
                                                 flex items-center justify-between
                                                 border border-gray-500 rounded-4xl
-                                                px-4 py-3 cursor-pointer
+                                                px-4 py-3 w-full min-h-12 cursor-pointer
+                                                focus:outline-none focus-visible:ring-2
+                                                focus-visible:ring-[#e2d4b8]
                                             `}
                                         >
                                             <span>{deck.name}</span>
-                                            <span className='text-xs'>
+                                                                                        <span className='text-xs'>
                                                 N. Cartas: {deck.deck_cards.reduce((n, c) => n + c.quantity, 0)}
                                             </span>
-                                        </div>
+                                        </button>
                                     </li>
                                 ))}
                                 {copyList.length == 0 && <span>Nenhum deck encontrado</span>}
