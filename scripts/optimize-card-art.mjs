@@ -1,49 +1,57 @@
 // Converte as artes estaticas (public/cards, public/packs) de PNG para WebP.
 //
-// A arte da carta e desenhada num quadro de 234x231 dentro do Card e o proprio
-// card ainda leva `scale`, entao 250px e o maior tamanho de exibicao real: o cap
-// de 500px cobre tela 2x com folga. Os packs ja saem em 300x440, do tamanho em
-// que sao exibidos, e so trocam de formato.
+// Os PNGs originais nao estao mais no working tree -- foram removidos quando a
+// conversao rodou. Para reexecutar, restaure-os antes num diretorio qualquer e
+// aponte --from para ele:
 //
-// Os PNGs originais sao apagados -- continuam no historico do git se algum dia
-// precisar reexportar em resolucao maior.
+//   git archive <commit-antes-da-remocao> public/cards public/packs | tar -x -C /tmp/orig
+//   node scripts/optimize-card-art.mjs --from /tmp/orig [--dry]
 //
-//   node scripts/optimize-card-art.mjs [--dry]
+// A arte da carta e desenhada num quadro de 234x231, entao o cap de 1000px
+// cobre ate 4x de densidade de tela. Os packs so existem em 300x440 -- e o
+// tamanho em que ja sao exibidos, sem margem para tela 2x -- entao vao em
+// lossless para nao perder nada do pouco que ha.
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
 const TARGETS = [
-    { dir: 'public/cards', maxSize: 500 },
-    { dir: 'public/packs', maxSize: 600 },
+    { dir: 'public/cards', encode: img => img
+        .resize(1000, 1000, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 90 }) },
+    { dir: 'public/packs', encode: img => img
+        .webp({ lossless: true }) },
 ];
-const QUALITY = 82;
+
+const arg = name => {
+    const i = process.argv.indexOf(name);
+    return i === -1 ? null : process.argv[i + 1];
+};
 
 const dry = process.argv.includes('--dry');
-const mb = bytes => (bytes / 1048576).toFixed(1) + ' MB';
+const from = arg('--from');
+const mb = bytes => (bytes / 1048576).toFixed(2) + ' MB';
 
-for(const { dir, maxSize } of TARGETS){
-    const pngs = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+for(const { dir, encode } of TARGETS){
+    const srcDir = from ? path.join(from, dir) : dir;
+    const pngs = fs.readdirSync(srcDir).filter(f => f.endsWith('.png'));
     let before = 0;
     let after = 0;
 
     for(const file of pngs){
-        const src = path.join(dir, file);
-        const out = src.replace(/\.png$/, '.webp');
+        const src = path.join(srcDir, file);
+        const out = path.join(dir, file.replace(/\.png$/, '.webp'));
 
-        const buffer = await sharp(src)
-            // `withoutEnlargement` mantem intacto o que ja e menor que o cap --
-            // metade das artes de carta esta entre 250 e 430px.
-            .resize(maxSize, maxSize, { fit: 'inside', withoutEnlargement: true })
-            .webp({ quality: QUALITY })
-            .toBuffer();
+        const buffer = await encode(sharp(src)).toBuffer();
 
         before += fs.statSync(src).size;
         after += buffer.length;
 
         if(!dry){
             fs.writeFileSync(out, buffer);
-            fs.unlinkSync(src);
+            // So apaga o PNG quando ele mora no proprio public/ -- rodando com
+            // --from, o diretorio de origem e do chamador.
+            if(!from) fs.unlinkSync(src);
         }
     }
 

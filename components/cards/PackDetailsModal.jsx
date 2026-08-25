@@ -49,6 +49,7 @@ export function PackDetailsModal({
                         alt={pack.name}
                         width={300}
                         height={480}
+                        quality={90}
                     />
                 </CardForm>
                 <ActionButton text={`Comprar por ${pack.price} coins`}

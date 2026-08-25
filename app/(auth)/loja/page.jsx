@@ -44,6 +44,7 @@ export default function StorePage(){
                                     alt={pack.name}
                                     width={300}
                                     height={480}
+                                    quality={90}
                                 />
                             </CardForm>
                             <span className='text-gray-400 text-sm text-wrap'>

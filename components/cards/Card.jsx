@@ -18,6 +18,13 @@ export function Card({
     const isInteractive = Boolean(onClick);
     const Root = isInteractive ? 'button' : 'div';
 
+    // Nas grades a carta e reduzida por transform, que o browser nao enxerga:
+    // sem `sizes` o next/image fixa o srcset em 250/500 e a grade nao baixa
+    // arte grande para exibir a 72px. No visor a arte ocupa os 234px de fato,
+    // entao declaramos o tamanho e deixamos o browser pedir a variante da
+    // densidade da tela dele.
+    const isDetail = scale >= 1;
+
     return (
         <Root
             {...(isInteractive && {
@@ -100,6 +107,8 @@ export function Card({
                             alt={card.name}
                             width={250}
                             height={250}
+                            quality={90}
+                            {...(isDetail && { sizes: '234px' })}
                         />
                     </div>
                     <AutoFitText 
