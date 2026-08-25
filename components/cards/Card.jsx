@@ -1,7 +1,9 @@
 'use client'
 import Image from 'next/image'
+import { useState } from 'react';
 import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
 import { AutoFitText } from '@/components/elements/AutoFitText';
+import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ICONS } from '@/assets/icons';
 
 export function Card({ 
@@ -24,6 +26,13 @@ export function Card({
     // entao declaramos o tamanho e deixamos o browser pedir a variante da
     // densidade da tela dele.
     const isDetail = scale >= 1;
+
+    // Trocar de carta no CardNavigation reusa este mesmo componente: nome,
+    // nivel e texto trocam no mesmo frame, mas o <img> segue pintando a arte
+    // anterior ate a nova decodificar. Guardar de qual carta e a arte carregada
+    // faz o estado se resetar sozinho na troca -- sem efeito, sem carta hibrida.
+    const [loadedArtId, setLoadedArtId] = useState(null);
+    const isArtLoaded = loadedArtId === card.id;
 
     return (
         <Root
@@ -101,13 +110,26 @@ export function Card({
                         w-[234px] h-[231px] 
                         bg-white overflow-hidden    
                     `}>
+                        {!isArtLoaded && <div className={`
+                            absolute inset-0
+                            flex items-center justify-center
+                        `}>
+                            <SpinLoader color='text-gray-400' />
+                        </div>}
                         <Image
-                            className='object-contain'
+                            // A key remonta o <img> na troca: nem por um frame
+                            // sobra pixel da carta anterior.
+                            key={card.id}
+                            className={`object-contain ${isArtLoaded ? '' : 'opacity-0'}`}
                             src={`/cards/${card.id}.webp`}
                             alt={card.name}
                             width={250}
                             height={250}
                             quality={90}
+                            onLoad={() => setLoadedArtId(card.id)}
+                            // Sem isto uma arte que falha deixa o loader
+                            // girando para sempre.
+                            onError={() => setLoadedArtId(card.id)}
                             {...(isDetail && { sizes: '234px' })}
                         />
                     </div>
