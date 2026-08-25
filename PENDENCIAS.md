@@ -43,7 +43,7 @@ Qualquer jogador abre o DevTools e roda `supabase.from('...').update({ coins: 99
 
 - [x] ~~**Sorteio do pack acontece no navegador**~~ — virou `o_jogo.buy_pack`.- [x] ~~**Validação de saldo só no cliente**~~ — a conferência saiu do modal; quem recusa é a RPC, e `coins` tem `check (coins >= 0)`.
 - [x] ~~**`buyPack` e `sellCard` fazem UPDATE direto do browser**~~ — os dois viraram `supabase.rpc(...)`. O preço mora em `o_jogo.card_sell_price`; `cardSellPrice()` no cliente é só rótulo de botão.
-- [x] ~~**Auditar RLS**~~ — auditadas as 8 tabelas. `coins` e `user_cards` são select-only de fato: não existe policy nem grant de `UPDATE` em `o_jogo.users`, então toda mutação de economia só entra por RPC. Os 4 furos achados viraram `supabase/migrations/20260824000006_rls_audit_fixes.sql`, e `supabase/manual/audit_rls.sql` reexecuta a auditoria contra o banco a qualquer momento. ⚠️ **A 0006 ainda não foi aplicada.**
+- [x] ~~**Auditar RLS**~~ — auditadas as 8 tabelas. `coins` e `user_cards` são select-only de fato: não existe policy nem grant de `UPDATE` em `o_jogo.users`, então toda mutação de economia só entra por RPC. Os 4 furos achados viraram `supabase/migrations/20260824000006_rls_audit_fixes.sql`, **aplicada**. `supabase/manual/audit_rls.sql` reexecuta a auditoria contra o banco a qualquer momento.
 - [x] ~~**Policies precisam checar participação no jogo**~~ — confirmado: nenhuma das 12 policies usa `auth.uid() is not null`; todas passam por `o_jogo.current_player_id()`, que exige linha em `o_jogo.users`. O bloco 3 do `audit_rls.sql` vigia isso.
 - [x] ~~**Não usar `service_role` no app**~~ — confirmado: a string não aparece em nenhum arquivo do repositório fora de um comentário de migration. `supabase/client.js` e `supabase/server.js` usam só `NEXT_PUBLIC_SUPABASE_ANON_KEY`, e o `.env.example` documenta as duas chaves como públicas.
 
@@ -163,9 +163,7 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 
 ## Estado da migração para `o_jogo`
 
-⚠️ **Pendente de aplicação: `20260824000006_rls_audit_fixes.sql`** — fecha os furos da auditoria (entrar em partida em andamento, status da partida voltando atrás, `usage` do schema para `anon`, `execute` default para `public`). Não é urgente como a 0005: sem ela o app funciona, só fica mais frouxo do que devia. Rodar `supabase/manual/audit_rls.sql` depois, para conferir.
-
-Migrations **aplicadas** ao banco em 2026-08-24. ⚠️ A `20260824000005_fix_rls_recursion.sql` corrige um `42P17` (recursão infinita) nas policies da 0003 e **precisa ser aplicada** — sem ela nem o login funciona. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
+Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. ⚠️ A `20260824000005_fix_rls_recursion.sql` corrige um `42P17` (recursão infinita) nas policies da 0003 e **precisa ser aplicada** — sem ela nem o login funciona. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
 
 **Ainda apontando para tabelas legadas** — parte da reescrita de `lobby`/`game`, que já estava pendente:
 
@@ -206,7 +204,7 @@ Nada foi executado contra o banco ainda — os arquivos existem, mas o Supabase 
 
 ## Já resolvido
 
-- **Auditoria de RLS (2026-08-24)** — as 8 tabelas do `o_jogo` conferidas policy a policy. O desenho da 0003/0005 se sustentou: economia fechada para escrita do cliente, nenhuma policy contente com JWT válido, nenhum `service_role` no repositório. Os 4 furos achados estão na migration 0006, **ainda não aplicada**. Auditoria repetível em `supabase/manual/audit_rls.sql`.
+- **Auditoria de RLS (2026-08-24)** — as 8 tabelas do `o_jogo` conferidas policy a policy. O desenho da 0003/0005 se sustentou: economia fechada para escrita do cliente, nenhuma policy contente com JWT válido, nenhum `service_role` no repositório. Os 4 furos achados estão na migration 0006, aplicada em 2026-08-24. Auditoria repetível em `supabase/manual/audit_rls.sql`.
 
 - **Faxina de bugs de cliente (2026-08-24)** — 9 itens fechados de uma vez, todos locais e sem dependência do painel do Supabase: `usePersistentState` no SSR, login no Enter, filtro por índice na coleção, ordenação da loja (+ typo `dateRealease`), `insertRecord` sem checar `error`, `console.log` de debug, imagem órfã, `.env.example` e `next.config.mjs`. `npm run lint` em exit 0 com os mesmos 4 warnings; `npm run build` passa.
 
