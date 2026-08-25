@@ -20,7 +20,7 @@ export function PageHeader({
                     flex items-center justify-center
                     h-12 w-12 -ml-3 text-xl
                     focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-[#e2d4b8]
+                    focus-visible:ring-cream
                 `}
             >
                 <ICONS.arrowLeft />

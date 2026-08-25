@@ -70,7 +70,7 @@ export function Header() {
             relative
             flex items-center justify-between
             h-10 px-[5%]
-            bg-[#1b5b82] text-[#e2d4b8]
+            bg-brand text-cream
         `}>
             <div ref={menuRef}
                 className='flex items-center gap-2'
@@ -84,7 +84,7 @@ export function Header() {
                         flex items-center justify-center
                         h-10 w-10 -ml-2 text-2xl
                         hover:brightness-90
-                        focus:outline-none focus:ring-2 focus:ring-[#e2d4b8]
+                        focus:outline-none focus:ring-2 focus:ring-cream
                     `}
                 >
                     {isOpen ? <ICONS.close /> : <ICONS.menu />}
@@ -97,7 +97,7 @@ export function Header() {
                         absolute left-[5%] top-10 z-20
                         flex flex-col
                         min-w-[180px] rounded-b
-                        bg-[#1b5b82] shadow-lg
+                        bg-brand shadow-lg
                     `}
                 >
                     {NAV.map(item => (
@@ -112,13 +112,13 @@ export function Header() {
                                 disabled:opacity-50 disabled:cursor-default
                                 enabled:hover:brightness-90
                                 focus:outline-none focus:ring-2 focus:ring-inset
-                                focus:ring-[#e2d4b8]
+                                focus:ring-cream
                             `}
                         >
                             {item.label}
                         </button>
                     ))}
-                    <div className='border-t border-[#e2d4b8]/30' />
+                    <div className='border-t border-cream/30' />
                     <button type='button'
                         role='menuitem'
                         disabled={isLeaving}
@@ -128,7 +128,7 @@ export function Header() {
                             h-12 px-4 text-left
                             hover:brightness-90
                             focus:outline-none focus:ring-2 focus:ring-inset
-                            focus:ring-[#e2d4b8]
+                            focus:ring-cream
                         `}
                     >
                         {isLeaving

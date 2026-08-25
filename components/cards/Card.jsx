@@ -31,7 +31,7 @@ export function Card({
                 ${isInteractive ? `
                     active:brightness-75
                     focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-[#e2d4b8]
+                    focus-visible:ring-cream
                 ` : ''}
             `}
             style={{

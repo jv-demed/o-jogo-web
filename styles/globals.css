@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+@theme {
+    --color-brand: #1b5b82;
+    --color-cream: #e2d4b8;
+    --color-surface: #171717;
+    --color-base: #212121;
+}
+
 body, html {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     height: 100%;

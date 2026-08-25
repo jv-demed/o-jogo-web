@@ -66,7 +66,7 @@ export default function Deck(){
                                                 border border-gray-500 rounded-4xl
                                                 px-4 py-3 w-full min-h-12 cursor-pointer
                                                 focus:outline-none focus-visible:ring-2
-                                                focus-visible:ring-[#e2d4b8]
+                                                focus-visible:ring-cream
                                             `}
                                         >
                                             <span>{deck.name}</span>

@@ -149,7 +149,7 @@ export default function Deck({ params }){
                                         border-b border-r border-l
                                         w-full h-8 rounded-b-2xl
                                         focus:outline-none focus-visible:ring-2
-                                        focus-visible:ring-[#e2d4b8]
+                                        focus-visible:ring-cream
                                     `}
                                 >
                                     <ICONS.add />
@@ -174,7 +174,7 @@ export default function Deck({ params }){
                             flex justify-center items-center
                             text-4xl h-12 w-full
                             focus:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#e2d4b8]
+                            focus-visible:ring-cream
                         `}
                     >
                         {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
@@ -208,7 +208,7 @@ export default function Deck({ params }){
                                                 flex items-center justify-center
                                                 w-full h-8 rounded-b-2xl bg-red-400
                                                 focus:outline-none focus-visible:ring-2
-                                                focus-visible:ring-[#e2d4b8]
+                                                focus-visible:ring-cream
                                             `}
                                         >
                                             <ICONS.close />

@@ -47,11 +47,9 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
 - [ ] **Tratamento de erro visível** — todo `catch` faz `console.log`; a loja usa `alert()`. Criar padrão de toast/estado de erro sobre o `ErrorMessage` existente (já consumido por `TextInput` e `PasswordInput`). Inclui o estado de erro e o empty state da compra de pack.
 - [ ] **Otimizar as artes** — 116 PNGs em tamanho cheio mesmo renderizados a `scale={0.24}`. Converter para WebP e passar `sizes` no `next/image`. É a causa da lentidão ao abrir a carta.
-- [ ] **Design tokens no Tailwind v4** — `#1b5b82`, `#e2d4b8`, `#171717`, `#212121` hardcoded em ~10 arquivos. Bloco `@theme` em `styles/globals.css`.
 - [ ] **Recuperação de senha** — não existe. `signOut` já é server action em `services/AuthService.js` e serve de espelho. (`signUp` está fora de escopo: cadastro é manual.)
 - [ ] **Tela de perfil** — não existe; o menu do header não tem para onde apontar.
 - [ ] **PWA** — o `manifest.json` está comentado em `app/layout.jsx:6`. Se a ideia é rodar no celular (o CSS todo aponta pra isso), fechar o suporte.
-- [ ] **`themeColor` no lugar errado** — o build avisa `Unsupported metadata themeColor is configured in metadata export`. Está no `export const metadata` e o Next quer no `export const viewport`. Morre junto com o item do PWA.
 - [ ] **`next/font`** em vez de `font-[verdana]` inline em `Main.jsx:11`.
 - [ ] **Migrar `bugs.txt` para issues** do repositório.
 

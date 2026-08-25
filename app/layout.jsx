@@ -6,10 +6,10 @@ export const metadata = {
     // manifest: '/manifest.json', 
     appleWebAppCapable: 'yes',
     appleWebAppStatusBarStyle: 'black-translucent',
-    themeColor: '#000000',
 };
 
 export const viewport = {
+    themeColor: '#000000',
     width: 'device-width',      
     initialScale: 1,            
     maximumScale: 1,            
@@ -20,7 +20,7 @@ export const viewport = {
 export default function RootLayout({ children }){
     return (
         <html lang='pt-br'>
-            <body className='bg-[#212121] '>
+            <body className='bg-base '>
                 {children}
             </body>
         </html>

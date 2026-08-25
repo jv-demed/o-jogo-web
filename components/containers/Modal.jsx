@@ -95,7 +95,7 @@ export function Modal({
                             flex items-center justify-center
                             h-12 w-12 text-4xl
                             hover:text-red-400
-                            focus:outline-none focus:ring-2 focus:ring-[#e2d4b8]
+                            focus:outline-none focus:ring-2 focus:ring-cream
                         `}
                     >
                         <ICONS.close />

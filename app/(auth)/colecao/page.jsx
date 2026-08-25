@@ -55,7 +55,7 @@ export default function Colecao(){
                             flex items-center justify-center
                             h-12 w-12 -mr-3 text-2xl
                             focus:outline-none focus-visible:ring-2
-                            focus-visible:ring-[#e2d4b8]
+                            focus-visible:ring-cream
                         `}
                     >
                         {isListMode ? <ICONS.list /> : <ICONS.blocks />}

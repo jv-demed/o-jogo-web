@@ -40,9 +40,9 @@ export function TextInput({
                 className={`
                     w-full h-12 px-2 text-xl
                     border border-gray-500 rounded   
-                    hover:border-[#1b5b82]
+                    hover:border-brand
                     focus:outline-none focus:ring-2
-                    focus:ring-[#1b5b82] focus:border-[#1b5b82]
+                    focus:ring-brand focus:border-brand
                 `}
             />
             {(error || internalError) && <ErrorMessage 

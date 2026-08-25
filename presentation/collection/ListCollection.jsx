@@ -17,7 +17,7 @@ export function ListCollection({ user, cards, onPressCard }) {
                                 px-4 py-3 w-full min-h-12
                                 enabled:cursor-pointer disabled:cursor-default
                                 focus:outline-none focus-visible:ring-2
-                                focus-visible:ring-[#e2d4b8]
+                                focus-visible:ring-cream
                                 ${haveCard 
                                     ? card.isShot 
                                         ? 'border-rose-300' 

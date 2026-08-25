@@ -183,8 +183,8 @@ export default function Lobby({ params }){
                                                 className={`
                                                     flex items-center justify-between gap-2
                                                     rounded px-3 py-2 w-full
-                                                    bg-[#212121] text-left
-                                                    ${selectedIndex === i ? 'border-2 border-[#1b5b82]' : 'border-2 border-transparent'}
+                                                    bg-base text-left
+                                                    ${selectedIndex === i ? 'border-2 border-brand' : 'border-2 border-transparent'}
                                                     ${isHost ? 'cursor-pointer' : 'cursor-default'}
                                                 `}
                                             >
@@ -201,7 +201,7 @@ export default function Lobby({ params }){
                             </div>
                             <Actions justifyContent='justify-between'>
                                 <ActionButton text={isHost ? 'Cancelar' : 'Sair'}
-                                    bg='#212121'
+                                    bg='var(--color-base)'
                                     width='40%'
                                     action={handleLeave}
                                 />

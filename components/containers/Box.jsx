@@ -17,7 +17,7 @@ export function Box({
             className={`
                 flex flex-col gap-2.5
                 px-5 py-4 w-full rounded-2xl 
-                bg-[#171717]
+                bg-surface
                 overflow-x-hidden
                 scrollbar-custom
             `}

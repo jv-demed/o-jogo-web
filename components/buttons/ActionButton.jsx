@@ -7,7 +7,7 @@ export function ActionButton({
     action,
     disabled,
     reverse,
-    bg = '#1b5b82', 
+    bg = 'var(--color-brand)', 
     width = '100%',
     icon: Icon
 }){
@@ -29,7 +29,7 @@ export function ActionButton({
                 rounded h-12 px-2
                 hover:brightness-90
                 focus:outline-none focus:ring-2
-                focus:ring-[#1b5b82] focus:border-[#1b5b82]
+                focus:ring-brand focus:border-brand
             `}
             style={{ 
                 background: disabled ? 'gray' : bg,

@@ -34,7 +34,7 @@ export default function StorePage(){
                             className={`
                                 flex flex-col items-center gap-0.5 w-full
                                 focus:outline-none focus-visible:ring-2
-                                focus-visible:ring-[#e2d4b8]
+                                focus-visible:ring-cream
                             `}
                         >
                             <CardForm factor={0.40}>

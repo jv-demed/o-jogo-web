@@ -19,7 +19,7 @@ export function CardNavigation({
                     flex items-center justify-center
                     w-12 shrink-0
                     focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-[#e2d4b8]
+                    focus-visible:ring-cream
                 `}
             >
                 <ICONS.chevronBack 
@@ -35,7 +35,7 @@ export function CardNavigation({
                     flex items-center justify-center
                     w-12 shrink-0
                     focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-[#e2d4b8]
+                    focus-visible:ring-cream
                 `}
             >
                 <ICONS.chevronForward 
