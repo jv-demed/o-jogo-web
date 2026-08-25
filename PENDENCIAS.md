@@ -163,7 +163,7 @@ Revisitar apenas se aparecer: (1) timers autoritativos na partida, (2) WebSocket
 
 ## Estado da migração para `o_jogo`
 
-Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. ⚠️ A `20260824000005_fix_rls_recursion.sql` corrige um `42P17` (recursão infinita) nas policies da 0003 e **precisa ser aplicada** — sem ela nem o login funciona. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
+Migrations **aplicadas** ao banco em 2026-08-24, incluindo a `0006` da auditoria de RLS. A `0005` corrigiu um `42P17` (recursão infinita) nas policies da 0003, que derrubava até o login. O cliente já fala com o schema novo em: perfil, coleção, loja/compra, venda e decks.
 
 **Ainda apontando para tabelas legadas** — parte da reescrita de `lobby`/`game`, que já estava pendente:
 
