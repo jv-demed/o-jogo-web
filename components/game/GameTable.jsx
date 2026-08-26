@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+'use client'
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
+import { Phase, REACTION_WINDOW_MS } from '@/domain/match/state';
 import { Seat } from './Seat';
 import { cardById } from './narrate';
 
 /**
- * A mesa: os lugares em roda e o descarte no meio.
+ * A mesa: os lugares em roda e a carta em jogo no meio.
  *
  * A fila vertical de adversarios dizia quem estava na partida, mas nao *onde* —
  * e um jogo em que carta fala de vizinho, de ordem e de inverter a mesa precisa
@@ -33,6 +35,8 @@ export function GameTable({
     selected = [],
     onSelect
 }){
+
+    const areaRef = useRef(null);
 
     const seats = useMemo(() => {
         if(!state || !you) return [];
@@ -62,7 +66,7 @@ export function GameTable({
     const currentId = state?.order[state.turnIndex];
 
     return (
-        <section className='relative w-full flex-1 min-h-[13rem]'>
+        <section ref={areaRef} className='relative w-full flex-1 min-h-[13rem]'>
             {/* O feltro. Nao e enfeite: e ele que faz as cadeiras lerem como
                 uma roda em volta de um centro, e nao como cartoes soltos. */}
             <div className={`
@@ -73,7 +77,8 @@ export function GameTable({
                 bg-[radial-gradient(circle_at_50%_35%,rgba(47,141,196,0.10),transparent_70%)]
             `} />
 
-            <DiscardPile state={state}
+            <TableCenter state={state}
+                areaRef={areaRef}
                 lastPlay={lastPlay}
                 onOpen={onOpenLastPlay}
             />
@@ -94,12 +99,130 @@ export function GameTable({
 }
 
 /**
+ * O meio da mesa.
+ *
+ * Enquanto uma carta esta resolvendo ela fica ali, grande, com o tempo que
+ * sobra logo abaixo — para todo mundo, o tempo inteiro da espera. Era um
+ * anuncio em tela cheia que sumia em dois segundos, e isso tinha dois defeitos:
+ * cobria a mao justo na janela em que da para reagir, e ia embora antes de a
+ * espera acabar, deixando "por que ainda nao resolveu?" sem resposta na tela.
+ *
+ * Fora da resolucao o centro volta a ser a pilha do descarte, pequena, e um
+ * toque nela reabre a ultima carta em tamanho de leitura.
+ */
+function TableCenter({ state, areaRef, lastPlay, onOpen }){
+
+    const scale = useCenterScale(areaRef);
+
+    const top = state.stack[state.stack.length - 1];
+    const card = top ? cardById(top.idCard) : null;
+
+    if(!card){
+        return <DiscardPile state={state} lastPlay={lastPlay} onOpen={onOpen} />;
+    }
+
+    const byName = state.players.find(player => player.id === top.byId)?.name;
+
+    return (
+        <div className={`
+            absolute left-1/2 top-1/2
+            -translate-x-1/2 -translate-y-1/2
+            flex flex-col items-center gap-1.5
+            pointer-events-none
+        `}>
+            {byName && <p className='text-[0.7rem] text-cream-dim'>
+                <span className='font-semibold text-cream'>{byName}</span>
+                {' jogou'}
+            </p>}
+
+            <div className={`
+                rounded-xl overflow-hidden
+                shadow-[0_16px_40px_-16px_rgba(0,0,0,0.95)]
+                animate-sheet-up
+            `}>
+                <Card card={card} scale={scale} />
+            </div>
+
+            {/* O relogio mora embaixo da carta, e nao na barra de acao: e a
+                carta que a mesa esta olhando, e o tempo e sobre ela. */}
+            {state.phase === Phase.window && state.window
+                ? <WindowTimer closesAt={state.window.closesAt}
+                    width={300 * scale}
+                />
+                : null}
+        </div>
+    );
+}
+
+/**
+ * A barra encolhendo da janela de interferencia.
+ *
+ * Sem ela, a espera parece travamento — e num jogo em que a janela fecha
+ * sozinha, saber quanto falta e o que decide se vale a pena procurar uma carta
+ * de reacao na mao.
+ */
+function WindowTimer({ closesAt, width }){
+
+    const [left, setLeft] = useState(() => closesAt - Date.now());
+
+    useEffect(() => {
+        setLeft(closesAt - Date.now());
+        const timer = setInterval(() => setLeft(closesAt - Date.now()), 100);
+        return () => clearInterval(timer);
+    }, [closesAt]);
+
+    const ratio = Math.max(0, Math.min(1, left / REACTION_WINDOW_MS));
+
+    return (
+        <div style={{ width }}
+            className='h-1.5 rounded-full bg-elevated overflow-hidden'
+        >
+            <div className='h-full bg-gold transition-[width] duration-100'
+                style={{ width: `${ratio * 100}%` }}
+            />
+        </div>
+    );
+}
+
+/**
+ * A carta tem 300x440 fixos e encolhe por transform, entao o tamanho e conta
+ * nossa: a maior escala que ainda cabe no buraco da roda sem encostar nas
+ * cadeiras de cima e de baixo.
+ */
+function useCenterScale(areaRef){
+
+    const [scale, setScale] = useState(0.34);
+
+    useEffect(() => {
+        const element = areaRef.current;
+        if(!element) return;
+
+        function measure(){
+            const { width, height } = element.getBoundingClientRect();
+            setScale(Math.max(0.24, Math.min(
+                // 2 * RADIUS_Y da a distancia entre as cadeiras opostas; o
+                // resto e a folga para a altura da cadeira e a legenda.
+                (height * 0.42) / 440,
+                (width * 0.52) / 300,
+                0.6
+            )));
+        }
+
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [areaRef]);
+
+    return scale;
+}
+
+/**
  * A pilha do descarte, no centro.
  *
- * Mostra a ultima carta que a mesa viu — a que esta resolvendo, ou a ultima que
- * resolveu. O descarte e por jogador no estado (cada um tem o proprio baralho),
- * entao o numero aqui e a soma: o que interessa a mesa e quanto ja foi jogado,
- * nao de quem era.
+ * Mostra a ultima carta que a mesa viu — a que resolveu por ultimo. O descarte
+ * e por jogador no estado (cada um tem o proprio baralho), entao o numero aqui
+ * e a soma: o que interessa a mesa e quanto ja foi jogado, nao de quem era.
  */
 function DiscardPile({ state, lastPlay, onOpen }){
 

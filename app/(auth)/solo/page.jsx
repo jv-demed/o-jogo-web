@@ -21,6 +21,7 @@ import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
 import { MatchLog } from '@/components/game/MatchLog';
 import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
+import { MissionModal, MissionButton } from '@/components/game/MissionModal';
 
 /**
  * Jogo solo: voce contra bots, tudo no browser.
@@ -34,9 +35,6 @@ import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
 
 const CATALOG_IDS = CARDS.map(card => card.id);
 
-// Quanto tempo a carta jogada fica grande na tela. Um toque fecha antes.
-const PLAY_REVEAL_MS = 2200;
-
 export default function Solo(){
 
     const { user } = useUser();
@@ -49,6 +47,7 @@ export default function Solo(){
     const [useCollection, setUseCollection] = useState(false);
     const [selected, setSelected] = useState([]);
     const [isRevealing, setIsRevealing] = useState(false);
+    const [isMissionOpen, setIsMissionOpen] = useState(false);
 
     // Com a partida na tela, o app inteiro sai de cena: sem cabecalho e sem
     // titulo de pagina, a mesa fica com a tela toda.
@@ -68,15 +67,10 @@ export default function Solo(){
         setSelected([]);
     }, [request?.slot, request?.uid]);
 
-    // Carta jogada aparece grande para todo mundo e sai sozinha. O relogio e
-    // curto de proposito: a janela de interferencia corre atras do veu, e quem
-    // quiser reagir precisa da mao de volta antes dela fechar.
-    useEffect(() => {
-        if(!lastPlay) return;
-        setIsRevealing(true);
-        const timer = setTimeout(() => setIsRevealing(false), PLAY_REVEAL_MS);
-        return () => clearTimeout(timer);
-    }, [lastPlay?.uid]);
+    // A carta jogada nao abre mais um veu em tela cheia: ela fica grande no meio
+    // da mesa enquanto resolve (ver GameTable), onde nao cobre a mao de quem
+    // ainda pode reagir. O modal aqui e so para reler a ultima carta com calma,
+    // a pedido — dai so o toque na pilha do descarte abrir.
 
     function handleStart(){
         setSelected([]);
@@ -136,45 +130,59 @@ export default function Solo(){
             : [];
 
     return (
-        <Main>
-            {/* Sem PageHeader durante a partida: a saida mora na barra da
-                missao, junto do resto do que e seu. */}
-            <Box fullH>
-                {error && <div onClick={dismissError}><ErrorMessage error={error} /></div>}
-
+        <>
+            {/* Sem Main e sem Box: a partida e a tela. O painel de 480px com
+                borda servia para uma lista de cartas, nao para uma roda de sete
+                cadeiras — cada pixel que ele reservava de moldura era pixel que
+                faltava para a mesa. */}
+            <div className={`
+                fixed inset-0 z-30 flex flex-col
+                bg-base text-cream overflow-hidden
+            `}>
                 {isOver
-                    ? <MatchResult state={state} you={you}
-                        onRestart={handleStart}
-                        onLeave={leave}
-                    />
+                    ? <Sheet>
+                        <MatchResult state={state} you={you}
+                            onRestart={handleStart}
+                            onLeave={leave}
+                        />
+                    </Sheet>
                     : state.status === MatchStatus.guessing && you.mission === 'sjehnsens'
-                        ? <MissionGuess state={state} you={you} dispatch={dispatch} />
-                        : <div className='flex flex-col gap-2 h-full min-h-0'>
-                            {/* Sua missao fica sempre a vista: e a unica coisa
-                                que voce sabe e os outros nao, e esquecer dela
-                                e jogar sem objetivo. */}
-                            <section className={`
-                                flex items-center gap-2.5 shrink-0
-                                px-3 py-2 rounded-2xl
-                                border border-brand-light/30 bg-brand/15
-                            `}>
-                                <span className='text-brand-light text-lg shrink-0'>
-                                    <ICONS.investigation />
-                                </span>
-                                <span className='flex flex-col min-w-0'>
-                                    <span className='text-sm font-bold'>{mission.name}</span>
-                                    <span className='text-[0.65rem] text-cream-dim'>{mission.text}</span>
-                                </span>
-                                {/* Seus shots agora estao na sua cadeira, com
-                                    os dos outros; aqui fica a saida, que sem o
-                                    cabecalho nao teria outro lugar. */}
+                        ? <Sheet>
+                            <MissionGuess state={state} you={you} dispatch={dispatch} />
+                        </Sheet>
+                        : <>
+                            <div className='relative flex flex-col flex-1 min-h-0'>
+                                <GameTable state={state} you={you}
+                                    lastPlay={lastPlay}
+                                    onOpenLastPlay={() => setIsRevealing(true)}
+                                    selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
+                                    selected={selected}
+                                    onSelect={handleSelect}
+                                />
+
+                                {/* O log flutua sobre a mesa em vez de ocupar
+                                    uma faixa dela: e leitura de canto de olho, e
+                                    a altura que ele cobrava rende mais como
+                                    feltro. */}
+                                <div className={`
+                                    absolute left-2 top-2 z-10
+                                    max-w-[58%] max-h-20
+                                    overflow-y-auto scrollbar-custom
+                                    pointer-events-none
+                                `}>
+                                    <MatchLog state={state} limit={6} />
+                                </div>
+
+                                {/* A saida nao tem mais barra onde morar, entao
+                                    vira um icone no canto da mesa. */}
                                 <button type='button'
                                     aria-label='Sair da partida'
                                     onClick={leave}
                                     className={`
+                                        absolute right-2 top-2 z-10
                                         flex items-center justify-center
-                                        ml-auto shrink-0 h-9 w-9 rounded-xl
-                                        border border-line bg-base/60 text-cream-dim
+                                        h-9 w-9 rounded-xl
+                                        border border-line bg-base/70 text-cream-dim
                                         transition-transform active:scale-95
                                         focus:outline-none focus-visible:ring-2
                                         focus-visible:ring-brand-light
@@ -182,49 +190,68 @@ export default function Solo(){
                                 >
                                     <ICONS.close />
                                 </button>
-                            </section>
 
-                            <GameTable state={state} you={you}
-                                lastPlay={lastPlay}
-                                onOpenLastPlay={() => setIsRevealing(true)}
-                                selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
-                                selected={selected}
-                                onSelect={handleSelect}
-                            />
+                                {error && <div onClick={dismissError}
+                                    className='absolute inset-x-3 bottom-2 z-20'
+                                >
+                                    <ErrorMessage error={error} />
+                                </div>}
+                            </div>
 
-                            {/* O log encolheu para caber a mesa: quem quiser o
-                                historico inteiro rola dentro dele. */}
-                            <section className={`
-                                shrink-0 h-12 overflow-y-auto
-                                scrollbar-custom
+                            {/* Controles e mao colados no rodape: a mao e a
+                                borda de baixo da tela, e a acao fica logo em
+                                cima dela, sempre no mesmo lugar. */}
+                            <div className={`
+                                shrink-0 flex flex-col gap-2
+                                px-3 pt-1
+                                pb-[max(0.5rem,env(safe-area-inset-bottom))]
                             `}>
-                                <MatchLog state={state} limit={8} />
-                            </section>
+                                <div className='flex items-end gap-2'>
+                                    <MissionButton onClick={() => setIsMissionOpen(true)} />
+                                    <div className='flex-1 min-w-0'>
+                                        <TurnBar state={state} you={you}
+                                            isYourTurn={isYourTurn}
+                                            selected={selected}
+                                            onSelect={handleSelect}
+                                            dispatch={dispatch}
+                                        />
+                                    </div>
+                                </div>
 
-                            <section className='shrink-0'>
-                                <TurnBar state={state} you={you}
-                                    isYourTurn={isYourTurn}
-                                    selected={selected}
-                                    onSelect={handleSelect}
-                                    dispatch={dispatch}
-                                />
-                            </section>
-
-                            <section className='shrink-0'>
                                 <Hand cards={you.hand}
                                     playable={playable}
                                     onPlay={handlePlay}
                                     scale={0.38}
                                 />
-                            </section>
+                            </div>
+                        </>}
+            </div>
 
-                            {isRevealing && <PlayedCard play={lastPlay}
-                                players={state.players}
-                                onClose={() => setIsRevealing(false)}
-                            />}
-                        </div>}
-            </Box>
-        </Main>
+            {isMissionOpen && <MissionModal mission={mission}
+                onClose={() => setIsMissionOpen(false)}
+            />}
+
+            {isRevealing && <PlayedCard play={lastPlay}
+                players={state.players}
+                onClose={() => setIsRevealing(false)}
+            />}
+        </>
+    );
+}
+
+/**
+ * O painel de fim de partida e o da adivinhacao: as duas telas que nao sao
+ * mesa. Aqui a largura limitada volta a fazer sentido — sao texto e botoes.
+ */
+function Sheet({ children }){
+    return (
+        <div className={`
+            flex flex-col justify-center
+            flex-1 min-h-0 w-full max-w-[480px] mx-auto
+            px-4 py-6 overflow-y-auto scrollbar-custom
+        `}>
+            {children}
+        </div>
     );
 }
 

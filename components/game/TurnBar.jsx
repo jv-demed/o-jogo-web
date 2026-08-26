@@ -1,9 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react';
 import { Command } from '@/domain/match/engine';
-import { Phase, REACTION_WINDOW_MS } from '@/domain/match/state';
+import { Phase } from '@/domain/match/state';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { cardName, promptText } from './narrate';
+import { promptText } from './narrate';
 
 /**
  * O que fazer agora: a barra que diz de quem e a vez e oferece a acao da fase.
@@ -85,50 +84,24 @@ function Bar({ hint, children }){
 }
 
 /**
- * A janela de interferencia, com o tempo que sobra.
+ * A janela de interferencia.
  *
- * A barra encolhendo nao e enfeite: sem ela, "por que a carta ainda nao
- * resolveu" nao tem resposta na tela, e a espera parece travamento.
+ * O que a mesa esta esperando — a carta e o tempo que sobra — mora no meio da
+ * mesa, grande, onde todo mundo ja esta olhando. Aqui fica so a decisao: reagir
+ * com uma carta da mao, ou passar.
  */
 function Window({ state, you, top, dispatch }){
 
-    const [left, setLeft] = useState(() => state.window.closesAt - Date.now());
-
-    useEffect(() => {
-        const timer = setInterval(() => setLeft(state.window.closesAt - Date.now()), 100);
-        return () => clearInterval(timer);
-    }, [state.window.closesAt]);
-
     const canPass = top?.byId !== you.id && !state.window.passed.includes(you.id);
-    const ratio = Math.max(0, Math.min(1, left / REACTION_WINDOW_MS));
-    const byName = state.players.find(p => p.id === top?.byId)?.name;
 
-    return (
-        <div className='flex flex-col gap-2 w-full'>
-            <p className='text-center text-xs text-cream-dim'>
-                {top
-                    ? <>
-                        <span className='text-cream'>{byName}</span>
-                        {' jogou '}
-                        <span className='text-cream'>{cardName(top.idCard)}</span>
-                    </>
-                    : 'Resolvendo...'}
-            </p>
-            <div className='h-1 w-full rounded-full bg-elevated overflow-hidden'>
-                <div className='h-full bg-gold transition-[width] duration-100'
-                    style={{ width: `${ratio * 100}%` }}
-                />
-            </div>
-            {canPass
-                ? <ActionButton text='Passar'
-                    variant='secondary'
-                    action={() => dispatch({ type: Command.pass, playerId: you.id })}
-                />
-                : <p className='text-center text-[0.65rem] text-cream-dim/70'>
-                    Esperando a mesa.
-                </p>}
-        </div>
-    );
+    return canPass
+        ? <Bar hint='Reaja com uma carta ou passe.'>
+            <ActionButton text='Passar'
+                variant='secondary'
+                action={() => dispatch({ type: Command.pass, playerId: you.id })}
+            />
+        </Bar>
+        : <Bar hint='Esperando a mesa.' />;
 }
 
 /**
