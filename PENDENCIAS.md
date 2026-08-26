@@ -25,7 +25,29 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
   Cartas cuja leitura ficou em aberto e que merecem uma decisão de regra antes de existir resolvedor: **74 Extreme Zero** (a escolha é por missão, não por jogador — virou alvo `manual`), **79 Largando a Medicina** (o texto não diz quem recebe a metade dos shots), **85 Jp da Ganância** ("até a mão se estabilizar" não tem duração equivalente no vocabulário, ficou em nota), **101 Valeu Valeu** e **105 Não é o Momento** (dependem do alvo da jogada em curso, e não do alvo da própria carta).
 
-- [ ] **Definir as regras da partida** (turnos, mão, compra, resolução, condição de vitória) antes de reescrever `lobby`/`game`. `game`, `GameTable` e `Opponent` são esqueleto: têm camada de dados e estilo, mas nenhuma regra por trás.
+- [ ] **Levar a partida para o banco.** As regras já existem e são puras — `domain/match/` (motor, missões, alvos, resolvedor), `npm run validate:match` verde com as 116 cartas jogadas de verdade numa mesa simulada. Falta o outro lado: o estado da partida (`jsonb`) e a semente numa coluna de `o_jogo.matches`, e uma RPC `play_card`/`apply_command` que chame o mesmo motor do lado do servidor. Enquanto isso não existe, o motor roda só em memória.
+
+  ⚠️ Decisão pendente e não trivial: o motor é JS e o servidor é Postgres. Ou a RPC vira uma Edge Function em Deno (importa `domain/match/` direto, que é justamente por isso que a camada é pura e sem bundler), ou o motor é reescrito em plpgsql — e aí passam a existir duas implementações da mesma regra, que é o que a camada pura foi feita para evitar. A Edge Function é o caminho natural.
+
+- [ ] **Reescrever `game` sobre o motor.** `GameTable` e `Opponent` continuam esqueleto. O que o motor já entrega para a UI: `legalCommands(state, playerId)` diz o que habilitar, `state.pending[0]` é a pergunta da vez (escolher alvo, escolher opção, aceitar um shot opcional), `state.window.closesAt` é o relógio da janela de interferência e `state.log` é a narração da mesa.
+
+- [ ] **Missões como carta.** Hoje a missão é sorteada direto no `createMatch` e vive só no estado. Virar carta (com arte, como as outras) é o próximo passo — o motor já trata identidade e missão como um par só, então é trabalho de catálogo e de UI, não de regra.
+
+---
+
+## 🎲 Regras da partida — fechadas em 2026-08-26
+
+Decididas e implementadas em `domain/match/`. Não são pendências; estão aqui porque os itens acima dependem delas e porque nenhuma se deduz do código sozinha.
+
+- **Turno:** o jogador da vez compra 1 (fica com 6) e joga 1. Mão inicial de 5, baralho próprio por jogador.
+- **Janela de interferência:** toda carta jogada fica na pilha por 5s antes de resolver. Quem tem carta de reação (qualquer efeito com `timing: reaction` — os tipos *defesa* e *rápido* do catálogo) pode entrar; todo mundo passando fecha a janela antes do tempo. A pilha resolve do topo para a base, então a reação resolve antes da carta que ela responde — é assim que cancelar chega a tempo de cancelar.
+- **Fim da partida:** quando um baralho acaba. Sem reembaralhar o descarte: com reembaralho nenhuma mesa termina sozinha, só por carta de fim de jogo, e o tamanho do deck deixa de significar alguma coisa. Assim quem monta o deck escolhe o comprimento da partida.
+- **Missões:** uma por jogador, secreta, sorteada sem reposição. Mesa de 2 a 7; com menos de 7, sobram missões fora do jogo, e carta que fala de missão ausente simplesmente não acha alvo. Empate no extremo (mais/menos shots) dá vitória a todos os empatados.
+- **Sjehnsens:** a partida para em `guessing` antes de apurar, para ele apontar quem é quem. Palpite faltando conta como erro.
+- **Stanley × Smichaels:** as duas missões perguntam pelo resultado alheio, então a apuração tem duas passadas e a segunda não se lê a si mesma — senão as duas ficam em referência circular. O corte é arbitrário; é o mesmo que a mesa faz no olho.
+- **Aleatoriedade com semente** (`domain/match/rng.js`), nunca `Math.random`: é o que permite o cliente reconferir o que o servidor sorteou, e o que torna teste de mesa reproduzível.
+
+Cartas cuja modelagem ficou aproximada no resolvedor, e que valem uma segunda passada quando forem jogadas na prática: `negate` de `divine`/`effectCard` cancela qualquer carta, porque distinguir exige o `type` de `o_jogo.cards`, que não vive em `domain/`; e `copy` só copia quando o motor tem o que copiar na pilha.
 
 ---
 

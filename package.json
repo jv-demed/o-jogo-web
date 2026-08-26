@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "validate:effects": "node scripts/validate-effects.mjs"
+    "validate:effects": "node scripts/validate-effects.mjs",
+    "validate:match": "node scripts/validate-match.mjs",
+    "validate": "npm run validate:effects && npm run validate:match"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
