@@ -21,11 +21,9 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
 ## 🎮 Pré-requisito para o jogo em si
 
-- [ ] **Modelar os efeitos das cartas como dados estruturados.** ⚠️ Em andamento: **63/116** (pack 1 fechado; packs 2 e 3 pendentes). O vocabulário fechado — 43 ações, 13 tipos de alvo, 7 identidades (`Sauzburg`, `Swarley`, `Smichaels`, `Stanley`, `Sjehnsens`, `Swelcows`, `Sjamals`) — foi derivado lendo as 116 e vive em `domain/cards/vocabulary.js`; as entradas em `domain/cards/effects/pack1.js`. `npm run validate:effects` valida o catálogo e cobra cobertura dos packs marcados como fechados em `MODELED_PACKS`.
+- [ ] **Levar o efeito estruturado para `o_jogo.cards`.** As 116 cartas já estão modeladas como dados — `domain/cards/effects/pack{1,2,3}.js`, vocabulário em `domain/cards/vocabulary.js`, `npm run validate:effects` verde com cobertura 116/116. Falta a outra metade: quem valida a jogada é o servidor, então o efeito precisa de uma coluna (`effect jsonb`) em `o_jogo.cards`, e o `scripts/gen-catalog-seed.mjs` precisa emiti-la junto com o resto do catálogo. O `text` continua sendo a fonte narrativa: quando os dois discordarem, o texto ganha.
 
-  Falta modelar `pack2.js` (19 cartas) e `pack3.js` (34). O vocabulário já foi desenhado olhando essas cartas também, então a expectativa é preencher entradas, não mexer no schema — se precisar de verbo novo, é sinal de que a carta merece discussão.
-
-  O `text` continua sendo a fonte narrativa: quando os dois discordarem, o texto ganha. Falta também levar o efeito estruturado para `o_jogo.cards`, já que é o servidor que valida a jogada.
+  Cartas cuja leitura ficou em aberto e que merecem uma decisão de regra antes de existir resolvedor: **74 Extreme Zero** (a escolha é por missão, não por jogador — virou alvo `manual`), **79 Largando a Medicina** (o texto não diz quem recebe a metade dos shots), **85 Jp da Ganância** ("até a mão se estabilizar" não tem duração equivalente no vocabulário, ficou em nota), **101 Valeu Valeu** e **105 Não é o Momento** (dependem do alvo da jogada em curso, e não do alvo da própria carta).
 
 - [ ] **Definir as regras da partida** (turnos, mão, compra, resolução, condição de vitória) antes de reescrever `lobby`/`game`. `game`, `GameTable` e `Opponent` são esqueleto: têm camada de dados e estilo, mas nenhuma regra por trás.
 

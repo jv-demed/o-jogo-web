@@ -181,9 +181,18 @@ export const Pile = Object.freeze({
     discard: 'discard',
 });
 
+// Metricas que o alvo `rank` compara. Fechada pelo mesmo motivo do resto: o
+// resolvedor precisa saber de qual contador esta falando.
+export const Metric = Object.freeze({
+    shots:      'shots',      // shots bebidos
+    shotsGiven: 'shotsGiven', // shots distribuidos a outros
+});
+
 export const Rounding = Object.freeze({ up: 'up', down: 'down' });
 
 export const Direction = Object.freeze({ left: 'left', right: 'right' });
 
-// `amount` aceita numero ou uma destas palavras.
-export const AMOUNT_KEYWORDS = Object.freeze(['half', 'all', 'infinity']);
+// `amount` aceita numero ou uma destas palavras. `perOpponent` existe porque
+// a quantidade so e conhecida na mesa: "beber 1 shot para cada adversario
+// jogando" muda com o numero de jogadores.
+export const AMOUNT_KEYWORDS = Object.freeze(['half', 'all', 'infinity', 'perOpponent']);

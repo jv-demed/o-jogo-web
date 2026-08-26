@@ -1,6 +1,6 @@
 import {
     AMOUNT_KEYWORDS, Action, Chooser, ConditionWho, Direction, DurationKind,
-    Goal, Mission, Negatable, Pile, Rounding, Scope, TargetKind, Timing,
+    Goal, Metric, Mission, Negatable, Pile, Rounding, Scope, TargetKind, Timing,
 } from './vocabulary.js';
 
 const ACTIONS    = new Set(Object.values(Action));
@@ -12,6 +12,7 @@ const NEGATABLES = new Set(Object.values(Negatable));
 const SCOPES     = new Set(Object.values(Scope));
 const GOALS      = new Set(Object.values(Goal));
 const CHOOSERS   = new Set(Object.values(Chooser));
+const METRICS    = new Set(Object.values(Metric));
 const WHOS       = new Set(Object.values(ConditionWho));
 const PILES      = new Set(Object.values(Pile));
 const ROUNDINGS  = new Set(Object.values(Rounding));
@@ -118,8 +119,14 @@ function validateTarget(target, path, errors){
             errors.push(path + '.' + flag + ': esperado booleano');
         }
     }
-    if(target.by !== undefined && !CHOOSERS.has(target.by)){
-        errors.push(path + '.by: desconhecido "' + target.by + '"');
+    // `by` e sobrecarregado: no kind "rank" e a metrica comparada; nos outros,
+    // quem faz a escolha. Sao vocabularios diferentes, e conferir contra o
+    // errado transformava todo alvo por ranking em erro.
+    if(target.by !== undefined){
+        const permitidos = target.kind === TargetKind.rank ? METRICS : CHOOSERS;
+        if(!permitidos.has(target.by)){
+            errors.push(path + '.by: desconhecido "' + target.by + '"');
+        }
     }
     if(target.except !== undefined){
         if(target.except === 'self'){
@@ -167,7 +174,8 @@ function validateDuration(duration, path, errors){
     if(duration.kind === DurationKind.turns && !isCount(duration.turns)){
         errors.push(path + '.turns: esperado inteiro positivo');
     }
-    if(duration.kind === DurationKind.untilMissionChange){
+    // Sem `mission`, o gatilho e a missao do proprio alvo do efeito.
+    if(duration.kind === DurationKind.untilMissionChange && duration.mission !== undefined){
         checkMissions(duration.mission, path + '.mission', errors);
     }
     if(duration.kind === DurationKind.untilDrinks && !isCount(duration.amount)){
