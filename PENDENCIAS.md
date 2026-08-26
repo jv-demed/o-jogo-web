@@ -21,11 +21,11 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
 ## 🎮 Pré-requisito para o jogo em si
 
-- [ ] **Modelar os efeitos das cartas como dados estruturados.** Hoje `text` em `assets/cards.js` é prosa em português, nada executável. Exemplo real — *"Escolha 1 jogador para beber 1 shot, na vez dele, pelos próximos 3 turnos"* precisa virar algo como:
+- [ ] **Modelar os efeitos das cartas como dados estruturados.** ⚠️ Em andamento: **63/116** (pack 1 fechado; packs 2 e 3 pendentes). O vocabulário fechado — 43 ações, 13 tipos de alvo, 7 identidades (`Sauzburg`, `Swarley`, `Smichaels`, `Stanley`, `Sjehnsens`, `Swelcows`, `Sjamals`) — foi derivado lendo as 116 e vive em `domain/cards/vocabulary.js`; as entradas em `domain/cards/effects/pack1.js`. `npm run validate:effects` valida o catálogo e cobra cobertura dos packs marcados como fechados em `MODELED_PACKS`.
 
-  ```js
-  { target: 'choose_player', effect: 'drink', amount: 1, duration: 3, timing: 'on_their_turn' }
-  ```
+  Falta modelar `pack2.js` (19 cartas) e `pack3.js` (34). O vocabulário já foi desenhado olhando essas cartas também, então a expectativa é preencher entradas, não mexer no schema — se precisar de verbo novo, é sinal de que a carta merece discussão.
+
+  O `text` continua sendo a fonte narrativa: quando os dois discordarem, o texto ganha. Falta também levar o efeito estruturado para `o_jogo.cards`, já que é o servidor que valida a jogada.
 
 - [ ] **Definir as regras da partida** (turnos, mão, compra, resolução, condição de vitória) antes de reescrever `lobby`/`game`. `game`, `GameTable` e `Opponent` são esqueleto: têm camada de dados e estilo, mas nenhuma regra por trás.
 
@@ -35,17 +35,16 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
 - [ ] **Adotar TypeScript** (ou no mínimo `checkJs` + JSDoc). Boa parte dos bugs já corrigidos — `useUser()` desestruturado errado, `id` vs `number`, props fantasma, import `Loading` inexistente — seria pega em tempo de compilação. ⚠️ Com o ESLint configurado, sabemos exatamente o que ele **não** cobre, e é justamente essa lista: nenhum dos 4 aparecia no `npm run lint`.
 - [ ] **Rodar `npm run build` no CI, não só o lint.** Quem pegou o import inexistente foi o build (`Attempted import error`), não o ESLint — a regra `import/named` não dispara com o parser do Next.
-- [ ] **Separar as camadas**: `domain/` (regras puras e testáveis — economia, deck building, resolução de carta), `data/` (Supabase), `presentation/`. Hoje `presenters/` mistura JSX com `insert`.
-- [ ] **Consolidar as camadas de dados** — sobraram `supabase/crud.js` (genérico, sem consumidor hoje) e as queries inline no `UserProvider` e nos hooks `useDataObj`/`useDataList`, que ainda seguram a tela de decks. Os `console.log` em `catch` que restam morrem junto.
+- [ ] **Separar as camadas**: `domain/` (regras puras e testáveis — economia, deck building, resolução de carta), `data/` (Supabase), `presentation/`. Hoje `presenters/` mistura JSX com `insert`. ⚠️ `domain/` já existe com a modelagem de efeitos e é puro (roda em Node sem bundler, via `domain/package.json` com `type: module`); economia e deck building continuam fora.
+- [ ] **Consolidar as camadas de dados** — sobraram `supabase/crud.js` (genérico, sem consumidor hoje) e as queries inline no `UserProvider` e nos hooks `useDataObj`/`useDataList`, que ainda seguram a tela de decks. Os últimos `console.log` em `catch` moram justamente aí (`useDataList.jsx:34`, `useDataObj.jsx:35`) mais um em `AuthService.login`, e morrem junto — o resto das telas já mostra erro via `ErrorMessage`.
 - [ ] **Deps de `useDataList`/`useDataObj`** (`useDataList.jsx:40`, `useDataObj.jsx:41`) dependem só de `flag`. ⚠️ O `exhaustive-deps` **não** acusa isso — só analisa hooks nativos e não relaciona o corpo do `useEffect` às variáveis externas. Continua sendo revisão manual.
-- [ ] **Testes**: nenhum hoje. Começar pelas regras puras (`domain/`) com Vitest.
+- [ ] **Testes**: nenhum hoje. Começar pelas regras puras (`domain/`) com Vitest. O `scripts/validate-effects.mjs` já é o corpo de um teste esperando um runner — roda sem dependência nenhuma e sai com código 1 se algo quebrar.
 - [ ] **`supabase db diff --schema o_jogo`** no fluxo de migration, para não capturar as tabelas dos outros projetinhos. ⚠️ Sem os arquivos SQL versionados (ver abaixo), isto é "recriar o fluxo do zero", não "ajustar".
 
 ---
 
 ## 🎨 Visual e UX
 
-- [ ] **Tratamento de erro visível** — todo `catch` faz `console.log`; a loja usa `alert()`. Criar padrão de toast/estado de erro sobre o `ErrorMessage` existente (já consumido por `TextInput` e `PasswordInput`). Inclui o estado de erro e o empty state da compra de pack.
 - [ ] **Recuperação de senha** — não existe. `signOut` já é server action em `services/AuthService.js` e serve de espelho. (`signUp` está fora de escopo: cadastro é manual.)
 - [ ] **Tela de perfil** — não existe; o menu do header não tem para onde apontar.
 - [ ] **PWA** — o `manifest.json` está comentado em `app/layout.jsx:6`. Se a ideia é rodar no celular (o CSS todo aponta pra isso), fechar o suporte.

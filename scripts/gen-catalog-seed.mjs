@@ -1,20 +1,7 @@
 import fs from 'node:fs';
+import { loadArray } from './lib/loadAssets.mjs';
 
 const q = s => "'" + String(s).replace(/'/g, "''") + "'";
-
-// Le os assets sem passar pelo bundler: strip do import e do alias @/.
-function loadArray(file, name){
-    let src = fs.readFileSync(file, 'utf8')
-        .replace(/^import .*$/gm, '')
-        .replace(/export const/g, 'const');
-    src += `\n;globalThis.__out = ${name};`;
-    const CardType = {
-        defense:'defesa', divine:'divino', effect:'efeito', equip:'equipamento',
-        investigation:'investigacao', quick:'rápido', shot:'shot',
-    };
-    new Function('CardType', src)(CardType);
-    return globalThis.__out;
-}
 
 const PACKS = loadArray('assets/packs.js', 'PACKS');
 const CARDS = loadArray('assets/cards.js', 'CARDS');
