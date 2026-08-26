@@ -29,9 +29,25 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
   ⚠️ Decisão pendente e não trivial: o motor é JS e o servidor é Postgres. Ou a RPC vira uma Edge Function em Deno (importa `domain/match/` direto, que é justamente por isso que a camada é pura e sem bundler), ou o motor é reescrito em plpgsql — e aí passam a existir duas implementações da mesma regra, que é o que a camada pura foi feita para evitar. A Edge Function é o caminho natural.
 
-- [ ] **Reescrever `game` sobre o motor.** `GameTable` e `Opponent` continuam esqueleto. O que o motor já entrega para a UI: `legalCommands(state, playerId)` diz o que habilitar, `state.pending[0]` é a pergunta da vez (escolher alvo, escolher opção, aceitar um shot opcional), `state.window.closesAt` é o relógio da janela de interferência e `state.log` é a narração da mesa.
+- [ ] **Reescrever `game` sobre o motor.** A tela de partida multijogador (`/game/[id]`) continua mostrando só quem está na mesa: sem estado de partida no banco, não há o que desenhar. A UI já existe e é reaproveitável — `components/game/` (`GameTable`, `Hand`, `TurnBar`, `MatchLog`, `MatchResult`) foi escrita para o modo solo e só conhece `state` + `dispatch`, então o que sobra é trocar a origem do estado (hook local → realtime). O que o motor entrega para a UI: `legalCommands(state, playerId)` diz o que habilitar, `state.pending[0]` é a pergunta da vez, `state.window.closesAt` é o relógio da janela e `state.log` é a narração da mesa.
 
 - [ ] **Missões como carta.** Hoje a missão é sorteada direto no `createMatch` e vive só no estado. Virar carta (com arte, como as outras) é o próximo passo — o motor já trata identidade e missão como um par só, então é trabalho de catálogo e de UI, não de regra.
+
+---
+
+## 🤖 Modo solo
+
+Jogável hoje, em `/solo`: você contra 1 a 6 bots, tudo no browser, sem passar pelo Supabase. Existe porque o motor é puro — dava para jogar antes de a partida existir no banco, e é assim que se descobre se as regras dão uma partida boa antes de gastar migration com elas. Nada é salvo: recarregar recomeça.
+
+- **Bots** (`domain/match/bot.js`): não são adversário esperto e não tentam ser. Guardam carta de reação para a janela, só reagem quando a carta na pilha ia fazer eles beberem, e miram quem tem menos shots — sem saber as missões, espalhar é o único palpite razoável. O que importa é que jogam sempre e jogam legal.
+- **Baralho aleatório** de 20 cartas por jogador (`SOLO_DECK_SIZE`), sorteado do catálogo inteiro ou só da sua coleção.
+- **Ritmo**: `useSoloMatch` dá 900ms de "pensamento" por comando de bot e toca o relógio da janela a cada 200ms — sem o atraso, a partida inteira resolveria num frame.
+
+Pendências do solo:
+
+- [ ] **Nada é persistido.** Fechar a aba perde a partida. O `usePersistentState` já existe e resolveria, mas só vale a pena se o solo virar mais que bancada de teste.
+- [ ] **Escolha de carta** (`kind: 'cards'` — descartar, dar, roubar escolhendo) ainda cai no default do resolvedor: as primeiras da mão. O motor já sabe pedir; falta a tela oferecer.
+- [ ] **`chooser: 'table'`** (voto da mesa) decide como se fosse quem jogou. Voto de verdade precisa de mecânica que não existe.
 
 ---
 

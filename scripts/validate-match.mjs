@@ -13,7 +13,9 @@
 //      nem cair no ramo "acao sem handler";
 //   3. uma partida inteira, do primeiro turno ate a apuracao.
 
-import { Command, apply } from '../domain/match/engine.js';
+import { Command, apply, legalCommands } from '../domain/match/engine.js';
+import { botCommand } from '../domain/match/bot.js';
+import { createSoloMatch } from '../domain/match/solo.js';
 import { CARD_EFFECTS } from '../domain/cards/effects/index.js';
 import { MISSIONS, evaluateMissions } from '../domain/match/missions.js';
 import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
@@ -123,7 +125,7 @@ function responder(state){
     const todos = state.players.map(p => p.id);
 
     switch(request.kind){
-        case 'optIn':  return request.candidates;
+        case 'optIn':  return true;
         case 'option': return 0;
         case 'cards':  return [];
         default: {
@@ -337,6 +339,127 @@ for(const id of IDS){
         check('partida encerrada tem resultado', Array.isArray(state.results));
     }
     console.log(`partida simulada: ${turnos} turno(s), status ${state.status}`);
+}
+
+// ------------------------------------------- 6. mesa so de bots
+
+// O modo solo em cima da mesa: cinco bots jogam sozinhos ate a apuracao. Se
+// isto trava, e porque existe um estado em que ninguem tem comando legal — que
+// e exatamente o bug que o solo revelaria depois de tres telas de UI.
+{
+    const { state: inicial, botIds } = createSoloMatch({
+        seed: 99,
+        you: { id: -99, name: 'bot zero' },
+        botCount: 4,
+        pool: IDS,
+    });
+
+    check('o solo monta a mesa pedida', inicial.players.length === 5);
+    check('bot tem baralho aleatorio', inicial.players.every(p => p.deck.length + p.hand.length === 20));
+    check('cada bot tem baralho proprio',
+        new Set(inicial.players.map(p => p.deck.join(','))).size === inicial.players.length);
+    check('os ids de bot sao negativos', botIds.every(id => id < 0));
+
+    let state = inicial;
+    let passos = 0;
+    while(state.status !== MatchStatus.finished && passos < 5000){
+        passos++;
+        const comando = state.players
+            .map(player => botCommand(state, player.id, 999999))
+            .find(Boolean);
+        if(!comando){
+            // Ninguem tem o que fazer: so pode ser janela esperando o relogio.
+            if(state.phase === Phase.window){
+                state = apply(state, { type: Command.tick, now: 999999 });
+                continue;
+            }
+            erro(`mesa travada na fase ${state.phase}`);
+            break;
+        }
+        state = apply(state, comando);
+    }
+
+    check('a mesa de bots chega ao fim', state.status === MatchStatus.finished);
+    check('a partida de bots apura', Array.isArray(state.results));
+    check('alguem bebeu alguma coisa', state.players.some(p => p.shots > 0));
+    console.log(`mesa de bots: ${passos} comando(s), ${state.turnCount} turnos, `
+        + `vencedores ${state.winners?.join(', ') || 'ninguem'}`);
+}
+
+// ------------------------------ 7. solo com um humano na mesa
+
+// O modo solo de verdade: bots mais uma pessoa. O humano aqui e o mais passivo
+// possivel — passa na janela, joga a primeira carta, responde a escolha com o
+// primeiro alvo. Se ate esse jogador termina a partida, nao existe estado em
+// que a tela fica sem botao para apertar, que e o travamento que o solo
+// esconderia atras de tres telas de UI.
+{
+    const { state: inicial, botIds } = createSoloMatch({
+        seed: 7,
+        you: { id: 1, name: 'voce' },
+        botCount: 3,
+        pool: IDS,
+    });
+
+    let state = inicial;
+    let passos = 0;
+    let jogadasDoHumano = 0;
+
+    while(state.status !== MatchStatus.finished && passos < 5000){
+        passos++;
+
+        const doBot = botIds.map(id => botCommand(state, id, 999999)).find(Boolean);
+        if(doBot){ state = apply(state, doBot); continue; }
+
+        const eu = state.players.find(p => p.id === 1);
+        const acoes = legalCommands(state, 1);
+
+        if(state.status === MatchStatus.guessing){
+            const palpites = {};
+            for(const other of state.players){
+                if(other.id !== 1) palpites[other.id] = other.mission;
+            }
+            state = apply(state, { type: Command.guess, playerId: 1, value: palpites, now: 0 });
+            continue;
+        }
+        if(acoes.includes(Command.draw)){
+            state = apply(state, { type: Command.draw, playerId: 1, now: 999999 });
+            continue;
+        }
+        if(acoes.includes(Command.play)){
+            if(eu.hand.length === 0){ state = apply(state, { type: Command.tick, now: 999999 }); continue; }
+            state = apply(state, { type: Command.play, playerId: 1, idCard: eu.hand[0], now: 999999 });
+            jogadasDoHumano++;
+            continue;
+        }
+        if(acoes.includes(Command.pass)){
+            state = apply(state, { type: Command.pass, playerId: 1, now: 999999 });
+            continue;
+        }
+        if(acoes.includes(Command.answer)){
+            state = apply(state, {
+                type: Command.answer, playerId: 1, value: responder(state), now: 999999,
+            });
+            continue;
+        }
+        if(acoes.includes(Command.endTurn)){
+            state = apply(state, { type: Command.endTurn, playerId: 1, now: 999999 });
+            continue;
+        }
+        // Ninguem tem o que fazer: so pode ser a janela esperando o relogio,
+        // que na tela e o tick do hook.
+        if(state.phase === Phase.window){
+            state = apply(state, { type: Command.tick, now: 999999 });
+            continue;
+        }
+        erro(`solo travado na fase ${state.phase} (ninguem tem comando legal)`);
+        break;
+    }
+
+    check('o solo com humano chega ao fim', state.status === MatchStatus.finished);
+    check('o humano chegou a jogar', jogadasDoHumano > 0);
+    console.log(`solo: ${passos} comando(s), ${state.turnCount} turnos, `
+        + `${jogadasDoHumano} jogadas suas`);
 }
 
 // ------------------------------------------------------------- panorama

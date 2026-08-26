@@ -1,4 +1,4 @@
-import { Action, Negatable, Pile, Rounding, Scope, Timing } from '../cards/vocabulary.js';
+import { Action, Chooser, Negatable, Pile, Rounding, Scope, Timing } from '../cards/vocabulary.js';
 import { MISSIONS } from './missions.js';
 import { nextRandom } from './rng.js';
 import { playerById } from './state.js';
@@ -649,15 +649,35 @@ export function applyEffect(draft, effect, ctx){
         }
     }
 
-    // `optional` e "pode, se quiser": so atinge quem aceitou. Sem resposta, o
-    // motor pergunta — aplicar em todos seria decidir pela mesa.
+    // `optional` e "pode, se quiser": so atinge quem aceitou. A pergunta e de
+    // cada candidato, um por vez — "todos podem beber" e cinco decisoes, nao
+    // uma. Quem jogou a carta nao responde pelos outros.
     let finalIds = ids;
     if(effect.optional === true){
-        const accepted = ctx.choices?.[ctx.slot + ':optIn'];
-        if(accepted === undefined){
-            return { needs: { kind: 'optIn', slot: ctx.slot, candidates: ids } };
+        const accepted = ctx.choices?.[ctx.slot + ':optIn'] ?? {};
+        const faltando = ids.find(id => accepted[id] === undefined);
+        if(faltando !== undefined){
+            return { needs: { kind: 'optIn', slot: ctx.slot, chooserId: faltando, candidates: ids } };
         }
-        finalIds = ids.filter(id => asList(accepted).includes(id));
+        finalIds = ids.filter(id => accepted[id] === true);
+    }
+
+    // Carta que oferece opcoes so resolve depois de alguem escolher. Perguntar
+    // aqui, e nao dentro do handler, e o que permite parar a resolucao — o
+    // handler ja nao teria como voltar atras.
+    if(effect.action === Action.choice && ctx.choices?.[ctx.slot + ':option'] === undefined){
+        // `chooser: 'table'` e voto da mesa, que ainda nao existe como
+        // mecanica; ate existir, decide quem jogou a carta.
+        const chooserId = effect.chooser === Chooser.target
+            ? (finalIds[0] ?? ctx.sourceId)
+            : ctx.sourceId;
+        return { needs: {
+            kind: 'option',
+            slot: ctx.slot,
+            chooserId,
+            options: (effect.options ?? []).length,
+            byTable: effect.chooser === Chooser.table,
+        } };
     }
 
     // Efeito que nao resolve agora vira estado prolongado. A pilha continua:

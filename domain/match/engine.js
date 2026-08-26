@@ -452,7 +452,7 @@ export function apply(state, command){
             if(request.chooserId !== undefined && request.chooserId !== command.playerId){
                 fail('a escolha nao e sua');
             }
-            const choices = { ...draft.resolution.choices, ...keyFor(request, command.value) };
+            const choices = keyFor(draft.resolution.choices, request, command.playerId, command.value);
 
             // Refaz a resolucao inteira sobre o snapshot, agora com a resposta.
             // Determinismo vem da semente: o mesmo sorteio sai igual.
@@ -498,13 +498,22 @@ function makeItem(draft, command, respondsTo){
     };
 }
 
-/** Onde a resposta entra em `choices`, conforme o tipo do pedido. */
-function keyFor(request, value){
+/**
+ * Onde a resposta entra em `choices`, conforme o tipo do pedido.
+ *
+ * `optIn` acumula por jogador em vez de sobrescrever: "todos podem beber" sao
+ * varias respostas para o mesmo efeito, e a resolucao so segue quando a ultima
+ * chegar.
+ */
+function keyFor(choices, request, playerId, value){
     switch(request.kind){
-        case 'optIn':  return { [request.slot + ':optIn']: value };
-        case 'option': return { [request.slot + ':option']: value };
-        case 'cards':  return { [request.slot + ':cards']: value };
-        default:       return { [request.slot]: value };  // alvo escolhido
+        case 'optIn': {
+            const key = request.slot + ':optIn';
+            return { ...choices, [key]: { ...(choices[key] ?? {}), [playerId]: value === true } };
+        }
+        case 'option': return { ...choices, [request.slot + ':option']: value };
+        case 'cards':  return { ...choices, [request.slot + ':cards']: value };
+        default:       return { ...choices, [request.slot]: value };  // alvo escolhido
     }
 }
 

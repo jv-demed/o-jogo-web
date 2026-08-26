@@ -82,7 +82,7 @@ export default function Home(){
                     <div className='min-w-0'>
                         <h2 className='font-semibold'>Nova partida</h2>
                         <p className='text-xs text-cream-dim mt-0.5'>
-                            Crie a sala e mande o link para a mesa.
+                            Crie a sala, ou jogue sozinho contra bots.
                         </p>
                     </div>
                     <div className={`
@@ -102,6 +102,15 @@ export default function Home(){
                     variant='gold'
                     icon={ICONS.play}
                     action={handlePlay}
+                />
+                {/* O solo fica aqui, e nao na navegacao de baixo: e um jeito de
+                    jogar, nao uma tela para visitar. Enquanto a partida nao
+                    existe no banco, e o unico caminho que leva a uma mesa de
+                    verdade. */}
+                <ActionButton text='Jogar solo'
+                    variant='secondary'
+                    icon={ICONS.blocks}
+                    action={() => router.push('/solo')}
                 />
                 {isCreating && <SpinLoader color='text-gold' />}
                 {error && <ErrorMessage error={error} />}
