@@ -15,7 +15,7 @@ import { GridCollection } from '@/presentation/collection/GridCollection';
 
 export default function Colecao(){
 
-    const { user, refreshUser } = useUser(); 
+    const { user, refreshUser } = useUser();
 
     const [isListMode, setIsListMode] = usePersistentState('isListModeInCollection', true);
 
@@ -36,61 +36,113 @@ export default function Colecao(){
         setSelectedCardIndex(cardIndex);
     }
 
+    const totalProgress = Math.round((userCards.length / CARDS.length) * 100);
+
     return (
         <Main>
-            <PageHeader title='Coleção' />  
-            <div className='flex flex-col gap-2 w-full'>
+            <PageHeader title='Coleção' />
+            <div className='flex flex-col gap-3 w-full shrink-0'>
                 <TextInput value={search}
                     setValue={setSearch}
                     placeholder='Buscar carta...'
                 />
-                <div className='flex items-center justify-between text-sm'>
-                    <span>
-                        Obtidas: {userCards.length || 0}/{CARDS.length}
-                    </span>
-                                        <button type='button'
-                        aria-label={isListMode ? 'Ver em grade' : 'Ver em lista'}
-                        onClick={() => setIsListMode(!isListMode)}
-                        className={`
-                            flex items-center justify-center
-                            h-12 w-12 -mr-3 text-2xl
-                            focus:outline-none focus-visible:ring-2
-                            focus-visible:ring-cream
-                        `}
-                    >
-                        {isListMode ? <ICONS.list /> : <ICONS.blocks />}
-                    </button>
+                <div className='flex items-center justify-between gap-3'>
+                    <div className='flex flex-col gap-1.5 min-w-0 flex-1'>
+                        <span className='text-xs text-cream-dim'>
+                            Obtidas <strong className='text-cream'>{userCards.length}</strong> de {CARDS.length}
+                        </span>
+                        <div className='h-1.5 w-full rounded-full bg-elevated overflow-hidden'>
+                            <div className={`
+                                h-full rounded-full
+                                bg-linear-to-r from-brand to-brand-light
+                                transition-[width] duration-500
+                            `}
+                                style={{ width: `${totalProgress}%` }}
+                            />
+                        </div>
+                    </div>
+                    {/* Alternador segmentado: os dois modos ficam visiveis e o
+                        atual acende, em vez de um botao que troca de icone e
+                        so diz para onde vai. */}
+                    <div className={`
+                        flex shrink-0 gap-0.5 p-0.5 rounded-xl
+                        border border-line bg-surface
+                    `}>
+                        {[
+                            { mode: true, icon: ICONS.list, label: 'Ver em lista' },
+                            { mode: false, icon: ICONS.blocks, label: 'Ver em grade' }
+                        ].map(option => {
+                            const Icon = option.icon;
+                            const isCurrent = isListMode === option.mode;
+                            return (
+                                <button key={option.label}
+                                    type='button'
+                                    aria-label={option.label}
+                                    aria-pressed={isCurrent}
+                                    onClick={() => setIsListMode(option.mode)}
+                                    className={`
+                                        flex items-center justify-center
+                                        h-9 w-10 rounded-[0.6rem] text-lg
+                                        transition-colors
+                                        ${isCurrent
+                                            ? 'bg-brand text-cream'
+                                            : 'text-cream-dim'}
+                                        focus:outline-none focus-visible:ring-2
+                                        focus-visible:ring-brand-light
+                                    `}
+                                >
+                                    <Icon />
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
             <div className={`
-                flex flex-col gap-4
-                flex-1 pb-4 w-full
-                overflow-y-auto scrollbar-custom 
+                flex flex-col gap-6
+                flex-1 min-h-0 pb-4 w-full
+                overflow-y-auto scrollbar-custom
             `}>
-                {PACKS.map(pack => <div key={`collection-${pack.id}`}>
-                    <div className='flex items-center justify-between mb-2'>
-                        <h3 className='underline'>
-                            {pack.name}
-                        </h3>
-                        <div className='flex justify-between text-sm'>
-                            <span className='pr-1'>
-                                {userCards.filter(cards => cards.idPack == pack.id).length || 0}/{CARDS.filter(cards => cards.idPack == pack.id).length}
-                            </span>
-                        </div>
-                    </div>
-                    {isListMode
-                        ? <ListCollection 
-                            user={user}
-                            cards={copyList.filter(cards => cards.idPack == pack.id)}
-                            onPressCard={onPressCard}
-                        />
-                        : <GridCollection 
-                            user={user}
-                            cards={copyList.filter(cards => cards.idPack == pack.id)}
-                            onPressCard={onPressCard}
-                        />
-                    }
-                </div>)}
+                {PACKS.map(pack => {
+                    const packCards = copyList.filter(card => card.idPack == pack.id);
+                    const packTotal = CARDS.filter(card => card.idPack == pack.id).length;
+                    const packOwned = userCards.filter(card => card.idPack == pack.id).length;
+                    return (
+                        <section key={`collection-${pack.id}`}>
+                            {/* Titulo grudado no topo da rolagem: a lista e
+                                longa e sem isto some a referencia de qual
+                                pacote se esta olhando. */}
+                            <header className={`
+                                sticky top-0 z-10
+                                flex items-center justify-between gap-2 mb-3 py-2
+                                bg-base/90 backdrop-blur-sm
+                            `}>
+                                <h2 className='font-semibold truncate'>
+                                    {pack.name}
+                                </h2>
+                                <span className={`
+                                    shrink-0 px-2.5 py-1 rounded-full
+                                    border border-line bg-elevated
+                                    text-xs tabular-nums text-cream-dim
+                                `}>
+                                    {packOwned}/{packTotal}
+                                </span>
+                            </header>
+                            {isListMode
+                                ? <ListCollection
+                                    user={user}
+                                    cards={packCards}
+                                    onPressCard={onPressCard}
+                                />
+                                : <GridCollection
+                                    user={user}
+                                    cards={packCards}
+                                    onPressCard={onPressCard}
+                                />
+                            }
+                        </section>
+                    );
+                })}
             </div>
             <CardDetailsModal
                 user={user}

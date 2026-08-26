@@ -49,7 +49,7 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 - [ ] **Recuperação de senha** — não existe. `signOut` já é server action em `services/AuthService.js` e serve de espelho. (`signUp` está fora de escopo: cadastro é manual.)
 - [ ] **Tela de perfil** — não existe; o menu do header não tem para onde apontar.
 - [ ] **PWA** — o `manifest.json` está comentado em `app/layout.jsx:6`. Se a ideia é rodar no celular (o CSS todo aponta pra isso), fechar o suporte.
-- [ ] **`next/font`** em vez de `font-[verdana]` inline em `Main.jsx:11`.
+- [ ] **`next/font`** para a tipografia. O `font-[verdana]` inline do `Main` saiu na repaginada; hoje a fonte e uma pilha de sistema declarada no `body` em `styles/globals.css`. Falta a fonte propria, com o `next/font` servindo o arquivo e evitando o salto de layout.
 - [ ] **Migrar `bugs.txt` para issues** do repositório.
 
 ---

@@ -1,5 +1,6 @@
-import { getCardTypeIcon } from '@/types/CardType';
+import { getCardTypeIcon, getCardTypeName } from '@/types/CardType';
 import { userHaveCard } from '@/presenters/usersPresenter';
+import { ICONS } from '@/assets/icons';
 
 export function ListCollection({ user, cards, onPressCard }) {
     return (
@@ -12,39 +13,61 @@ export function ListCollection({ user, cards, onPressCard }) {
                             disabled={!haveCard}
                             onClick={() => onPressCard(card)}
                             className={`
-                                flex items-center
-                                border-2 border-gray-500 rounded-4xl
-                                px-4 py-3 w-full min-h-12
-                                enabled:cursor-pointer disabled:cursor-default
+                                flex items-center gap-3
+                                px-3 py-2.5 w-full min-h-14 rounded-2xl
+                                border text-left transition-transform
+                                ${haveCard
+                                    ? `bg-surface enabled:cursor-pointer
+                                       enabled:active:scale-[0.99]
+                                       ${card.isShot
+                                            ? 'border-danger/40'
+                                            : 'border-success/35'}`
+                                    : 'border-line bg-surface/40 cursor-default'}
                                 focus:outline-none focus-visible:ring-2
-                                focus-visible:ring-cream
-                                ${haveCard 
-                                    ? card.isShot 
-                                        ? 'border-rose-300' 
-                                        : 'border-green-300'
-                                    : 'border-gray-500'
-                                }
+                                focus-visible:ring-brand-light
                             `}
                         >
-                            <span className='id'>
+                            {/* O numero num selo fixo alinha todas as linhas,
+                                mesmo com nome de tamanhos diferentes. */}
+                            <span className={`
+                                flex items-center justify-center shrink-0
+                                h-9 w-9 rounded-lg
+                                border border-line bg-elevated
+                                text-xs tabular-nums
+                                ${haveCard ? 'text-cream' : 'text-cream-dim'}
+                            `}>
                                 {card.number}
                             </span>
-                            <div className={`
-                                flex ${haveCard ? 'justify-start' : 'justify-center'}
-                                w-full 
-                            `}>
-                                <span className={haveCard ? 'pl-4' : ''}>
+                            <span className='flex flex-col min-w-0 flex-1'>
+                                <span className={`
+                                    truncate
+                                    ${haveCard ? 'text-cream' : 'text-cream-dim'}
+                                `}>
                                     {haveCard ? card.name : '???'}
                                 </span>
-                            </div>
-                            {haveCard && getCardTypeIcon(card.type)}
+                                {haveCard && <span className='text-xs text-cream-dim'>
+                                    {getCardTypeName(card.type)} · nível {card.level}
+                                </span>}
+                            </span>
+                            <span className={`
+                                shrink-0 text-lg
+                                ${haveCard
+                                    ? card.isShot ? 'text-danger' : 'text-success'
+                                    : 'text-cream-dim/50'}
+                            `}>
+                                {haveCard ? getCardTypeIcon(card.type) : <ICONS.lock />}
+                            </span>
                         </button>
                     </li>
                 )
             })}
-            {cards.length == 0 && <span>
-                Nenhum carta encontrada
-            </span>}
+            {cards.length == 0 && <li className={`
+                px-4 py-6 rounded-2xl
+                border border-dashed border-line
+                text-center text-sm text-cream-dim
+            `}>
+                Nenhuma carta encontrada
+            </li>}
         </ul>
     )
 }

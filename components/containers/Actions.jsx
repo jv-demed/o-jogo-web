@@ -1,11 +1,11 @@
-export function Actions({ 
+export function Actions({
     children,
-    justifyContent = 'justify-end', 
+    justifyContent = 'justify-end',
 }){
     return (
         <div className={`
             flex gap-2.5 ${justifyContent}
-            w-full pt-2.5 border-t border-t-gray-500
+            w-full pt-3 mt-1 border-t border-line
         `}
         >
             {children}

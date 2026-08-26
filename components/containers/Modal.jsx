@@ -72,8 +72,10 @@ export function Modal({
                 if(e.target === e.currentTarget) onCloseRef.current();
             }}
             className={`
-                fixed inset-0 bg-black/60 px-4
-                flex items-center justify-center z-50
+                fixed inset-0 z-50 px-3 py-4
+                flex items-center justify-center
+                bg-black/70 backdrop-blur-sm
+                animate-fade-in
             `}
         >
             <div ref={dialogRef}
@@ -82,9 +84,12 @@ export function Modal({
                 aria-label={label}
                 tabIndex={-1}
                 className={`
-                    flex flex-col justify-center items-center gap-2
-                    px-6 py-1 max-w-lg w-full 
-                    relative shadow-xl focus:outline-none
+                    relative flex flex-col items-center gap-3
+                    w-full max-w-[360px] max-h-full
+                    pt-2 pb-4 px-2
+                    overflow-y-auto overflow-x-hidden scrollbar-custom
+                    focus:outline-none
+                    animate-sheet-up
                 `}
             >
                 <header className='flex justify-end w-full'>
@@ -93,9 +98,12 @@ export function Modal({
                         onClick={onClose}
                         className={`
                             flex items-center justify-center
-                            h-12 w-12 text-4xl
-                            hover:text-red-400
-                            focus:outline-none focus:ring-2 focus:ring-cream
+                            h-11 w-11 rounded-full text-2xl
+                            border border-line bg-surface/90 text-cream
+                            transition-transform
+                            active:scale-95 active:text-danger
+                            focus:outline-none focus-visible:ring-2
+                            focus-visible:ring-brand-light
                         `}
                     >
                         <ICONS.close />

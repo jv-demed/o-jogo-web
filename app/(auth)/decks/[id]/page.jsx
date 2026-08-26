@@ -14,6 +14,10 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardDetailsModal } from '@/components/cards/CardDetailsModal';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
+// Mesma escala da grade da colecao: a carta de 300px reduzida para 90px,
+// que e o que cabe em tres colunas num celular estreito.
+const CARD_SCALE = 0.3;
+
 export default function Deck({ params }){
 
     const router = useRouter();
@@ -126,16 +130,20 @@ export default function Deck({ params }){
                 />
                 <ul className={`
                     flex-grow min-h-0
-                    grid gap-x-1 gap-y-2 justify-between
-                    grid-cols-[repeat(auto-fit,minmax(70px,max-content))]
-                    overflow-y-auto overflow-x-hidden 
+                    grid gap-2 justify-items-center
+                    grid-cols-[repeat(auto-fill,minmax(90px,1fr))]
+                    overflow-y-auto overflow-x-hidden
                     scrollbar-custom pr-1
                 `}>
                     {copyList.map((card, i) => (
                         <li key={`card-${i}/${card.id}`}>
-                                                        <div className='flex flex-col items-center'>
+                            <div className={`
+                                flex flex-col items-center
+                                rounded-md overflow-hidden
+                                shadow-lg shadow-black/40
+                            `}>
                                 <Card card={card}
-                                    scale={0.24}
+                                    scale={CARD_SCALE}
                                     onClick={() => {
                                         setSelectedCardList(copyList);
                                         setSelectedCardIndex(i);
@@ -146,10 +154,12 @@ export default function Deck({ params }){
                                     onClick={() => handleAddCard(card)}
                                     className={`
                                         flex items-center justify-center
-                                        border-b border-r border-l
-                                        w-full h-8 rounded-b-2xl
+                                        w-full h-8 text-lg
+                                        bg-brand text-cream
+                                        active:brightness-90
                                         focus:outline-none focus-visible:ring-2
-                                        focus-visible:ring-cream
+                                        focus-visible:ring-inset
+                                        focus-visible:ring-brand-light
                                     `}
                                 >
                                     <ICONS.add />
@@ -157,32 +167,36 @@ export default function Deck({ params }){
                             </div>
                         </li>
                     ))}
-                    {copyList.length == 0 && 
-                        <span>Nenhum carta encontrada</span>
-                    }
+                    {copyList.length == 0 && <li className={`
+                        col-span-full w-full px-4 py-6 rounded-2xl
+                        border border-dashed border-line
+                        text-center text-sm text-cream-dim
+                    `}>
+                        Nenhuma carta encontrada
+                    </li>}
                 </ul>
-                {selectedCards.length > 0 && <div>
-                    <div className={`
-                        border-b border-gray-500 
-                        w-full rounded-2xl    
-                    `}/>
-                                        <button type='button'
+                {selectedCards.length > 0 && <div className={`
+                    shrink-0 -mx-4 px-4 pt-1
+                    border-t border-line bg-surface/60 backdrop-blur-sm
+                `}>
+                    <button type='button'
                         aria-label={saveMode ? 'Recolher' : 'Expandir'}
                         aria-expanded={saveMode}
                         onClick={() => setSaveMode(!saveMode)}
                         className={`
-                            flex justify-center items-center
-                            text-4xl h-12 w-full
+                            flex justify-center items-center gap-2
+                            h-10 w-full rounded-lg
+                            text-sm text-cream-dim
                             focus:outline-none focus-visible:ring-2
-                            focus-visible:ring-cream
+                            focus-visible:ring-brand-light
                         `}
                     >
-                        {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
+                        <span className='text-xl'>
+                            {saveMode ? <ICONS.chevronDown /> : <ICONS.chevronUp />}
+                        </span>
+                        {selectedCards.length} no deck
                     </button>
                     <div className='flex flex-col gap-2'>
-                        {saveMode && <span>
-                            Número de cartas: {selectedCards.length}
-                        </span>}
                         <ul className={`
                             flex gap-2 pb-2
                             overflow-x-auto overflow-y-hidden
@@ -193,9 +207,13 @@ export default function Deck({ params }){
                                 <li key={`card-${i}/${card.id}`}
                                     className='snap-center shrink-0'
                                 >
-                                    <div className='flex flex-col items-center'>
-                                                                                <Card card={card}
-                                            scale={0.24}
+                                    <div className={`
+                                        flex flex-col items-center
+                                        rounded-md overflow-hidden
+                                        shadow-lg shadow-black/40
+                                    `}>
+                                        <Card card={card}
+                                            scale={CARD_SCALE}
                                             onClick={() => {
                                                 setSelectedCardList(selectedCards);
                                                 setSelectedCardIndex(i);
@@ -206,9 +224,12 @@ export default function Deck({ params }){
                                             onClick={() => handleRemoveCard(card)}
                                             className={`
                                                 flex items-center justify-center
-                                                w-full h-8 rounded-b-2xl bg-red-400
+                                                w-full h-8 text-lg
+                                                bg-danger/80 text-base
+                                                active:brightness-90
                                                 focus:outline-none focus-visible:ring-2
-                                                focus-visible:ring-cream
+                                                focus-visible:ring-inset
+                                                focus-visible:ring-brand-light
                                             `}
                                         >
                                             <ICONS.close />
@@ -217,7 +238,7 @@ export default function Deck({ params }){
                                 </li>
                             ))}
                         </ul>
-                        {saveMode && <div className='flex flex-col gap-1'>
+                        {saveMode && <div className='flex flex-col gap-3 pb-3'>
                             <TextInput placeholder='Nome do deck'
                                 value={deckName}
                                 setValue={setDeckName}

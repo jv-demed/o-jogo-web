@@ -114,7 +114,7 @@ export function Card({
                             absolute inset-0
                             flex items-center justify-center
                         `}>
-                            <SpinLoader color='text-gray-400' />
+                            <SpinLoader color='text-cream-dim' />
                         </div>}
                         <Image
                             // A key remonta o <img> na troca: nem por um frame

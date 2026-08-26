@@ -5,12 +5,11 @@ import { buyPack } from '@/presenters/usersPresenter';
 import { ICONS } from '@/assets/icons';
 import { CARDS } from '@/assets/cards';
 import { Modal } from '@/components/containers/Modal';
-import { CardForm } from '@/components/cards/CardForm';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
-export function PackDetailsModal({ 
+export function PackDetailsModal({
     refresh,
     pack,
     onClose
@@ -41,33 +40,55 @@ export function PackDetailsModal({
         <Modal onClose={onClose}
             label={pack.name}
         >
-            {drawnCards.length == 0 && <div className='flex flex-col items-center gap-1'>
-                <CardForm factor={1}>
+            {drawnCards.length == 0 && <div className={`
+                flex flex-col items-center gap-4 w-full max-w-[300px]
+            `}>
+                <div className={`
+                    relative w-full aspect-[300/440]
+                    rounded-xl overflow-hidden
+                    border border-line bg-elevated
+                    shadow-2xl shadow-black/60
+                `}>
                     <Image
-                        className='object-contain rounded'
+                        className='object-cover'
                         src={`/packs/${pack.id}.webp`}
                         alt={pack.name}
-                        width={300}
-                        height={480}
+                        fill
+                        sizes='300px'
                         quality={90}
                     />
-                </CardForm>
-                <ActionButton text={`Comprar por ${pack.price} coins`}
+                </div>
+                <div className='text-center'>
+                    <h2 className='font-semibold'>{pack.name}</h2>
+                    <p className='text-xs text-cream-dim mt-1'>
+                        {pack.quantity} cartas sorteadas na hora
+                    </p>
+                </div>
+                <ActionButton text={`Comprar por ${pack.price}`}
+                    variant='gold'
+                    icon={ICONS.coins}
                     action={handleBuy}
                 />
                 {error && <ErrorMessage error={error} />}
             </div>}
-            {drawnCards.length > 0 && <div 
-                className='flex flex-col items-center gap-2'
+            {drawnCards.length > 0 && <div
+                className='flex flex-col items-center gap-4 w-full max-w-[300px]'
             >
-                <CardNavigation 
+                <span className={`
+                    px-3 py-1 rounded-full
+                    border border-gold/30 bg-gold/10
+                    text-xs font-semibold uppercase tracking-widest text-gold
+                `}>
+                    Suas novas cartas
+                </span>
+                <CardNavigation
                     cards={drawnCards}
                     index={selectedCardIndex}
                     setIndex={setSelectedCardIndex}
-                />  
-                {selectedCardIndex == drawnCards.length-1 && <ActionButton 
+                />
+                {selectedCardIndex == drawnCards.length-1 && <ActionButton
+                    text='Guardar na coleção'
                     icon={ICONS.check}
-                    width='300px'
                     action={() => {
                         setDrawnCards([]);
                         setSelectedCardIndex(0);

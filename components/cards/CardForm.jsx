@@ -1,16 +1,17 @@
-export function CardForm({ 
+export function CardForm({
     children,
     factor = 1
 }) {
     return (
-        <div 
+        <div
             className={`
                 flex items-center justify-center
-                bg-gray-700 rounded
+                rounded-md border border-dashed border-line
+                bg-linear-to-b from-elevated to-surface
             `}
-            style={{ 
-                width: 300*factor, 
-                height: 440*factor 
+            style={{
+                width: 300*factor,
+                height: 440*factor
             }}
         >
             {children}

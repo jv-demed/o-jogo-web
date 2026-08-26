@@ -15,14 +15,14 @@ export function Form({ children, onSubmit }){
     }
 
     return (
-        <form 
+        <form
             onSubmit={handleSubmit}
             className={`
-                flex flex-col gap-2.5
-                w-full  
+                flex flex-col gap-4
+                w-full
             `}
         >
-            {isLoading ? <SpinLoader /> : children}
+            {isLoading ? <SpinLoader marginTop='24px' /> : children}
         </form>
     )
 }

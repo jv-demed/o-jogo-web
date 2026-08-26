@@ -167,45 +167,92 @@ export default function Lobby({ params }){
                     : <div className='flex flex-col justify-between gap-4 h-full'>
                         {error && <ErrorMessage error={error} />}
                         {match && <>
-                            <div className='flex flex-col flex-1 gap-2 justify-center w-full'>
-                                <span className='text-sm text-gray-400 text-center'>
-                                    {isHost
-                                        ? 'Toque em dois jogadores para trocá-los de lugar. A ordem é a ordem dos turnos.'
-                                        : 'Aguardando o host começar...'}
-                                </span>
-                                <ul className='flex flex-col gap-2.5 w-full'>
-                                    {players.map((player, i) => (
-                                        <li key={player.id}>
-                                            <button
-                                                type='button'
-                                                disabled={!isHost}
-                                                onClick={() => handlePlayerClick(i)}
-                                                className={`
-                                                    flex items-center justify-between gap-2
-                                                    rounded px-3 py-2 w-full
-                                                    bg-base text-left
-                                                    ${selectedIndex === i ? 'border-2 border-brand' : 'border-2 border-transparent'}
-                                                    ${isHost ? 'cursor-pointer' : 'cursor-default'}
-                                                `}
-                                            >
-                                                <span>{player.name}</span>
-                                                <span className='text-xs text-gray-400'>
-                                                    {player.id === match.id_host && 'host'}
-                                                    {player.id === user.id && ' (você)'}
-                                                </span>
-                                            </button>
-                                        </li>
-                                    ))}
+                            <div className='flex flex-col flex-1 gap-4 justify-center w-full'>
+                                <div className='flex flex-col items-center gap-1.5'>
+                                    <span className={`
+                                        flex items-center gap-2
+                                        px-3 py-1 rounded-full
+                                        border border-line bg-elevated
+                                        text-xs uppercase tracking-widest text-cream-dim
+                                    `}>
+                                        {players.length} na mesa
+                                    </span>
+                                    <span className='text-sm text-cream-dim text-center'>
+                                        {isHost
+                                            ? 'Toque em dois jogadores para trocá-los de lugar. A ordem é a ordem dos turnos.'
+                                            : 'Aguardando o host começar...'}
+                                    </span>
+                                </div>
+                                <ul className='flex flex-col gap-2 w-full'>
+                                    {players.map((player, i) => {
+                                        const isSelected = selectedIndex === i;
+                                        return (
+                                            <li key={player.id}>
+                                                <button
+                                                    type='button'
+                                                    disabled={!isHost}
+                                                    onClick={() => handlePlayerClick(i)}
+                                                    className={`
+                                                        flex items-center gap-3
+                                                        px-3 py-2.5 w-full min-h-14 rounded-2xl
+                                                        bg-base text-left
+                                                        border transition-transform
+                                                        ${isSelected
+                                                            ? 'border-brand-light ring-2 ring-brand-light/40'
+                                                            : 'border-line'}
+                                                        ${isHost
+                                                            ? 'cursor-pointer active:scale-[0.99]'
+                                                            : 'cursor-default'}
+                                                        focus:outline-none focus-visible:ring-2
+                                                        focus-visible:ring-brand-light
+                                                    `}
+                                                >
+                                                    {/* A posicao na fila e o
+                                                        dado que o host esta
+                                                        reordenando; fica no
+                                                        selo, nao implicita. */}
+                                                    <span className={`
+                                                        flex items-center justify-center shrink-0
+                                                        h-8 w-8 rounded-lg
+                                                        border border-line bg-elevated
+                                                        text-xs font-semibold tabular-nums
+                                                    `}>
+                                                        {i + 1}
+                                                    </span>
+                                                    <span className='truncate'>
+                                                        {player.name}
+                                                    </span>
+                                                    <span className='ml-auto flex shrink-0 gap-1.5'>
+                                                        {player.id === match.id_host && <span className={`
+                                                            px-2 py-0.5 rounded-full
+                                                            border border-gold/30 bg-gold/10
+                                                            text-[0.65rem] uppercase tracking-wider text-gold
+                                                        `}>
+                                                            host
+                                                        </span>}
+                                                        {player.id === user.id && <span className={`
+                                                            px-2 py-0.5 rounded-full
+                                                            border border-line bg-elevated
+                                                            text-[0.65rem] uppercase tracking-wider text-cream-dim
+                                                        `}>
+                                                            você
+                                                        </span>}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
-                                {!isHost && <SpinLoader />}
+                                {!isHost && <SpinLoader color='text-cream-dim' />}
                             </div>
                             <Actions justifyContent='justify-between'>
                                 <ActionButton text={isHost ? 'Cancelar' : 'Sair'}
-                                    bg='var(--color-base)'
+                                    variant='secondary'
                                     width='40%'
                                     action={handleLeave}
                                 />
                                 {isHost && <ActionButton text='Começar'
+                                    variant='gold'
                                     width='55%'
                                     disabled={players.length < 2}
                                     action={handleStart}

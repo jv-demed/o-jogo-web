@@ -1,19 +1,20 @@
 'use client'
 import { useState } from 'react';
 import { sellCard, cardSellPrice } from '@/presenters/usersPresenter';
+import { ICONS } from '@/assets/icons';
 import { Modal } from '@/components/containers/Modal';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { CardNavigation } from '@/components/cards/CardNavigation';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
-export function CardDetailsModal({ 
+export function CardDetailsModal({
     user,
     refresh,
     cards,
     selectedCardIndex,
     setSelectedCardIndex
 }) {
-    
+
     const [error, setError] = useState(null);
 
     if (selectedCardIndex == null) return null;
@@ -40,25 +41,30 @@ export function CardDetailsModal({
         <Modal onClose={() => setSelectedCardIndex(null)}
             label={selectedCard.name}
         >
-            <CardNavigation 
+            <CardNavigation
                 cards={cards}
                 index={selectedCardIndex}
                 setIndex={setSelectedCardIndex}
             />
             <footer className={`
-                flex flex-col gap-2 
-                p-2 w-[300px] rounded    
-                bg-gray-800/80 
+                flex flex-col gap-3
+                p-3 w-full max-w-[300px] panel
             `}>
-                <div className='flex justify-between'>
-                    <span>
-                        Unidades:
+                <div className='flex items-center justify-between text-sm'>
+                    <span className='text-cream-dim'>
+                        Unidades
                     </span>
-                    <span>
+                    <span className={`
+                        px-2.5 py-0.5 rounded-full
+                        border border-line bg-elevated
+                        font-semibold tabular-nums
+                    `}>
                         {repetitions}
                     </span>
                 </div>
-                <ActionButton text={`Vender por ${cardSellPrice(selectedCard.level)} coins`}
+                <ActionButton text={`Vender por ${cardSellPrice(selectedCard.level)}`}
+                    variant='gold'
+                    icon={ICONS.coins}
                     disabled={repetitions == 0}
                     action={handleSell}
                 />

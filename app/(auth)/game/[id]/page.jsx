@@ -51,12 +51,17 @@ export default function Game({ params }){
                             players={players}
                         />
                         <section className={`
-                            flex items-center justify-center
-                            h-[200px] w-full
-                            rounded border border-dashed border-gray-600
-                            text-sm text-gray-400
+                            flex flex-col items-center justify-center gap-1
+                            h-[200px] w-full shrink-0
+                            rounded-2xl border border-dashed border-line
+                            bg-base/50 text-center
                         `}>
-                            Mão do jogador — depende das regras da partida.
+                            <span className='text-sm text-cream-dim'>
+                                Mão do jogador
+                            </span>
+                            <span className='text-xs text-cream-dim/70'>
+                                Depende das regras da partida.
+                            </span>
                         </section>
                     </div>}
             </Box>

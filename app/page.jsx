@@ -33,29 +33,63 @@ export default function LoginPage(){
     }
 
     return (
-        <Main style={{
-            marginTop: '30px'
-        }}>
-            <Form onSubmit={handleSubmit}>
-                <TextInput name='E-mail' 
-                    type='email'
-                    value={auth.email}
-                    setValue={e => setAuth({...auth, email: e})}
-                />
-                <PasswordInput name='Senha' 
-                    value={auth.password}
-                    setValue={e => setAuth({...auth, password: e})}
-                />
-                <Actions>
-                    <ActionButton text='Entrar' 
-                        type='submit'
-                        icon={ICONS.login}
+        <Main between>
+            <section className={`
+                flex flex-col items-center gap-2
+                w-full pt-14 pb-8
+                animate-fade-rise
+            `}>
+                <span className={`
+                    flex items-center justify-center
+                    h-16 w-16 rounded-2xl mb-2
+                    border border-brand-light/40
+                    bg-linear-to-b from-brand-light to-brand
+                    shadow-lg shadow-brand/30
+                    text-2xl
+                `}>
+                    <ICONS.shot />
+                </span>
+                <h1 className={`
+                    text-4xl font-black tracking-[0.2em]
+                    text-cream
+                `}>
+                    O JOGO
+                </h1>
+                <p className='text-sm text-cream-dim tracking-wide'>
+                    O maior jogo de todos os tempos.
+                </p>
+            </section>
+
+            <div className='w-full panel p-5 animate-fade-rise'>
+                <Form onSubmit={handleSubmit}>
+                    <TextInput name='E-mail'
+                        type='email'
+                        placeholder='voce@email.com'
+                        value={auth.email}
+                        setValue={e => setAuth({...auth, email: e})}
+                        icon={ICONS.user}
                     />
-                </Actions>
-                {error && <ErrorMessage 
-                    error={error}
-                />}
-            </Form>
+                    <PasswordInput name='Senha'
+                        placeholder='••••••••'
+                        value={auth.password}
+                        setValue={e => setAuth({...auth, password: e})}
+                        icon={ICONS.lock}
+                    />
+                    {error && <ErrorMessage
+                        error={error}
+                    />}
+                    <Actions justifyContent='justify-center'>
+                        <ActionButton text='Entrar'
+                            type='submit'
+                            icon={ICONS.login}
+                        />
+                    </Actions>
+                </Form>
+            </div>
+
+            <footer className='py-6 text-xs text-cream-dim/70'>
+                Beba com responsabilidade.
+            </footer>
         </Main>
     );
 }
