@@ -16,12 +16,14 @@ import { PageHeader } from '@/components/elements/PageHeader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { GameTable } from '@/components/game/GameTable';
-import { PlayedCard } from '@/components/game/PlayedCard';
+import { PlayReveal } from '@/components/game/PlayReveal';
 import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
-import { MatchLog } from '@/components/game/MatchLog';
 import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
 import { MissionModal, MissionButton } from '@/components/game/MissionModal';
+import { MatchLogModal, MatchLogButton } from '@/components/game/MatchLogModal';
+import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
+import { DiscardModal } from '@/components/game/DiscardModal';
 
 /**
  * Jogo solo: voce contra bots, tudo no browser.
@@ -46,8 +48,9 @@ export default function Solo(){
     const [botCount, setBotCount] = useState(3);
     const [useCollection, setUseCollection] = useState(false);
     const [selected, setSelected] = useState([]);
-    const [isRevealing, setIsRevealing] = useState(false);
-    const [isMissionOpen, setIsMissionOpen] = useState(false);
+    // Uma gaveta de cada vez: as quatro coisas guardadas (missao, log, menu,
+    // descarte) sao todas modais, e duas abertas juntas empilhariam veus.
+    const [openPanel, setOpenPanel] = useState(null);
 
     // Com a partida na tela, o app inteiro sai de cena: sem cabecalho e sem
     // titulo de pagina, a mesa fica com a tela toda.
@@ -67,10 +70,11 @@ export default function Solo(){
         setSelected([]);
     }, [request?.slot, request?.uid]);
 
-    // A carta jogada nao abre mais um veu em tela cheia: ela fica grande no meio
-    // da mesa enquanto resolve (ver GameTable), onde nao cobre a mao de quem
-    // ainda pode reagir. O modal aqui e so para reler a ultima carta com calma,
-    // a pedido — dai so o toque na pilha do descarte abrir.
+    // A carta jogada nao tem estado nenhum na tela: ela aparece porque a mesa
+    // esta na janela de interferencia (ver PlayReveal) e some quando a janela
+    // fecha. Relogio de exibicao seria um segundo relogio correndo contra o do
+    // motor, e os dois discordariam.
+    const closePanel = () => setOpenPanel(null);
 
     function handleStart(){
         setSelected([]);
@@ -154,42 +158,30 @@ export default function Solo(){
                             <div className='relative flex flex-col flex-1 min-h-0'>
                                 <GameTable state={state} you={you}
                                     lastPlay={lastPlay}
-                                    onOpenLastPlay={() => setIsRevealing(true)}
+                                    onOpenDiscard={() => setOpenPanel('discard')}
                                     selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
                                     selected={selected}
                                     onSelect={handleSelect}
                                 />
 
-                                {/* O log flutua sobre a mesa em vez de ocupar
-                                    uma faixa dela: e leitura de canto de olho, e
-                                    a altura que ele cobrava rende mais como
-                                    feltro. */}
-                                <div className={`
-                                    absolute left-2 top-2 z-10
-                                    max-w-[58%] max-h-20
-                                    overflow-y-auto scrollbar-custom
-                                    pointer-events-none
-                                `}>
-                                    <MatchLog state={state} limit={6} />
+                                {/* Os dois cantos de cima da mesa: o que
+                                    aconteceu, e o menu. Ambos guardados — o
+                                    feltro e da roda e da carta em jogo. */}
+                                <div className='absolute left-2 top-2 z-30'>
+                                    <MatchLogButton onClick={() => setOpenPanel('log')} />
+                                </div>
+                                <div className='absolute right-2 top-2 z-30'>
+                                    <MatchMenuButton onClick={() => setOpenPanel('menu')} />
                                 </div>
 
-                                {/* A saida nao tem mais barra onde morar, entao
-                                    vira um icone no canto da mesa. */}
-                                <button type='button'
-                                    aria-label='Sair da partida'
-                                    onClick={leave}
-                                    className={`
-                                        absolute right-2 top-2 z-10
-                                        flex items-center justify-center
-                                        h-9 w-9 rounded-xl
-                                        border border-line bg-base/70 text-cream-dim
-                                        transition-transform active:scale-95
-                                        focus:outline-none focus-visible:ring-2
-                                        focus-visible:ring-brand-light
-                                    `}
-                                >
-                                    <ICONS.close />
-                                </button>
+                                {/* A carta em jogo cobre a mesa, nunca a mao:
+                                    todo mundo le a carta, e quem tiver bloqueio
+                                    continua com a mao ali embaixo para jogar. */}
+                                {state.phase === Phase.window && <PlayReveal
+                                    play={lastPlay}
+                                    players={state.players}
+                                    closesAt={state.window?.closesAt}
+                                />}
 
                                 {error && <div onClick={dismissError}
                                     className='absolute inset-x-3 bottom-2 z-20'
@@ -207,7 +199,7 @@ export default function Solo(){
                                 pb-[max(0.5rem,env(safe-area-inset-bottom))]
                             `}>
                                 <div className='flex items-end gap-2'>
-                                    <MissionButton onClick={() => setIsMissionOpen(true)} />
+                                    <MissionButton onClick={() => setOpenPanel('mission')} />
                                     <div className='flex-1 min-w-0'>
                                         <TurnBar state={state} you={you}
                                             isYourTurn={isYourTurn}
@@ -227,13 +219,21 @@ export default function Solo(){
                         </>}
             </div>
 
-            {isMissionOpen && <MissionModal mission={mission}
-                onClose={() => setIsMissionOpen(false)}
+            {openPanel === 'mission' && <MissionModal mission={mission}
+                onClose={closePanel}
             />}
 
-            {isRevealing && <PlayedCard play={lastPlay}
-                players={state.players}
-                onClose={() => setIsRevealing(false)}
+            {openPanel === 'log' && <MatchLogModal state={state}
+                onClose={closePanel}
+            />}
+
+            {openPanel === 'menu' && <MatchMenu
+                onLeave={leave}
+                onClose={closePanel}
+            />}
+
+            {openPanel === 'discard' && <DiscardModal state={state} you={you}
+                onClose={closePanel}
             />}
         </>
     );
