@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { CARDS } from '@/assets/cards';
 import { ICONS } from '@/assets/icons';
 import { useUser } from '@/providers/UserProvider';
+import { useImmersive } from '@/providers/ImmersiveProvider';
 import { useSoloMatch } from '@/hooks/useSoloMatch';
+import { useLastPlay } from '@/hooks/useLastPlay';
 import { Command, isReaction } from '@/domain/match/engine';
 import { MISSIONS } from '@/domain/match/missions';
 import { MatchStatus, Phase } from '@/domain/match/state';
@@ -14,6 +16,7 @@ import { PageHeader } from '@/components/elements/PageHeader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { GameTable } from '@/components/game/GameTable';
+import { PlayedCard } from '@/components/game/PlayedCard';
 import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
 import { MatchLog } from '@/components/game/MatchLog';
@@ -31,6 +34,9 @@ import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
 
 const CATALOG_IDS = CARDS.map(card => card.id);
 
+// Quanto tempo a carta jogada fica grande na tela. Um toque fecha antes.
+const PLAY_REVEAL_MS = 2200;
+
 export default function Solo(){
 
     const { user } = useUser();
@@ -42,6 +48,13 @@ export default function Solo(){
     const [botCount, setBotCount] = useState(3);
     const [useCollection, setUseCollection] = useState(false);
     const [selected, setSelected] = useState([]);
+    const [isRevealing, setIsRevealing] = useState(false);
+
+    // Com a partida na tela, o app inteiro sai de cena: sem cabecalho e sem
+    // titulo de pagina, a mesa fica com a tela toda.
+    useImmersive(Boolean(state));
+
+    const lastPlay = useLastPlay(state);
 
     // A colecao vem como lista plana com repeticao; o baralho quer ids unicos.
     const collectionIds = [...new Set(user.cards)];
@@ -54,6 +67,16 @@ export default function Solo(){
     useEffect(() => {
         setSelected([]);
     }, [request?.slot, request?.uid]);
+
+    // Carta jogada aparece grande para todo mundo e sai sozinha. O relogio e
+    // curto de proposito: a janela de interferencia corre atras do veu, e quem
+    // quiser reagir precisa da mao de volta antes dela fechar.
+    useEffect(() => {
+        if(!lastPlay) return;
+        setIsRevealing(true);
+        const timer = setTimeout(() => setIsRevealing(false), PLAY_REVEAL_MS);
+        return () => clearTimeout(timer);
+    }, [lastPlay?.uid]);
 
     function handleStart(){
         setSelected([]);
@@ -114,7 +137,8 @@ export default function Solo(){
 
     return (
         <Main>
-            <PageHeader title='Jogo solo' />
+            {/* Sem PageHeader durante a partida: a saida mora na barra da
+                missao, junto do resto do que e seu. */}
             <Box fullH>
                 {error && <div onClick={dismissError}><ErrorMessage error={error} /></div>}
 
@@ -125,7 +149,7 @@ export default function Solo(){
                     />
                     : state.status === MatchStatus.guessing && you.mission === 'sjehnsens'
                         ? <MissionGuess state={state} you={you} dispatch={dispatch} />
-                        : <div className='flex flex-col gap-3 h-full min-h-0'>
+                        : <div className='flex flex-col gap-2 h-full min-h-0'>
                             {/* Sua missao fica sempre a vista: e a unica coisa
                                 que voce sabe e os outros nao, e esquecer dela
                                 e jogar sem objetivo. */}
@@ -141,25 +165,40 @@ export default function Solo(){
                                     <span className='text-sm font-bold'>{mission.name}</span>
                                     <span className='text-[0.65rem] text-cream-dim'>{mission.text}</span>
                                 </span>
-                                <span className={`
-                                    flex items-center gap-1 ml-auto shrink-0
-                                    px-2 py-1 rounded-lg
-                                    border border-gold/30 bg-gold/10
-                                    text-xs font-semibold tabular-nums text-gold
-                                `}>
-                                    <ICONS.shot />
-                                    {you.shots}
-                                </span>
+                                {/* Seus shots agora estao na sua cadeira, com
+                                    os dos outros; aqui fica a saida, que sem o
+                                    cabecalho nao teria outro lugar. */}
+                                <button type='button'
+                                    aria-label='Sair da partida'
+                                    onClick={leave}
+                                    className={`
+                                        flex items-center justify-center
+                                        ml-auto shrink-0 h-9 w-9 rounded-xl
+                                        border border-line bg-base/60 text-cream-dim
+                                        transition-transform active:scale-95
+                                        focus:outline-none focus-visible:ring-2
+                                        focus-visible:ring-brand-light
+                                    `}
+                                >
+                                    <ICONS.close />
+                                </button>
                             </section>
 
                             <GameTable state={state} you={you}
+                                lastPlay={lastPlay}
+                                onOpenLastPlay={() => setIsRevealing(true)}
                                 selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
                                 selected={selected}
                                 onSelect={handleSelect}
                             />
 
-                            <section className='flex-1 min-h-0 overflow-y-auto scrollbar-custom'>
-                                <MatchLog state={state} />
+                            {/* O log encolheu para caber a mesa: quem quiser o
+                                historico inteiro rola dentro dele. */}
+                            <section className={`
+                                shrink-0 h-12 overflow-y-auto
+                                scrollbar-custom
+                            `}>
+                                <MatchLog state={state} limit={8} />
                             </section>
 
                             <section className='shrink-0'>
@@ -175,8 +214,14 @@ export default function Solo(){
                                 <Hand cards={you.hand}
                                     playable={playable}
                                     onPlay={handlePlay}
+                                    scale={0.38}
                                 />
                             </section>
+
+                            {isRevealing && <PlayedCard play={lastPlay}
+                                players={state.players}
+                                onClose={() => setIsRevealing(false)}
+                            />}
                         </div>}
             </Box>
         </Main>

@@ -1,15 +1,15 @@
 import { UserProvider } from '@/providers/UserProvider';
-import { Header } from '@/components/containers/Header';
+import { ImmersiveProvider } from '@/providers/ImmersiveProvider';
 
 export default function AuthLayout({ children }){
     return(
         <UserProvider>
-            {/* --header-h e a altura do Header; o Main desconta esse valor da
-                altura da tela para nao gerar scroll de pagina. */}
-            <div className='[--header-h:3.5rem]'>
-                <Header />
+            {/* O ImmersiveProvider e quem monta o Header e declara --header-h,
+                a altura que o Main desconta da tela para nao gerar scroll de
+                pagina. Na partida ele apaga os dois. */}
+            <ImmersiveProvider>
                 {children}
-            </div>
+            </ImmersiveProvider>
         </UserProvider>
     );
 }
