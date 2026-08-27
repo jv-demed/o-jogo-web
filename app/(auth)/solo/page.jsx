@@ -22,6 +22,8 @@ import { TurnBar } from '@/components/game/TurnBar';
 import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
 import { MissionModal, MissionButton } from '@/components/game/MissionModal';
 import { MatchLogModal, MatchLogButton } from '@/components/game/MatchLogModal';
+import { PlayerPickModal } from '@/components/game/PlayerPickModal';
+import { CardPreview } from '@/components/game/CardPreview';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
 
@@ -48,9 +50,13 @@ export default function Solo(){
     const [botCount, setBotCount] = useState(3);
     const [useCollection, setUseCollection] = useState(false);
     const [selected, setSelected] = useState([]);
-    // Uma gaveta de cada vez: as quatro coisas guardadas (missao, log, menu,
-    // descarte) sao todas modais, e duas abertas juntas empilhariam veus.
+    // Uma gaveta de cada vez: missao, log, menu, descarte e a escolha de alvo
+    // sao todas modais, e duas abertas juntas empilhariam veus.
     const [openPanel, setOpenPanel] = useState(null);
+    // A carta que se esta olhando de perto (toque longo na mao, toque no
+    // descarte). Fica fora do `openPanel`: da para olhar uma carta *durante*
+    // uma escolha, e sem isso abrir a lupa fecharia a pergunta.
+    const [preview, setPreview] = useState(null);
 
     // Com a partida na tela, o app inteiro sai de cena: sem cabecalho e sem
     // titulo de pagina, a mesa fica com a tela toda.
@@ -69,6 +75,14 @@ export default function Solo(){
     useEffect(() => {
         setSelected([]);
     }, [request?.slot, request?.uid]);
+
+    // Pergunta de alvo abre sozinha: e a mesa que esta esperando *voce*, e
+    // deixar a pergunta atras de um botao e deixar a partida parada sem dizer
+    // por que. Fechada, o botao de acao reabre com a selecao intacta.
+    const isYourPick = isPlayerPick(request) && request.chooserId === you?.id;
+    useEffect(() => {
+        if(isYourPick) setOpenPanel('pick');
+    }, [isYourPick, request?.slot, request?.uid]);
 
     // A carta jogada nao tem estado nenhum na tela: ela aparece porque a mesa
     // esta na janela de interferencia (ver PlayReveal) e some quando a janela
@@ -203,8 +217,7 @@ export default function Solo(){
                                     <div className='flex-1 min-w-0'>
                                         <TurnBar state={state} you={you}
                                             isYourTurn={isYourTurn}
-                                            selected={selected}
-                                            onSelect={handleSelect}
+                                            onOpenPicker={() => setOpenPanel('pick')}
                                             dispatch={dispatch}
                                         />
                                     </div>
@@ -213,6 +226,7 @@ export default function Solo(){
                                 <Hand cards={you.hand}
                                     playable={playable}
                                     onPlay={handlePlay}
+                                    onInspect={setPreview}
                                     scale={0.38}
                                 />
                             </div>
@@ -234,9 +248,39 @@ export default function Solo(){
 
             {openPanel === 'discard' && <DiscardModal state={state} you={you}
                 onClose={closePanel}
+                onInspect={setPreview}
+            />}
+
+            {openPanel === 'pick' && isYourPick && <PlayerPickModal
+                request={request}
+                state={state}
+                you={you}
+                selected={selected}
+                onSelect={handleSelect}
+                onConfirm={() => {
+                    dispatch({ type: Command.answer, playerId: you.id, value: selected });
+                    closePanel();
+                }}
+                onClose={closePanel}
+            />}
+
+            {preview && <CardPreview card={preview}
+                onClose={() => setPreview(null)}
             />}
         </>
     );
+}
+
+/**
+ * Pergunta de alvo e a que aponta jogador: `choose` e `manual` no motor. As
+ * outras duas (`optIn`, `option`) sao botao de sim/nao e escolha de opcao, e
+ * cabem na propria barra de acao.
+ */
+function isPlayerPick(request){
+    return Boolean(request)
+        && request.kind !== 'optIn'
+        && request.kind !== 'option'
+        && Array.isArray(request.candidates);
 }
 
 /**

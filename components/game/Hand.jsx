@@ -1,4 +1,6 @@
+'use client'
 import { Card } from '@/components/cards/Card';
+import { useLongPress } from '@/hooks/useLongPress';
 import { cardById } from './narrate';
 
 /**
@@ -11,11 +13,17 @@ import { cardById } from './narrate';
  * `playable` e a lista de ids que podem ser jogados agora — na sua vez e a mao
  * toda, na janela de interferencia sao so as cartas de reacao. Quem decide isso
  * e a tela, com o que o motor respondeu; aqui so muda a aparencia.
+ *
+ * Toque curto joga, toque longo mostra a carta inteira (`onInspect`): nesta
+ * escala o texto da carta nao se le, e decidir sem ler nao e decidir. Vale para
+ * a carta bloqueada tambem — saber o que voce *nao* pode jogar agora e
+ * informacao de jogo.
  */
 export function Hand({
     cards,
     playable = [],
     onPlay,
+    onInspect,
     scale = 0.42
 }){
 
@@ -36,24 +44,38 @@ export function Hand({
         `}>
             {cards.map((idCard, index) => {
                 const card = cardById(idCard);
-                const isPlayable = playable.includes(idCard);
                 if(!card) return null;
                 return (
                     // A chave leva o indice junto: a mesma carta pode aparecer
                     // duas vezes na mao, e so o id faria React reusar o no.
-                    <div key={`${idCard}:${index}`}
-                        className={`
-                            shrink-0 transition-[opacity,transform]
-                            ${isPlayable ? '' : 'opacity-40 saturate-50'}
-                        `}
-                    >
-                        <Card card={card}
-                            scale={scale}
-                            onClick={isPlayable ? () => onPlay(idCard) : undefined}
-                        />
-                    </div>
+                    <HandCard key={`${idCard}:${index}`}
+                        card={card}
+                        scale={scale}
+                        isPlayable={playable.includes(idCard)}
+                        onPlay={() => onPlay(idCard)}
+                        onInspect={() => onInspect?.(card)}
+                    />
                 );
             })}
+        </div>
+    );
+}
+
+function HandCard({ card, scale, isPlayable, onPlay, onInspect }){
+
+    const longPress = useLongPress(onInspect);
+
+    return (
+        <div {...longPress}
+            className={`
+                shrink-0 transition-[opacity,transform]
+                ${isPlayable ? '' : 'opacity-40 saturate-50'}
+            `}
+        >
+            <Card card={card}
+                scale={scale}
+                onClick={isPlayable ? onPlay : undefined}
+            />
         </div>
     );
 }

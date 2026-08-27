@@ -21,7 +21,7 @@ export const PLAYS_PER_TURN = 1;
 // Quanto tempo a mesa tem para reagir a uma carta antes dela resolver. Nao e
 // so sabor: sem janela, carta de defesa e carta rapida (dois tipos inteiros do
 // catalogo) nao teriam quando entrar. Qualquer um pode encurtar passando.
-export const REACTION_WINDOW_MS = 5000;
+export const REACTION_WINDOW_MS = 10000;
 
 // Fases do turno. O estado guarda a fase porque a mesma acao ("jogar carta") e
 // legal ou nao dependendo dela — e quem decide isso e o servidor, nao a UI.

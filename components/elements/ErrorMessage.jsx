@@ -11,7 +11,9 @@ export function ErrorMessage({ error }){
                 animate-fade-rise
             `}
         >
-            <span className='shrink-0 text-base leading-5'>
+            {/* text-[1rem] e nao text-base: `base` tambem e cor no tema, e o
+                Tailwind casa os dois — o icone saia pintado do preto do fundo. */}
+            <span className='shrink-0 text-[1rem] leading-5'>
                 <ICONS.warning />
             </span>
             <span className='min-w-0 break-words'>

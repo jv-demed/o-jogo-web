@@ -19,7 +19,7 @@ export function MatchLog({ state, limit = 14 }){
 
     if(lines.length === 0){
         return (
-            <p className='text-center text-[0.7rem] text-cream-dim/60'>
+            <p className='text-center text-xs text-cream-dim'>
                 A partida começou.
             </p>
         );
@@ -29,9 +29,12 @@ export function MatchLog({ state, limit = 14 }){
         <ul className='flex flex-col gap-1'>
             {lines.map((line, position) => (
                 <li key={line.index}
+                    // Nada de opacidade nas linhas antigas: o log e para ser
+                    // lido, e cream-dim ja e o degrau de contraste. Duas linhas
+                    // de cinza uma sobre a outra viravam sombra no painel.
                     className={`
-                        text-[0.7rem] leading-snug
-                        ${position === 0 ? 'text-cream' : 'text-cream-dim/70'}
+                        text-[0.8rem] leading-snug
+                        ${position === 0 ? 'text-cream' : 'text-cream-dim'}
                     `}
                 >
                     {line.text}

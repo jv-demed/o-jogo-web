@@ -16,8 +16,8 @@ export function MatchMenu({ onLeave, onClose }){
     return (
         <Modal onClose={onClose} label='Menu da partida'>
             <div className='flex flex-col gap-3 w-full px-4 py-5 panel'>
-                <h2 className='text-base font-bold text-center'>Menu</h2>
-                <p className='text-[0.7rem] text-cream-dim text-center'>
+                <h2 className='text-[1rem] font-bold text-center'>Menu</h2>
+                <p className='text-xs text-cream-dim text-center'>
                     Sair encerra a partida: nada aqui é salvo.
                 </p>
                 <ActionButton text='Sair da partida'

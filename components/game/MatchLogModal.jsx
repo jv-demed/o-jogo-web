@@ -15,7 +15,7 @@ export function MatchLogModal({ state, onClose }){
     return (
         <Modal onClose={onClose} label='O que aconteceu'>
             <div className='flex flex-col gap-2.5 w-full px-4 py-4 panel'>
-                <h2 className='text-base font-bold text-center'>
+                <h2 className='text-[1rem] font-bold text-center'>
                     O que aconteceu
                 </h2>
                 {/* Sem limite aqui: o modal e justamente o lugar de ver o
@@ -26,7 +26,11 @@ export function MatchLogModal({ state, onClose }){
     );
 }
 
-/** O botao que abre o log, no canto da mesa. */
+/**
+ * O botao que abre o log, no canto da mesa. Relogio com seta, e nao lista: uma
+ * lista de tres tracinhos ao lado de um sanduiche de tres tracinhos e o mesmo
+ * botao duas vezes.
+ */
 export function MatchLogButton({ onClick }){
     return (
         <button type='button'
@@ -41,7 +45,7 @@ export function MatchLogButton({ onClick }){
                 focus-visible:ring-brand-light
             `}
         >
-            <ICONS.list />
+            <ICONS.history />
         </button>
     );
 }
