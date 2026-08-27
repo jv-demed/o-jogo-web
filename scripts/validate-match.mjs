@@ -25,6 +25,30 @@ const erro = message => { console.error('ERRO ' + message); problemas++; };
 
 const check = (label, condition) => { if(!condition) erro(label); };
 
+/**
+ * O descarte da mesa (`state.discardPile`, em ordem) e os montes de cada
+ * jogador (`player.discard`) sao a mesma carta contada duas vezes: um sabe
+ * quando ela caiu, o outro de quem ela e. Escrever num e esquecer o outro faz
+ * a pilha do centro mostrar carta errada — e e um bug silencioso, porque cada
+ * lado sozinho continua coerente. Por isso os dois batem em toda simulacao.
+ */
+function descarteBate(state){
+    const daMesa = new Map();
+    for(const { idCard, playerId } of state.discardPile){
+        const chave = `${playerId}:${idCard}`;
+        daMesa.set(chave, (daMesa.get(chave) ?? 0) + 1);
+    }
+    for(const player of state.players){
+        for(const idCard of player.discard){
+            const chave = `${player.id}:${idCard}`;
+            const resta = daMesa.get(chave) ?? 0;
+            if(resta === 0) return false;
+            daMesa.set(chave, resta - 1);
+        }
+    }
+    return [...daMesa.values()].every(resta => resta === 0);
+}
+
 // ------------------------------------------------------- 1. apuracao
 
 function mesa(players){
@@ -184,6 +208,12 @@ for(const id of IDS){
             .reduce((sum, e) => sum + e.amount, 0);
         if(bebidos > 0 && logados === 0){
             erro(`carta #${id}: mexeu em shots sem registrar no log`);
+        }
+
+        // Aqui e onde o descarte forcado e o redraw da mao de fato acontecem:
+        // a partida sorteada acima pode nunca tirar essas cartas do baralho.
+        if(!descarteBate(depois)){
+            erro(`carta #${id}: descartou sem passar pela pilha da mesa`);
         }
     }catch(err){
         erro(`carta #${id}: ${err.message}`);
@@ -380,6 +410,8 @@ for(const id of IDS){
     }
 
     check('a mesa de bots chega ao fim', state.status === MatchStatus.finished);
+    check('o descarte da mesa bate com os montes dos bots', descarteBate(state));
+    check('a mesa de bots descartou alguma coisa', state.discardPile.length > 0);
     check('a partida de bots apura', Array.isArray(state.results));
     check('alguem bebeu alguma coisa', state.players.some(p => p.shots > 0));
     console.log(`mesa de bots: ${passos} comando(s), ${state.turnCount} turnos, `
@@ -457,6 +489,7 @@ for(const id of IDS){
     }
 
     check('o solo com humano chega ao fim', state.status === MatchStatus.finished);
+    check('o descarte da mesa bate com os montes no solo', descarteBate(state));
     check('o humano chegou a jogar', jogadasDoHumano > 0);
     console.log(`solo: ${passos} comando(s), ${state.turnCount} turnos, `
         + `${jogadasDoHumano} jogadas suas`);

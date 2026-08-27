@@ -14,23 +14,22 @@ import { cardById } from './narrate';
  * secao por jogador, e a secao gastava uma linha de titulo para as vezes uma
  * carta so: com sete jogadores, o modal virava mais titulo do que carta.
  *
- * O descarte vive por jogador no estado (cada um tem o proprio baralho), e nao
- * ha registro de quem descartou primeiro: a ordem aqui e a da mesa, e nao uma
- * cronologia que o motor nao guarda.
+ * A ordem e a que a mesa viu: `state.discardPile` guarda o descarte em ordem
+ * cronologica, e aqui ele vem invertido — a carta que acabou de cair primeiro,
+ * que e a que faz alguem abrir isto. O `discard` de cada jogador continua
+ * existindo (e dele que a carta volta para o baralho), mas ele nao sabe
+ * *quando*, e sem isso a lista era so a ordem das cadeiras.
  */
 export function DiscardModal({ state, you, onClose, onInspect }){
 
-    const used = state.order.flatMap(id => {
-        const player = state.players.find(p => p.id === id);
-        if(!player) return [];
-        // O mais recente primeiro dentro de cada monte: e a carta que acabou de
-        // sair de jogo que faz alguem abrir isto.
-        return [...player.discard].reverse().map((idCard, index) => ({
-            key: `${id}:${idCard}:${index}`,
+    const used = state.discardPile.map(({ idCard, playerId }, index) => {
+        const player = state.players.find(p => p.id === playerId);
+        return {
+            key: `${index}:${idCard}`,
             card: cardById(idCard),
-            owner: id === you.id ? 'Você' : player.name
-        }));
-    }).filter(entry => entry.card);
+            owner: playerId === you.id ? 'Você' : player?.name ?? 'alguém'
+        };
+    }).filter(entry => entry.card).reverse();
 
     return (
         <Modal onClose={onClose} label='Cartas já usadas'>

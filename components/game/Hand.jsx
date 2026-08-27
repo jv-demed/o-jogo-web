@@ -14,15 +14,18 @@ import { cardById } from './narrate';
  * toda, na janela de interferencia sao so as cartas de reacao. Quem decide isso
  * e a tela, com o que o motor respondeu; aqui so muda a aparencia.
  *
- * Toque curto joga, toque longo mostra a carta inteira (`onInspect`): nesta
- * escala o texto da carta nao se le, e decidir sem ler nao e decidir. Vale para
- * a carta bloqueada tambem — saber o que voce *nao* pode jogar agora e
- * informacao de jogo.
+ * Toque curto abre a gaveta da carta (`onChoose`, ver CardActionModal), onde
+ * jogar e ler ficam lado a lado; toque longo vai direto para a carta inteira
+ * (`onInspect`), que e o atalho de quem ja sabe o que tem na mao. Nesta escala
+ * o texto da carta nao se le, e jogar no primeiro toque era jogar sem ler.
+ *
+ * Carta bloqueada abre a gaveta do mesmo jeito: saber o que voce *nao* pode
+ * jogar agora e informacao de jogo.
  */
 export function Hand({
     cards,
     playable = [],
-    onPlay,
+    onChoose,
     onInspect,
     scale = 0.42
 }){
@@ -52,7 +55,7 @@ export function Hand({
                         card={card}
                         scale={scale}
                         isPlayable={playable.includes(idCard)}
-                        onPlay={() => onPlay(idCard)}
+                        onChoose={() => onChoose(card)}
                         onInspect={() => onInspect?.(card)}
                     />
                 );
@@ -61,7 +64,7 @@ export function Hand({
     );
 }
 
-function HandCard({ card, scale, isPlayable, onPlay, onInspect }){
+function HandCard({ card, scale, isPlayable, onChoose, onInspect }){
 
     const longPress = useLongPress(onInspect);
 
@@ -74,7 +77,7 @@ function HandCard({ card, scale, isPlayable, onPlay, onInspect }){
         >
             <Card card={card}
                 scale={scale}
-                onClick={isPlayable ? onPlay : undefined}
+                onClick={onChoose}
             />
         </div>
     );

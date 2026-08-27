@@ -24,6 +24,7 @@ import { MissionModal, MissionButton } from '@/components/game/MissionModal';
 import { MatchLogModal, MatchLogButton } from '@/components/game/MatchLogModal';
 import { PlayerPickModal } from '@/components/game/PlayerPickModal';
 import { CardPreview } from '@/components/game/CardPreview';
+import { CardActionModal } from '@/components/game/CardActionModal';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
@@ -61,6 +62,11 @@ export default function Solo(){
     // descarte). Fica fora do `openPanel`: da para olhar uma carta *durante*
     // uma escolha, e sem isso abrir a lupa fecharia a pergunta.
     const [preview, setPreview] = useState(null);
+    // A carta da mao que voce tocou, esperando voce dizer o que fazer com ela.
+    // Guarda so a carta: se ela pode ser jogada e coisa da mesa, e a mesa anda
+    // com a gaveta aberta — a janela fecha, o bot joga. Derivado, o botao de
+    // jogar some junto com o direito de jogar, em vez de mentir.
+    const [choice, setChoice] = useState(null);
 
     // Ferramentas de dev. `devPick` diz o que a escolha de carta vai fazer com
     // ela: empilhar e comprar, so empilhar, ou por na mao. Fora do `openPanel`
@@ -140,6 +146,7 @@ export default function Solo(){
     }
 
     function handlePlay(idCard){
+        setChoice(null);
         if(state.phase === Phase.window){
             dispatch({ type: Command.react, playerId: you.id, idCard });
             return;
@@ -197,7 +204,6 @@ export default function Solo(){
                         : <>
                             <div className='relative flex flex-col flex-1 min-h-0'>
                                 <GameTable state={state} you={you}
-                                    lastPlay={lastPlay}
                                     onOpenDiscard={() => setOpenPanel('discard')}
                                     selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
                                     selected={selected}
@@ -257,7 +263,7 @@ export default function Solo(){
 
                                 <Hand cards={you.hand}
                                     playable={playable}
-                                    onPlay={handlePlay}
+                                    onChoose={setChoice}
                                     onInspect={setPreview}
                                     scale={0.38}
                                 />
@@ -325,6 +331,17 @@ export default function Solo(){
                 ]}
                 onPick={handleDevPick}
                 onClose={() => setDevPick(null)}
+            />}
+
+            {/* A gaveta da carta fica antes da lupa na arvore, mas some antes
+                dela na tela: "ver detalhes" fecha esta e abre aquela, e voltar
+                da lupa cai direto na mao — quem quis ler ja leu. */}
+            {choice && <CardActionModal card={choice}
+                isPlayable={playable.includes(choice.id)}
+                isReaction={state.phase === Phase.window}
+                onPlay={() => handlePlay(choice.id)}
+                onInspect={() => { setPreview(choice); setChoice(null); }}
+                onClose={() => setChoice(null)}
             />}
 
             {preview && <CardPreview card={preview}

@@ -116,6 +116,17 @@ ul {
     to { opacity: 1; transform: none; }
 }
 
+/* O sentido do jogo, na borda da mesa. Cada ponto do anel roda esta mesma
+   volta com um atraso diferente, e o sinal do atraso e que decide se a luz
+   corre no horario ou no anti-horario (ver GameTable). Discreta de proposito:
+   e o cenario dizendo para onde a vez vai, nao um aviso. */
+@keyframes table-spin {
+    0%   { opacity: 0.06; transform: translate(-50%, -50%) scale(0.85); }
+    12%  { opacity: 0.85; transform: translate(-50%, -50%) scale(1.35); }
+    34%  { opacity: 0.10; transform: translate(-50%, -50%) scale(0.9); }
+    100% { opacity: 0.06; transform: translate(-50%, -50%) scale(0.85); }
+}
+
 @utility animate-fade-rise {
     animation: fade-rise 0.28s ease-out both;
 }
@@ -124,6 +135,10 @@ ul {
 }
 @utility animate-sheet-up {
     animation: sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility animate-table-spin {
+    /* A duracao e o atraso chegam inline: sao eles que carregam o sentido. */
+    animation: table-spin 5.6s linear infinite;
 }
 
 /* Quem pediu menos movimento no sistema nao recebe nenhuma das entradas. */

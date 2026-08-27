@@ -5,9 +5,9 @@ import { missionName } from './narrate';
  * Um lugar na mesa.
  *
  * Mostra so o que a mesa realmente enxerga: nome, shots bebidos, quantas cartas
- * tem na mao e a missao *se* ela foi revelada. Missao secreta continua secreta —
- * o estado da partida tem `mission` de todo mundo porque o motor precisa dela,
- * e vazar isso na tela seria acabar com o jogo.
+ * restam no baralho dele e a missao *se* ela foi revelada. Missao secreta
+ * continua secreta — o estado da partida tem `mission` de todo mundo porque o
+ * motor precisa dela, e vazar isso na tela seria acabar com o jogo.
  *
  * E estreito de proposito: sao ate sete lugares em volta da pilha, numa tela de
  * celular. O que nao cabe em duas linhas nao entra.
@@ -73,14 +73,19 @@ export function Seat({
                     <ICONS.shot />
                     {player.shots}
                 </span>
+                {/* O baralho, e nao a mao: o fim da partida vem quando um
+                    baralho acaba, entao este numero e um relogio. Quantas
+                    cartas o outro segura nao muda decisao nenhuma — ninguem
+                    sabe *quais* sao. */}
                 <span className={`
                     flex items-center gap-0.5
                     px-1.5 py-0.5 rounded-lg
                     border border-line bg-elevated
-                    text-[0.65rem] tabular-nums text-cream-dim
+                    text-[0.65rem] tabular-nums
+                    ${player.deck.length === 0 ? 'text-danger' : 'text-cream-dim'}
                 `}>
                     <ICONS.deck />
-                    {player.hand.length}
+                    {player.deck.length}
                 </span>
             </span>
 

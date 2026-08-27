@@ -28,7 +28,6 @@ const RADIUS_Y = 33;
 export function GameTable({
     state,
     you,
-    lastPlay,
     onOpenDiscard,
     selectable = [],
     selected = [],
@@ -75,10 +74,9 @@ export function GameTable({
                 bg-[radial-gradient(circle_at_50%_35%,rgba(47,141,196,0.10),transparent_70%)]
             `} />
 
-            <DiscardPile state={state}
-                lastPlay={lastPlay}
-                onOpen={onOpenDiscard}
-            />
+            <DirectionRing direction={state.direction} />
+
+            <DiscardPile state={state} onOpen={onOpenDiscard} />
 
             {seats.map(({ player, style }) => (
                 <Seat key={player.id}
@@ -97,17 +95,83 @@ export function GameTable({
 }
 
 /**
+ * O sentido do jogo, correndo na borda do feltro.
+ *
+ * `order.reverse` inverte a mesa, e ate agora isso so aparecia como uma linha
+ * no log — a carta mais barulhenta do jogo passava despercebida. Uma luz que
+ * corre pela borda diz para onde a vez esta indo sem gastar texto, e a corrida
+ * trocando de mao e a confirmacao de que a carta pegou.
+ *
+ * Sao pontos parados na elipse acendendo em sequencia, e nao um anel girando:
+ * girar um elemento eliptico o deforma a cada frame, e a borda largaria o
+ * feltro nas laterais. O que da a volta e a *fase* da animacao, nao a
+ * geometria.
+ */
+
+// Raios do feltro (h-74% w-86%), mais uma folga para a luz correr do lado de
+// fora da linha, e nao em cima dela.
+const RING_X = 44.5;
+const RING_Y = 38.5;
+
+const RING_DOTS = 16;
+const RING_CYCLE = 5.6; // segundos por volta; devagar de proposito
+
+function DirectionRing({ direction }){
+
+    const dots = useMemo(() => Array.from({ length: RING_DOTS }, (_, i) => {
+        const angle = ((i * 360) / RING_DOTS) * (Math.PI / 180);
+        // O indice cresce no mesmo sentido das cadeiras (`seat` em GameTable),
+        // entao a luz acompanha a vez se acender do menor indice para o maior.
+        // Quem acende depois e quem tem o atraso maior: dai o `step` positivo
+        // no sentido normal, e o negativo quando a mesa inverte. Os dois saem
+        // negativos de proposito — atraso negativo entra com a animacao ja em
+        // curso, e inverter troca a mao da volta sem reinicia-la.
+        const step = (i / RING_DOTS) * RING_CYCLE;
+        return {
+            key: i,
+            left: `${50 + RING_X * Math.cos(angle)}%`,
+            top: `${50 + RING_Y * Math.sin(angle)}%`,
+            delay: direction >= 0 ? step - RING_CYCLE : -step
+        };
+    }), [direction]);
+
+    return (
+        <div aria-hidden='true' className='absolute inset-0 pointer-events-none'>
+            {dots.map(({ key, left, top, delay }) => (
+                <span key={key}
+                    style={{
+                        left,
+                        top,
+                        animationDelay: `${delay}s`,
+                        animationDuration: `${RING_CYCLE}s`
+                    }}
+                    className={`
+                        absolute h-1 w-1 rounded-full
+                        -translate-x-1/2 -translate-y-1/2
+                        bg-brand-light opacity-20 animate-table-spin
+                    `}
+                />
+            ))}
+        </div>
+    );
+}
+
+/**
  * A pilha do descarte, no centro.
  *
- * Mostra a ultima carta que a mesa viu — a que resolveu por ultimo — e abre no
- * toque a lista inteira do que ja foi usado. O descarte e por jogador no estado
- * (cada um tem o proprio baralho), entao o numero aqui e a soma: o que
- * interessa a mesa e quanto ja foi jogado, nao de quem era.
+ * Mostra a carta que caiu por ultimo e abre no toque a lista inteira do que ja
+ * foi usado. A folha de cima vem de `state.discardPile` — o descarte da mesa em
+ * ordem — e nao da ultima carta *jogada*: sao coisas diferentes, e trocar uma
+ * pela outra fazia a pilha mentir. A carta jogada ainda esta na pilha de
+ * resolucao (ainda da para cancelar, e equipamento nem chega a descartar), e a
+ * carta que cai por efeito — descarte forcado, redraw da mao — nunca passa por
+ * jogada nenhuma e simplesmente nao aparecia aqui.
  */
-function DiscardPile({ state, lastPlay, onOpen }){
+function DiscardPile({ state, onOpen }){
 
-    const card = lastPlay ? cardById(lastPlay.idCard) : null;
-    const count = state.players.reduce((total, player) => total + player.discard.length, 0);
+    const top = state.discardPile[state.discardPile.length - 1] ?? null;
+    const card = top ? cardById(top.idCard) : null;
+    const count = state.discardPile.length;
 
     return (
         <div className={`
@@ -137,7 +201,11 @@ function DiscardPile({ state, lastPlay, onOpen }){
                         absolute inset-0 rotate-3 rounded-lg
                         border border-line bg-elevated
                     `} />
-                    <span className='relative block overflow-hidden rounded-lg'>
+                    {/* A chave e a altura do monte: sem ela React reusa o no e
+                        a folha nova troca sem ninguem ver que caiu carta. */}
+                    <span key={count}
+                        className='relative block overflow-hidden rounded-lg animate-fade-in'
+                    >
                         <Card card={card} scale={0.2} />
                     </span>
                 </button>

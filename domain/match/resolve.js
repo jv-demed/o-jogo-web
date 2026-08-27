@@ -1,7 +1,7 @@
 import { Action, Chooser, Negatable, Pile, Rounding, Scope, Timing } from '../cards/vocabulary.js';
 import { MISSIONS } from './missions.js';
 import { nextRandom } from './rng.js';
-import { playerById } from './state.js';
+import { fromDiscard, playerById, toDiscard } from './state.js';
 import { meetsCondition, resolveTarget } from './targeting.js';
 
 /**
@@ -127,7 +127,7 @@ function discard(draft, player, cards){
         const index = player.hand.indexOf(idCard);
         if(index === -1) continue;
         player.hand.splice(index, 1);
-        player.discard.push(idCard);
+        toDiscard(draft, player, idCard);
     }
 }
 
@@ -279,7 +279,7 @@ const HANDLERS = {
             const player = playerById(draft, id);
             if(!player) continue;
             const size = player.hand.length;
-            player.discard.push(...player.hand);
+            for(const idCard of player.hand) toDiscard(draft, player, idCard);
             player.hand = [];
             draw(draft, player, size);
             log(draft, { type: 'hand.redraw', playerId: id, size });
@@ -362,7 +362,8 @@ const HANDLERS = {
             const chosen = asList(ctx.choices?.[ctx.slot + ':cards'] ?? []).filter(c => source.includes(c));
             const cards = chosen.length ? chosen.slice(0, count) : source.slice(0, count);
             for(const idCard of cards){
-                source.splice(source.indexOf(idCard), 1);
+                if(effect.from === Pile.hand) source.splice(source.indexOf(idCard), 1);
+                else fromDiscard(draft, player, idCard);
                 player.deck.unshift(idCard);
             }
         }

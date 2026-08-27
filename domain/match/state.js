@@ -132,6 +132,14 @@ export function createMatch({ seed, players }){
         // escolher entre opcoes, ou o juiz humano de uma carta `manual`.
         pending: [],
 
+        // O descarte da mesa, em ordem cronologica: [{ idCard, playerId }].
+        // Cada jogador ja tem o proprio `discard` — e dele que sai a carta que
+        // volta para o baralho —, mas o monte por jogador nao sabe *quando*
+        // cada carta caiu, e sem isso nao ha "carta de cima" para a pilha do
+        // centro mostrar nem cronologia para a lista do descarte. Esta e a
+        // unica lista que a mesa ve; as outras sao contabilidade de cada um.
+        discardPile: [],
+
         // Efeitos com duracao, que sobrevivem a jogada que os criou.
         ongoing: [],
         // Vinculos entre jogadores (link.shots, link.fate).
@@ -177,6 +185,36 @@ export function seatDistance(state, fromId, toId){
     if(from === -1 || to === -1) return Infinity;
     const forward = (to - from + size) % size;
     return Math.min(forward, size - forward);
+}
+
+// ------------------------------------------------------------------ descarte
+
+/**
+ * Manda uma carta para o descarte.
+ *
+ * Todo caminho que descarta passa por aqui — a carta jogada que resolveu, o
+ * descarte forcado da mao, a mao inteira do redraw. Escrever direto no
+ * `player.discard` deixaria a pilha da mesa para tras, e a tela mostraria a
+ * carta errada no centro ate a proxima jogada consertar por acidente.
+ */
+export function toDiscard(state, player, idCard){
+    player.discard.push(idCard);
+    state.discardPile.push({ idCard, playerId: player.id });
+}
+
+/**
+ * Tira uma carta do descarte (deck.return traz de volta para o baralho).
+ *
+ * Remove a ocorrencia mais recente. Ids se repetem no monte, e a copia de cima
+ * e a que a mesa acabou de ver cair: e ela que sai.
+ */
+export function fromDiscard(state, player, idCard){
+    const index = player.discard.lastIndexOf(idCard);
+    if(index !== -1) player.discard.splice(index, 1);
+    const onTable = state.discardPile.findLastIndex(
+        entry => entry.idCard === idCard && entry.playerId === player.id
+    );
+    if(onTable !== -1) state.discardPile.splice(onTable, 1);
 }
 
 /** Copia defensiva. O motor trabalha sobre o clone e devolve estado novo. */

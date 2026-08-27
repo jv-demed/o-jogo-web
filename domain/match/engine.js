@@ -4,7 +4,7 @@ import { evaluateMissions } from './missions.js';
 import { runEffects } from './resolve.js';
 import {
     MatchStatus, Phase, PLAYS_PER_TURN, REACTION_WINDOW_MS,
-    cloneState, currentPlayer, playerById,
+    cloneState, currentPlayer, playerById, toDiscard,
 } from './state.js';
 
 /**
@@ -167,7 +167,7 @@ function discardPlayed(draft, item){
     // Equipamento fica na mesa: quem o tira e equipment.destroy.
     const entry = getCardEffects(item.idCard);
     if(firstAction(entry, Action.equip)) return;
-    owner.discard.push(item.idCard);
+    toDiscard(draft, owner, item.idCard);
 }
 
 /**
