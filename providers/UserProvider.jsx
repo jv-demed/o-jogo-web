@@ -45,7 +45,7 @@ export function UserProvider({ children }){
         // bug de request quando na verdade e so ausencia de perfil.
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, id_auth, name, coins, user_cards(id_card, quantity)')
+            .select('id, id_auth, name, coins, is_dev, user_cards(id_card, quantity)')
             .eq('id_auth', data.user.id)
             .maybeSingle();
         if(userError){
@@ -104,7 +104,11 @@ export function UserProvider({ children }){
         );
     }
     return (
-        <UserContext.Provider value={{ user, refreshUser }}>
+        // `isDev` sai da coluna o_jogo.users.is_dev, e nao de uma env var: a
+        // mesma verdade precisa servir a UI agora e a RPC depois, quando a
+        // partida for para o banco. Aqui ela so decide o que aparece na tela —
+        // os poderes do solo rodam em memoria e nao valem autorizacao nenhuma.
+        <UserContext.Provider value={{ user, refreshUser, isDev: Boolean(user.is_dev) }}>
             {children}
         </UserContext.Provider>
     );

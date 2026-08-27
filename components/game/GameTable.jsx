@@ -32,7 +32,8 @@ export function GameTable({
     onOpenDiscard,
     selectable = [],
     selected = [],
-    onSelect
+    onSelect,
+    reveal = false
 }){
 
     const seats = useMemo(() => {
@@ -84,6 +85,7 @@ export function GameTable({
                     player={player}
                     style={style}
                     isYou={player.id === you.id}
+                    reveal={reveal}
                     isCurrent={player.id === currentId}
                     isSelectable={selectable.includes(player.id)}
                     isSelected={selected.includes(player.id)}

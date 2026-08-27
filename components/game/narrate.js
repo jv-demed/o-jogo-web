@@ -82,6 +82,17 @@ export function narrate(entry, nameOf){
             return `Ritual: ${entry.text}`;
         case 'manual':
             return `A mesa resolve: ${entry.instruction}`;
+        // Cirurgia de dev. Aparece no log como qualquer outro fato, e de
+        // proposito: sem isso, meia hora depois, a mesa estranha vira cacada a
+        // um bug que foi voce quem plantou.
+        case 'dev.stackDeck':
+            return entry.from === 'deck'
+                ? `[dev] ${cardName(entry.idCard)} subiu para o topo do baralho de ${who(entry.playerId)}.`
+                : `[dev] ${cardName(entry.idCard)} entrou no topo do baralho de ${who(entry.playerId)}.`;
+        case 'dev.giveCard':
+            return `[dev] ${cardName(entry.idCard)} foi para a mão de ${who(entry.playerId)}.`;
+        case 'dev.window.close':
+            return '[dev] A janela de interferência foi fechada na marra.';
         case 'match.end':
             return entry.winners.length
                 ? `Fim. Ganhou: ${list(entry.winners)}.`

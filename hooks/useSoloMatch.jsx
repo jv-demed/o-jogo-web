@@ -32,6 +32,11 @@ export function useSoloMatch(){
 
     const [match, setMatch] = useState(null);
     const [error, setError] = useState(null);
+    // Ferramenta de dev: com os bots parados da para ler a pilha e a janela sem
+    // a mesa andando por baixo. Nao congela o relogio da janela — esse e da
+    // mesa, nao dos bots, e congelar os dois junto e o que trava a partida sem
+    // dizer por que.
+    const [botsPaused, setBotsPaused] = useState(false);
 
     const dispatch = useCallback(command => {
         setMatch(prev => {
@@ -43,6 +48,23 @@ export function useSoloMatch(){
                 // Jogada ilegal nao derruba a mesa: o motor recusou e o estado
                 // anterior continua valendo. Mostrar e seguir e o certo aqui,
                 // porque em solo o unico jeito de isso acontecer e bug nosso.
+                setError(err);
+                return prev;
+            }
+        });
+    }, []);
+
+    /**
+     * Poder de dev: aplica um transformador de domain/match/dev.js sobre o
+     * estado. Nao passa pelo `apply` de proposito — o motor nao conhece dev, e
+     * e assim que ele continua seguro para rodar no servidor.
+     */
+    const devApply = useCallback(transform => {
+        setMatch(prev => {
+            if(!prev) return prev;
+            try{
+                return { ...prev, state: transform(prev.state) };
+            }catch(err){
                 setError(err);
                 return prev;
             }
@@ -61,16 +83,18 @@ export function useSoloMatch(){
 
     // Os bots. Um comando por vez, na ordem da mesa: quem responde primeiro e
     // quem esta com a vez, e o resto so entra na janela.
+    const nextBotCommand = useCallback(() => match?.botIds
+        .map(id => botCommand(match.state, id, Date.now()))
+        .find(Boolean) ?? null, [match]);
+
     useEffect(() => {
-        if(!match) return;
-        const command = match.botIds
-            .map(id => botCommand(match.state, id, Date.now()))
-            .find(Boolean);
+        if(!match || botsPaused) return;
+        const command = nextBotCommand();
         if(!command) return;
 
         const timer = setTimeout(() => dispatch(command), BOT_DELAY);
         return () => clearTimeout(timer);
-    }, [match, dispatch]);
+    }, [match, botsPaused, nextBotCommand, dispatch]);
 
     // O relogio da janela de interferencia.
     useEffect(() => {
@@ -94,5 +118,15 @@ export function useSoloMatch(){
         start,
         leave,
         dispatch,
+        devApply,
+        botsPaused,
+        setBotsPaused,
+        // Um comando de bot, na mao. So faz sentido com os bots parados: solto,
+        // o proprio efeito acima ja teria jogado por eles.
+        stepBots: () => {
+            const command = nextBotCommand();
+            if(command) dispatch(command);
+        },
+        hasBotCommand: Boolean(nextBotCommand()),
     };
 }

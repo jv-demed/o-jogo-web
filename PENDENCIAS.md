@@ -12,7 +12,7 @@ O que ainda falta. Itens concluídos saem daqui — o histórico está no git.
 
 Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque os itens abaixo dependem delas.
 
-- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas; nenhuma pendente.
+- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas. A 0008 (`users.is_dev`, para as ferramentas de dev) está versionada em `supabase/migrations/` e **falta aplicar** — rode-a no SQL Editor e marque o seu jogador com `update o_jogo.users set is_dev = true where name = '<você>'`.
 - **Cadastro fechado**: usuários criados manualmente pelo dono, sem fluxo de signup. Policies checam participação no jogo via `o_jogo.current_player_id()`, nunca só `auth.uid() is not null`.
 - **`o_jogo.cards` é a fonte única** de id, nível, preço, tipo, pack e efeito, para o servidor validar jogada e preço dentro da RPC. A arte continua estática em `public/cards/{id}.png`.
 - **Economia só por RPC** (`buy_pack`, `sell_card`): não existe grant de `UPDATE` em `o_jogo.users` para o cliente.
@@ -43,10 +43,15 @@ Jogável hoje, em `/solo`: você contra 1 a 6 bots, tudo no browser, sem passar 
 - **Baralho aleatório** de 20 cartas por jogador (`SOLO_DECK_SIZE`), sorteado do catálogo inteiro ou só da sua coleção.
 - **Ritmo**: `useSoloMatch` dá 900ms de "pensamento" por comando de bot e toca o relógio da janela a cada 200ms — sem o atraso, a partida inteira resolveria num frame.
 
+- **Ferramentas de dev** (`domain/match/dev.js`, `components/dev/`): quem tem `o_jogo.users.is_dev` vê a alça **DEV** no canto da mesa e um botão ao lado de "Comprar carta" para escolher a carta que vem. Hoje dá para escolher a compra, pôr carta direto na mão, revelar missões e mãos dos bots, pausar os bots (com passo a passo) e fechar a janela de interferência na marra.
+
+  ⚠️ **Poder de dev nunca vira comando do motor.** Não existe `Command.devDraw`: `apply()` vai rodar no servidor quando a partida for para o banco, e um comando de dev aceito lá seria trapaça de verdade no multijogador. Os poderes são funções puras em `domain/match/dev.js` que recebem o estado e devolvem outro — chamadas só pelo `useSoloMatch`, que roda em memória. Por isso `domain/match/index.js` **não** reexporta esse arquivo. Pelo mesmo motivo, escolher a compra *empilha o baralho* e deixa o `Command.draw` normal acontecer, em vez de inventar uma compra especial: a jogada de teste percorre o caminho real. Toda cirurgia entra no `state.log` como `dev.*` e aparece narrada no log da partida.
+
 Pendências do solo:
 
 - [ ] **Nada é persistido.** Fechar a aba perde a partida. O `usePersistentState` já existe e resolveria, mas só vale a pena se o solo virar mais que bancada de teste.
 - [ ] **Escolha de carta** (`kind: 'cards'` — descartar, dar, roubar escolhendo) ainda cai no default do resolvedor: as primeiras da mão. O motor já sabe pedir; falta a tela oferecer.
+- [ ] **Ferramentas de dev, segunda leva.** Falta o que encurta teste de *partida*, e não de carta: semente fixa no setup (o `rng.js` já foi escrito para isso) e visível na mesa, ajustar shots e trocar missão de qualquer um, esvaziar baralho / encerrar agora para cair direto na apuração, e copiar/colar o `state` em JSON — que sai quase de graça, já que o estado é JSON puro por decisão de projeto.
 - [ ] **`chooser: 'table'`** (voto da mesa) decide como se fosse quem jogou. Voto de verdade precisa de mecânica que não existe.
 
 ---

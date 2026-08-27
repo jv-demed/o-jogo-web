@@ -26,6 +26,9 @@ import { PlayerPickModal } from '@/components/game/PlayerPickModal';
 import { CardPreview } from '@/components/game/CardPreview';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
+import { DevPanel, DevButton } from '@/components/dev/DevPanel';
+import { CardPickerModal } from '@/components/dev/CardPickerModal';
+import { closeWindowNow, giveCard, stackDeck } from '@/domain/match/dev';
 
 /**
  * Jogo solo: voce contra bots, tudo no browser.
@@ -41,10 +44,11 @@ const CATALOG_IDS = CARDS.map(card => card.id);
 
 export default function Solo(){
 
-    const { user } = useUser();
+    const { user, isDev } = useUser();
     const {
         state, you, error, dismissError,
-        isYourTurn, isOver, start, leave, dispatch
+        isYourTurn, isOver, start, leave, dispatch,
+        devApply, botsPaused, setBotsPaused, stepBots, hasBotCommand
     } = useSoloMatch();
 
     const [botCount, setBotCount] = useState(3);
@@ -57,6 +61,12 @@ export default function Solo(){
     // descarte). Fica fora do `openPanel`: da para olhar uma carta *durante*
     // uma escolha, e sem isso abrir a lupa fecharia a pergunta.
     const [preview, setPreview] = useState(null);
+
+    // Ferramentas de dev. `devPick` diz o que a escolha de carta vai fazer com
+    // ela: empilhar e comprar, so empilhar, ou por na mao. Fora do `openPanel`
+    // porque a escolha nasce de dentro do painel — as duas gavetas se revezam.
+    const [reveal, setReveal] = useState(false);
+    const [devPick, setDevPick] = useState(null);
 
     // Com a partida na tela, o app inteiro sai de cena: sem cabecalho e sem
     // titulo de pagina, a mesa fica com a tela toda.
@@ -111,6 +121,22 @@ export default function Solo(){
             if(prev.length >= request.count) return request.count === 1 ? [id] : prev;
             return [...prev, id];
         });
+    }
+
+    /**
+     * Poder de dev: a carta escolhida vira o topo do seu baralho, e a compra
+     * acontece pelo `Command.draw` de sempre. Empilhar em vez de inventar um
+     * draw especial e o que mantem a jogada de teste no caminho real — inclusive
+     * para a carta que compra duas ou que compra do fundo.
+     */
+    function handleDevPick(card){
+        if(devPick === 'hand'){
+            devApply(state => giveCard(state, you.id, card.id));
+        }else{
+            devApply(state => stackDeck(state, you.id, card.id));
+            if(devPick === 'draw') dispatch({ type: Command.draw, playerId: you.id });
+        }
+        setDevPick(null);
     }
 
     function handlePlay(idCard){
@@ -176,6 +202,7 @@ export default function Solo(){
                                     selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
                                     selected={selected}
                                     onSelect={handleSelect}
+                                    reveal={isDev && reveal}
                                 />
 
                                 {/* Os dois cantos de cima da mesa: o que
@@ -184,7 +211,11 @@ export default function Solo(){
                                 <div className='absolute left-2 top-2 z-30'>
                                     <MatchLogButton onClick={() => setOpenPanel('log')} />
                                 </div>
-                                <div className='absolute right-2 top-2 z-30'>
+                                <div className='absolute right-2 top-2 z-30 flex items-center gap-1.5'>
+                                    {isDev && <DevButton
+                                        active={botsPaused || reveal}
+                                        onClick={() => setOpenPanel('dev')}
+                                    />}
                                     <MatchMenuButton onClick={() => setOpenPanel('menu')} />
                                 </div>
 
@@ -218,6 +249,7 @@ export default function Solo(){
                                         <TurnBar state={state} you={you}
                                             isYourTurn={isYourTurn}
                                             onOpenPicker={() => setOpenPanel('pick')}
+                                            onDevDraw={isDev ? () => setDevPick('draw') : undefined}
                                             dispatch={dispatch}
                                         />
                                     </div>
@@ -262,6 +294,37 @@ export default function Solo(){
                     closePanel();
                 }}
                 onClose={closePanel}
+            />}
+
+            {openPanel === 'dev' && isDev && <DevPanel state={state} you={you}
+                reveal={reveal}
+                onToggleReveal={() => setReveal(on => !on)}
+                botsPaused={botsPaused}
+                onToggleBots={() => setBotsPaused(on => !on)}
+                onStepBots={stepBots}
+                hasBotCommand={hasBotCommand}
+                onPickForDeck={() => { closePanel(); setDevPick('deck'); }}
+                onPickForHand={() => { closePanel(); setDevPick('hand'); }}
+                onCloseWindow={() => { devApply(closeWindowNow); closePanel(); }}
+                onInspect={setPreview}
+                onClose={closePanel}
+            />}
+
+            {devPick && isDev && <CardPickerModal
+                title={devPick === 'hand' ? 'Carta para a mão' : 'Carta para comprar'}
+                hint={devPick === 'hand'
+                    ? 'Entra na sua mão agora, sem passar pelo baralho.'
+                    : 'Vai para o topo do seu baralho, no lugar da carta que estava lá.'}
+                // O baralho vem primeiro, na ordem em que vai ser comprado —
+                // mas some quando acaba: aba vazia e um beco.
+                sources={[
+                    ...(you.deck.length
+                        ? [{ key: 'deck', label: 'Meu baralho', ids: you.deck }]
+                        : []),
+                    { key: 'catalog', label: 'Catálogo', ids: CATALOG_IDS },
+                ]}
+                onPick={handleDevPick}
+                onClose={() => setDevPick(null)}
             />}
 
             {preview && <CardPreview card={preview}

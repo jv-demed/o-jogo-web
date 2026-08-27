@@ -1,6 +1,7 @@
 'use client'
 import { Command } from '@/domain/match/engine';
 import { Phase } from '@/domain/match/state';
+import { ICONS } from '@/assets/icons';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { promptText } from './narrate';
 
@@ -22,6 +23,7 @@ export function TurnBar({
     you,
     isYourTurn,
     onOpenPicker,
+    onDevDraw,
     dispatch
 }){
 
@@ -44,10 +46,32 @@ export function TurnBar({
         case Phase.draw:
             return isYourTurn
                 ? <Bar hint='Sua vez. Comece comprando.'>
-                    <ActionButton text='Comprar carta'
-                        variant='gold'
-                        action={() => dispatch({ type: Command.draw, playerId: you.id })}
-                    />
+                    <div className='flex gap-2'>
+                        <ActionButton text='Comprar carta'
+                            variant='gold'
+                            width={onDevDraw ? 'calc(100% - 3.5rem)' : '100%'}
+                            action={() => dispatch({ type: Command.draw, playerId: you.id })}
+                        />
+                        {/* Ferramenta de dev, e so para quem tem: escolher a
+                            carta que vem. Fica colada na compra porque e ali
+                            que a pergunta aparece — no painel ela seria uma
+                            gaveta de distancia do gesto. */}
+                        {onDevDraw && <button type='button'
+                            onClick={onDevDraw}
+                            aria-label='Escolher a carta que vou comprar'
+                            className={`
+                                flex items-center justify-center shrink-0
+                                h-12 w-12 rounded-xl text-lg
+                                border border-dashed border-gold/60
+                                bg-gold/10 text-gold
+                                transition-transform active:scale-95
+                                focus:outline-none focus-visible:ring-2
+                                focus-visible:ring-gold
+                            `}
+                        >
+                            <ICONS.deck />
+                        </button>}
+                    </div>
                 </Bar>
                 : <Waiting text={`Vez de ${currentName}`} />;
 

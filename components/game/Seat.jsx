@@ -15,6 +15,7 @@ import { missionName } from './narrate';
 export function Seat({
     player,
     isYou,
+    reveal,
     isCurrent,
     isSelectable,
     isSelected,
@@ -93,12 +94,21 @@ export function Seat({
                 {player.equipment.length}
             </span>}
 
-            {player.missionRevealed && <span className={`
-                max-w-full truncate
-                text-[0.6rem] text-brand-light
-            `}>
-                {missionName(player.mission)}
-            </span>}
+            {/* A missao revelada e informacao de mesa; a mesma linha em
+                tracejado dourado e a ferramenta de dev espiando por cima do
+                jogo. Precisam ser distinguiveis de relance: o que voce ve
+                trapaceando nao pode parecer o que a mesa ve. */}
+            {player.missionRevealed
+                ? <span className='max-w-full truncate text-[0.6rem] text-brand-light'>
+                    {missionName(player.mission)}
+                </span>
+                : reveal && <span className={`
+                    max-w-full truncate px-1 rounded
+                    border border-dashed border-gold/50
+                    text-[0.6rem] text-gold
+                `}>
+                    {missionName(player.mission)}
+                </span>}
         </Root>
     );
 }
