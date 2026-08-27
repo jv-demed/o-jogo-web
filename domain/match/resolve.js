@@ -1,7 +1,7 @@
 import { Action, Chooser, Negatable, Pile, Rounding, Scope, Timing } from '../cards/vocabulary.js';
 import { MISSIONS } from './missions.js';
 import { nextRandom } from './rng.js';
-import { fromDiscard, playerById, toDiscard } from './state.js';
+import { fromDiscard, playerById, releaseOngoingCard, toDiscard } from './state.js';
 import { meetsCondition, resolveTarget } from './targeting.js';
 
 /**
@@ -570,9 +570,13 @@ const HANDLERS = {
     [Action.auraDispel]: (draft, effect, ids) => {
         const scope = effect.scope;
         if(scope === Scope.prolonged || scope === Scope.all){
-            draft.ongoing = draft.ongoing.filter(o => o.timing !== Timing.eachTurn
-                && o.timing !== Timing.onTargetTurn
-                && o.timing !== Timing.delayed);
+            const dispelled = draft.ongoing.filter(o => o.timing === Timing.eachTurn
+                || o.timing === Timing.onTargetTurn
+                || o.timing === Timing.delayed);
+            draft.ongoing = draft.ongoing.filter(o => !dispelled.includes(o));
+            // Dissipar tira o efeito da mesa, e a carta que estava segurando ele
+            // na area do alvo vai junto para o descarte.
+            for(const gone of dispelled) releaseOngoingCard(draft, gone);
         }
         if(scope === Scope.equipment || scope === Scope.all){
             const affected = ids.length ? ids : draft.players.map(p => p.id);
@@ -690,13 +694,19 @@ export function applyEffect(draft, effect, ctx){
             targets: finalIds,
             sourceId: ctx.sourceId,
             idCard: ctx.idCard,
+            // A jogada que plantou o efeito. E por ele que o motor sabe que a
+            // carta ficou na mesa em vez de ir para o descarte, e que sabe qual
+            // carta devolver quando a duracao acabar.
+            uid: ctx.uid ?? null,
             equippedTo: effect.timing === Timing.passive ? finalIds[0] : undefined,
             timing: effect.timing,
             duration: effect.duration ?? null,
             turnsLeft: effect.duration?.kind === 'turns' ? effect.duration.turns : null,
             drinksLeft: effect.duration?.kind === 'untilDrinks' ? effect.duration.amount : null,
         });
-        log(draft, { type: 'ongoing', action: effect.action, timing: effect.timing, targets: finalIds });
+        log(draft, { type: 'ongoing', action: effect.action, timing: effect.timing,
+            idCard: ctx.idCard, targets: finalIds,
+            turns: effect.duration?.kind === 'turns' ? effect.duration.turns : null });
         return {};
     }
 

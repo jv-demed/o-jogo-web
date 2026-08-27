@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react';
+import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { REACTION_WINDOW_MS } from '@/domain/match/state';
 import { cardById } from './narrate';
@@ -12,10 +13,15 @@ import { cardById } from './narrate';
  * texto dela de longe — e nao encosta na mao: e olhando para a carta que se
  * decide se vale gastar um bloqueio, e a carta do bloqueio esta na mao.
  *
+ * Debaixo da carta vem em quem ela bate. O alvo e escolhido *antes* da janela
+ * abrir (ver a declaracao, em engine.js) justamente para caber aqui: interferir
+ * so e decisao de verdade quando se sabe quem ia sofrer — antes disso, gastar
+ * um cancelamento e adivinhacao.
+ *
  * Nao intercepta toque (`pointer-events-none`): o que existe para clicar
  * enquanto ela esta na tela mora fora da mesa.
  */
-export function PlayReveal({ play, players, closesAt }){
+export function PlayReveal({ play, players, you, closesAt }){
 
     const boxRef = useRef(null);
     const scale = useRevealScale(boxRef);
@@ -23,7 +29,9 @@ export function PlayReveal({ play, players, closesAt }){
     const card = play ? cardById(play.idCard) : null;
     if(!card) return null;
 
-    const byName = players.find(player => player.id === play.byId)?.name;
+    const nameOf = id => (id === you?.id ? 'Você' : players.find(p => p.id === id)?.name);
+    const byName = nameOf(play.byId);
+    const targets = (play.targets ?? []).map(id => ({ id, name: nameOf(id) })).filter(t => t.name);
 
     return (
         <div ref={boxRef}
@@ -47,6 +55,25 @@ export function PlayReveal({ play, players, closesAt }){
             `}>
                 <Card card={card} scale={scale} />
             </div>
+
+            {/* Em quem ela bate. Fica entre a carta e o relogio porque e o
+                par que decide a reacao: o que a carta faz, e com quem. */}
+            {targets.length > 0 && <div className='flex flex-wrap items-center justify-center gap-1.5'>
+                {targets.map(target => (
+                    <span key={target.id}
+                        className={`
+                            flex items-center gap-1
+                            px-2.5 py-1 rounded-full
+                            border border-gold/60 bg-gold/15
+                            text-xs font-semibold text-gold
+                            animate-fade-in
+                        `}
+                    >
+                        <ICONS.user />
+                        {target.name}
+                    </span>
+                ))}
+            </div>}
 
             {/* O relogio embaixo da carta, e nao na barra de acao: o tempo e
                 sobre esta carta, e sem ele a espera parece travamento. */}

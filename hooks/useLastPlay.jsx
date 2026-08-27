@@ -10,9 +10,11 @@ import { useEffect, useState } from 'react';
  * cheia — entao ela mora aqui, e nao no estado da partida.
  *
  * O `uid` do item e a identidade da jogada: e ele que diz "essa e nova" quando
- * a mesma carta e jogada duas vezes seguidas.
+ * a mesma carta e jogada duas vezes seguidas. Os alvos entram depois, na
+ * declaracao — a mesma jogada aparece primeiro sem ninguem apontado e ganha os
+ * alvos quando quem jogou escolhe.
  *
- * @returns {{uid: string, idCard: number, byId: number}|null}
+ * @returns {{uid: string, idCard: number, byId: number, targets: number[]}|null}
  */
 export function useLastPlay(state){
 
@@ -31,9 +33,12 @@ export function useLastPlay(state){
             return;
         }
         if(!top) return;
-        setPlay(prev => prev?.uid === top.uid
+        const targets = top.targets ?? [];
+        // Compara o conteudo, e nao a referencia: cada estado novo e um clone,
+        // entao o array de alvos e sempre outro objeto ainda que igual.
+        setPlay(prev => prev?.uid === top.uid && prev.targets.join() === targets.join()
             ? prev
-            : { uid: top.uid, idCard: top.idCard, byId: top.byId });
+            : { uid: top.uid, idCard: top.idCard, byId: top.byId, targets });
     }, [state, isFresh, top]);
 
     return play;

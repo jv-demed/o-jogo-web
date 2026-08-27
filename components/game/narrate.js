@@ -78,6 +78,18 @@ export function narrate(entry, nameOf){
             return `${list(entry.targets)} perdeu na hora.`;
         case 'deck.empty':
             return `O baralho de ${who(entry.playerId)} acabou. Fim de partida.`;
+        // Efeito prolongado e informacao de mesa desde que a carta passou a
+        // ficar na area do alvo em vez de ir para o descarte: quem le o log
+        // precisa saber quando ela entrou e quando ela saiu.
+        case 'ongoing':
+            return entry.idCard
+                ? `${cardName(entry.idCard)} ficou valendo sobre ${list(entry.targets)}.`
+                : null;
+        case 'ongoing.end':
+            if(!entry.idCard) return null;
+            return entry.returned
+                ? `${cardName(entry.idCard)} parou de valer e foi para o descarte.`
+                : `${cardName(entry.idCard)} parou de valer.`;
         case 'ritual':
             return `Ritual: ${entry.text}`;
         case 'manual':
@@ -99,6 +111,43 @@ export function narrate(entry, nameOf){
                 : 'Fim. Ninguém ganhou.';
         default:
             return null;
+    }
+}
+
+/**
+ * Quando um efeito prolongado dispara, em uma frase curta.
+ *
+ * O que ele *faz* nao se narra aqui: quem diz isso e o texto da propria carta,
+ * que esta ao lado na tela. O que a carta nao diz, e que so o estado sabe, e
+ * quando ela cobra e quanto ainda falta.
+ */
+export function ongoingTiming(ongoing, targetName){
+    switch(ongoing.timing){
+        case 'onTargetTurn': return `Na vez de ${targetName}`;
+        case 'eachTurn':     return 'A cada turno da mesa';
+        case 'delayed':      return 'Daqui a alguns turnos';
+        case 'passive':      return 'Enquanto estiver em jogo';
+        default:             return 'Em jogo';
+    }
+}
+
+/** Quanto ainda falta de uma duracao, do jeito que ela e contada. */
+export function ongoingDuration(ongoing){
+    if(ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
+        const turns = Math.max(0, ongoing.turnsLeft);
+        // `onTargetTurn` conta as vezes do alvo; o resto conta turnos de mesa.
+        return ongoing.timing === 'onTargetTurn'
+            ? `mais ${turns} vez${turns === 1 ? '' : 'es'} dele`
+            : `mais ${turns} turno${turns === 1 ? '' : 's'}`;
+    }
+    if(ongoing.drinksLeft !== null && ongoing.drinksLeft !== undefined){
+        return `até beber ${shots(Math.max(0, ongoing.drinksLeft))}`;
+    }
+    switch(ongoing.duration?.kind){
+        case 'untilMissionChange': return 'até uma troca de missão';
+        case 'untilDestroyed':     return 'até ser destruída';
+        case 'permanent':          return 'até o fim da partida';
+        default:                   return 'sem prazo';
     }
 }
 

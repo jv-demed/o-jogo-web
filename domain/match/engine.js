@@ -4,7 +4,7 @@ import { evaluateMissions } from './missions.js';
 import { runEffects } from './resolve.js';
 import {
     MatchStatus, Phase, PLAYS_PER_TURN, REACTION_WINDOW_MS,
-    cloneState, currentPlayer, playerById, toDiscard,
+    cloneState, currentPlayer, playerById, releaseOngoingCard, toDiscard,
 } from './state.js';
 
 /**
@@ -19,6 +19,8 @@ import {
  *
  *   draw   -> o jogador da vez compra 1 e fica com 6 cartas
  *   play   -> joga 1
+ *   declare-> a carta pergunta os alvos dela *antes* da janela; enquanto isso a
+ *             mesa fica em `pending` e nada aconteceu ainda
  *   window -> a carta fica na pilha por REACTION_WINDOW_MS; quem tiver carta de
  *             reacao (qualquer efeito com timing `reaction`) pode entrar. Todo
  *             mundo passando fecha a janela antes do tempo.
@@ -76,6 +78,87 @@ function pendingResponders(state){
 function openWindow(draft, now){
     draft.phase = Phase.window;
     draft.window = { closesAt: now + REACTION_WINDOW_MS, passed: [] };
+}
+
+// ---------------------------------------------------------------- declaracao
+
+/**
+ * O que a carta pergunta *antes* de a janela abrir: so o que aponta jogador.
+ * O resto (`optIn`, `option`, `cards`) e decisao de quem sofre o efeito e so
+ * faz sentido depois de a carta sobreviver a mesa.
+ */
+const DECLARABLE = new Set(['choose', 'manual']);
+
+const effectContext = (item, choices, seedRef) => ({
+    sourceId: item.byId,
+    playedById: item.respondsToPlayerId ?? null,
+    idCard: item.idCard,
+    uid: item.uid,
+    choices,
+    previous: [],
+    slot: '',
+    seedRef,
+    copyOf: item.copyOf ?? null,
+});
+
+/**
+ * Declarar a jogada: escolher os alvos antes de a mesa poder interferir.
+ *
+ * Interferencia so e decisao de verdade quando se sabe em quem a carta bate —
+ * gastar um cancelamento as cegas nao e escolha, e adivinhacao. Por isso a
+ * ordem e "jogou, apontou, *entao* a mesa tem 10s", e nao o contrario.
+ *
+ * O ensaio roda numa copia descartavel: a pergunta seguinte de uma carta pode
+ * depender do efeito da anterior (`sameTarget`, `then`), entao nao da para
+ * descobrir o que ela pergunta sem deixar ela rodar. Nada disso vale — o estado
+ * de verdade so muda quando a janela fechar, e ai a resolucao roda de novo, com
+ * as respostas ja em maos.
+ */
+function beginDeclaration(draft, now){
+    const item = draft.stack[draft.stack.length - 1];
+    if(!item) return;
+    draft.resolution = { item, choices: item.choices ?? {}, declaring: true };
+    runDeclaration(draft, now);
+}
+
+function runDeclaration(draft, now){
+    const { item, choices } = draft.resolution;
+    const scratch = cloneState({ ...draft, resolution: null });
+    const result = runEffects(scratch, getCardEffects(item.idCard),
+        effectContext(item, choices, scratch));
+
+    if(result.needs && DECLARABLE.has(result.needs.kind)){
+        draft.phase = Phase.pending;
+        draft.pending = [{ ...result.needs, idCard: item.idCard, uid: item.uid, declaring: true }];
+        return;
+    }
+
+    // Tudo o que dava para apontar, apontado. O que ficou (uma pergunta de
+    // `optIn`, por exemplo) espera a resolucao, como antes.
+    const top = draft.stack[draft.stack.length - 1];
+    if(top){
+        top.choices = choices;
+        top.targets = declaredTargets(choices);
+    }
+    draft.resolution = null;
+    draft.pending = [];
+    openWindow(draft, now);
+}
+
+/**
+ * Os alvos que a jogada declarou, para a mesa ver de quem se trata enquanto a
+ * janela corre. Chave com `:` e resposta de outro tipo (opcao, carta, sim/nao)
+ * e nao aponta ninguem.
+ */
+function declaredTargets(choices){
+    const ids = [];
+    for(const [key, value] of Object.entries(choices ?? {})){
+        if(key.includes(':')) continue;
+        for(const id of (Array.isArray(value) ? value : [value])){
+            if(typeof id === 'number' && !ids.includes(id)) ids.push(id);
+        }
+    }
+    return ids;
 }
 
 // ---------------------------------------------------------------- resolucao
@@ -138,16 +221,8 @@ function runResolution(draft, now){
     const { item, choices } = draft.resolution;
     const entry = getCardEffects(item.idCard);
 
-    const result = runEffects(draft, entry, {
-        sourceId: item.byId,
-        playedById: item.respondsToPlayerId ?? null,
-        idCard: item.idCard,
-        choices,
-        previous: [],
-        slot: '',
-        seedRef: draft,   // o sorteio de alvo avanca a semente da partida
-        copyOf: item.copyOf ?? null,
-    });
+    // seedRef: draft — o sorteio de alvo avanca a semente da partida.
+    const result = runEffects(draft, entry, effectContext(item, choices, draft));
 
     if(result.needs){
         draft.phase = Phase.pending;
@@ -167,6 +242,11 @@ function discardPlayed(draft, item){
     // Equipamento fica na mesa: quem o tira e equipment.destroy.
     const entry = getCardEffects(item.idCard);
     if(firstAction(entry, Action.equip)) return;
+    // Efeito prolongado tambem segura a carta na mesa: ela fica na area de quem
+    // esta sob o efeito enquanto a duracao corre, e quem a manda para o
+    // descarte e o fim da duracao (`releaseOngoingCard`). Descartar aqui faria
+    // a carta sumir com o efeito dela ainda valendo.
+    if(item.uid && draft.ongoing.some(ongoing => ongoing.uid === item.uid)) return;
     toDiscard(draft, owner, item.idCard);
 }
 
@@ -249,29 +329,68 @@ function applyTurnEffects(draft, now){
             seedRef: draft,
         });
         if(ongoing.timing === Timing.delayed){
-            draft.ongoing = draft.ongoing.filter(other => other !== ongoing);
+            finishOngoing(draft, ongoing);
+            continue;
+        }
+        // "Na vez dele, pelos proximos 3 turnos" sao tres vezes *dele*, e nao
+        // tres turnos de mesa: numa mesa de cinco, contar turnos de mesa faria
+        // a carta pegar o alvo uma vez so. Por isso quem vence a duracao de um
+        // `onTargetTurn` e o disparo, aqui, e nao o relogio de expireOngoing.
+        if(ongoing.timing === Timing.onTargetTurn
+            && ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
+            ongoing.turnsLeft--;
+            if(ongoing.turnsLeft <= 0) finishOngoing(draft, ongoing);
         }
     }
 }
 
 /** Vence a contagem das duracoes e limpa o que acabou. */
 function expireOngoing(draft){
+    const expired = [];
     const surviving = [];
     for(const ongoing of draft.ongoing){
-        if(ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
+        // `onTargetTurn` fica de fora: a duracao dele conta disparos, nao
+        // turnos de mesa, e quem a vence e applyTurnEffects.
+        const countsTurns = ongoing.timing !== Timing.onTargetTurn;
+        if(countsTurns && ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
             ongoing.turnsLeft--;
             if(ongoing.turnsLeft < 0){
-                releaseOngoing(draft, ongoing);
+                expired.push(ongoing);
                 continue;
             }
         }
         if(ongoing.drinksLeft !== null && ongoing.drinksLeft !== undefined && ongoing.drinksLeft <= 0){
-            releaseOngoing(draft, ongoing);
+            expired.push(ongoing);
             continue;
         }
         surviving.push(ongoing);
     }
+    // A lista nova entra *antes* de encerrar os vencidos: `releaseOngoingCard`
+    // pergunta se sobrou outro efeito da mesma carta, e a resposta tem que ser
+    // sobre o que ficou, nao sobre o que estava.
     draft.ongoing = surviving;
+    for(const ongoing of expired) endOngoing(draft, ongoing);
+}
+
+/** Tira um efeito prolongado da mesa antes da hora (disparou pela ultima vez). */
+function finishOngoing(draft, ongoing){
+    draft.ongoing = draft.ongoing.filter(other => other !== ongoing);
+    endOngoing(draft, ongoing);
+}
+
+/**
+ * Fim de um efeito prolongado: desliga o que ele ligou e devolve a carta.
+ *
+ * Ja fora de `draft.ongoing` quando chega aqui — quem remove e quem chama.
+ */
+function endOngoing(draft, ongoing){
+    releaseOngoing(draft, ongoing);
+    // `returned` diz se a carta caiu no descarte agora. Nem todo prolongado
+    // segurava uma carta na mesa — o passivo de um equipamento continua com o
+    // equipamento —, e narrar descarte que nao houve seria mentir no log.
+    const returned = releaseOngoingCard(draft, ongoing);
+    draft.log.push({ turn: draft.turnCount, type: 'ongoing.end',
+        idCard: ongoing.idCard, targets: ongoing.targets, returned });
 }
 
 // Alguns efeitos deixam contador ligado no jogador; ao expirar, e preciso
@@ -407,7 +526,9 @@ export function apply(state, command){
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
             draft.playsLeft--;
             draft.stack.push(makeItem(draft, command));
-            openWindow(draft, now);
+            // Primeiro os alvos, depois a janela: e olhando para quem a carta
+            // aponta que a mesa decide se vale interferir.
+            beginDeclaration(draft, now);
             break;
         }
 
@@ -425,7 +546,10 @@ export function apply(state, command){
 
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
             draft.stack.push(makeItem(draft, command, top));
-            openWindow(draft, now);
+            // A reacao declara os alvos dela igual, e a janela recomeca sobre a
+            // carta nova — quem vai sofrer *ela* ainda nao teve chance de dizer
+            // nada.
+            beginDeclaration(draft, now);
             break;
         }
 
@@ -453,6 +577,14 @@ export function apply(state, command){
                 fail('a escolha nao e sua');
             }
             const choices = keyFor(draft.resolution.choices, request, command.playerId, command.value);
+
+            // Declaracao: o estado ainda nao mudou (o ensaio roda numa copia),
+            // entao basta guardar a resposta e perguntar o proximo alvo.
+            if(draft.resolution.declaring){
+                draft.resolution = { ...draft.resolution, choices };
+                runDeclaration(draft, now);
+                return settle(draft);
+            }
 
             // Refaz a resolucao inteira sobre o snapshot, agora com a resposta.
             // Determinismo vem da semente: o mesmo sorteio sai igual.

@@ -217,5 +217,50 @@ export function fromDiscard(state, player, idCard){
     if(onTable !== -1) state.discardPile.splice(onTable, 1);
 }
 
+// ---------------------------------------------------- efeitos prolongados
+
+/**
+ * Os efeitos prolongados que pesam sobre este jogador.
+ *
+ * E a leitura que a mesa faz da area dele: enquanto a carta esta valendo, ela
+ * fica ali em vez de ir para o descarte (ver `releaseOngoingCard`), e varias
+ * podem estar ativas ao mesmo tempo.
+ *
+ * Equipamento fica de fora de proposito: o passivo dele ja aparece como
+ * equipamento no lugar, e contar duas vezes so faria a mesma carta ocupar dois
+ * lugares na cadeira.
+ */
+export function ongoingFor(state, playerId){
+    return (state.ongoing ?? []).filter(ongoing =>
+        ongoing.equippedTo === undefined
+        && (ongoing.targets ?? []).includes(playerId));
+}
+
+/**
+ * A carta de um efeito prolongado que acabou volta para o descarte.
+ *
+ * Enquanto o efeito vale, a carta nao esta no descarte: ela fica na area do
+ * alvo, na mesa, que e o unico jeito de a mesa lembrar de que ela continua
+ * valendo. Quem descarta e este ponto — o fim da duracao —, e nao a resolucao
+ * da jogada.
+ *
+ * O dono e quem jogou (`sourceId`): o descarte e por jogador, e a carta e
+ * dele, ainda que o efeito estivesse pesando sobre outro.
+ *
+ * @returns {boolean} se a carta de fato caiu no descarte agora.
+ */
+export function releaseOngoingCard(state, ongoing){
+    if(!ongoing?.uid) return false;                    // nao veio de uma carta jogada
+    if(ongoing.equippedTo !== undefined) return false; // equipamento sai por destroy
+    // Uma carta so pode ter deixado mais de um efeito prolongado. Ela so cai
+    // quando o ultimo deles acabar, senao o primeiro a vencer levaria a carta
+    // embora com o resto ainda valendo.
+    if((state.ongoing ?? []).some(other => other !== ongoing && other.uid === ongoing.uid)) return false;
+    const owner = playerById(state, ongoing.sourceId);
+    if(!owner) return false;
+    toDiscard(state, owner, ongoing.idCard);
+    return true;
+}
+
 /** Copia defensiva. O motor trabalha sobre o clone e devolve estado novo. */
 export const cloneState = state => structuredClone(state);

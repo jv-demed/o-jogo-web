@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
+import { ongoingFor } from '@/domain/match/state';
 import { Seat } from './Seat';
 import { cardById } from './narrate';
 
@@ -29,6 +30,7 @@ export function GameTable({
     state,
     you,
     onOpenDiscard,
+    onOpenOngoing,
     selectable = [],
     selected = [],
     onSelect,
@@ -81,6 +83,11 @@ export function GameTable({
             {seats.map(({ player, style }) => (
                 <Seat key={player.id}
                     player={player}
+                    // A area de efeitos prolongados dele: as cartas que
+                    // resolveram e continuam valendo ficam na cadeira, e nao no
+                    // descarte.
+                    ongoing={ongoingFor(state, player.id)}
+                    onOpenOngoing={onOpenOngoing}
                     style={style}
                     isYou={player.id === you.id}
                     reveal={reveal}

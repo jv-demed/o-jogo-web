@@ -27,6 +27,7 @@ import { CardPreview } from '@/components/game/CardPreview';
 import { CardActionModal } from '@/components/game/CardActionModal';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
+import { OngoingModal } from '@/components/game/OngoingModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
 import { closeWindowNow, giveCard, stackDeck } from '@/domain/match/dev';
@@ -62,6 +63,10 @@ export default function Solo(){
     // descarte). Fica fora do `openPanel`: da para olhar uma carta *durante*
     // uma escolha, e sem isso abrir a lupa fecharia a pergunta.
     const [preview, setPreview] = useState(null);
+    // De quem e a area de efeitos prolongados que esta aberta. Guardado a parte
+    // do `openPanel` porque o painel e o mesmo para os sete lugares — o que
+    // muda e a cadeira que foi tocada.
+    const [ongoingOf, setOngoingOf] = useState(null);
     // A carta da mao que voce tocou, esperando voce dizer o que fazer com ela.
     // Guarda so a carta: se ela pode ser jogada e coisa da mesa, e a mesa anda
     // com a gaveta aberta — a janela fecha, o bot joga. Derivado, o botao de
@@ -205,6 +210,10 @@ export default function Solo(){
                             <div className='relative flex flex-col flex-1 min-h-0'>
                                 <GameTable state={state} you={you}
                                     onOpenDiscard={() => setOpenPanel('discard')}
+                                    onOpenOngoing={id => {
+                                        setOngoingOf(id);
+                                        setOpenPanel('ongoing');
+                                    }}
                                     selectable={request?.chooserId === you.id ? (request.candidates ?? []) : []}
                                     selected={selected}
                                     onSelect={handleSelect}
@@ -228,10 +237,22 @@ export default function Solo(){
                                 {/* A carta em jogo cobre a mesa, nunca a mao:
                                     todo mundo le a carta, e quem tiver bloqueio
                                     continua com a mao ali embaixo para jogar. */}
-                                {state.phase === Phase.window && <PlayReveal
+                                {/* Vale tambem enquanto a carta declara os
+                                    alvos — menos quando quem escolhe e voce: o
+                                    veu cobre a mesa, e e na mesa que estao as
+                                    cadeiras que voce precisa apontar. Para quem
+                                    so assiste, e o oposto: a carta em tela
+                                    cheia e a unica coisa que explica a espera.
+                                    Relogio so na janela; na declaracao nao ha
+                                    prazo, a mesa espera quem esta escolhendo. */}
+                                {(state.phase === Phase.window
+                                    || (state.resolution?.declaring && !isYourPick)) && <PlayReveal
                                     play={lastPlay}
                                     players={state.players}
-                                    closesAt={state.window?.closesAt}
+                                    you={you}
+                                    closesAt={state.phase === Phase.window
+                                        ? state.window?.closesAt
+                                        : null}
                                 />}
 
                                 {error && <div onClick={dismissError}
@@ -285,6 +306,12 @@ export default function Solo(){
             />}
 
             {openPanel === 'discard' && <DiscardModal state={state} you={you}
+                onClose={closePanel}
+                onInspect={setPreview}
+            />}
+
+            {openPanel === 'ongoing' && <OngoingModal state={state} you={you}
+                playerId={ongoingOf}
                 onClose={closePanel}
                 onInspect={setPreview}
             />}

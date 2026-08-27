@@ -37,10 +37,10 @@ const isDefensive = idCard =>
 /**
  * A carta na pilha ia me fazer beber?
  *
- * Leitura grosseira de proposito: olha o alvo declarado, nao o alvo resolvido,
- * porque a carta ainda nao resolveu — no meio da janela ninguem sabe quem vai
- * ser escolhido. `all` e `random` contam como ameaca; `choose` tambem, porque
- * na duvida vale gastar a defesa.
+ * Onde a jogada declarou alvo (`item.targets`, escolhido antes da janela abrir),
+ * nao ha o que adivinhar: a carta ameaca quem ela aponta, e mais ninguem. O
+ * resto continua leitura grosseira do alvo *escrito* na carta, e nao do
+ * resolvido — `all` e `random` contam como ameaca porque ainda nao sortearam.
  */
 function threatensMe(state, item, playerId){
     if(!item || item.byId === playerId) return false;
@@ -48,6 +48,10 @@ function threatensMe(state, item, playerId){
         if(effect.action !== Action.drink && effect.action !== Action.shotsAdd) return false;
         const kind = effect.target?.kind;
         if(kind === 'self') return false;
+        if(kind === 'choose' || kind === 'manual'){
+            // Sem alvo declarado ainda, na duvida vale gastar a defesa.
+            return item.targets?.length ? item.targets.includes(playerId) : true;
+        }
         if(kind === 'all') return effect.target.except !== 'self' || item.byId !== playerId;
         return true;
     });

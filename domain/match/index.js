@@ -17,6 +17,6 @@ export { Command, RuleError, apply, isReaction, legalCommands } from './engine.j
 export { MISSIONS, MissionGoal, ALL_MISSIONS, evaluateMissions } from './missions.js';
 export {
     HAND_SIZE, MatchStatus, PLAYS_PER_TURN, Phase, REACTION_WINDOW_MS,
-    createMatch, currentPlayer, playerById, playersAfter,
+    createMatch, currentPlayer, ongoingFor, playerById, playersAfter,
 } from './state.js';
 export { INFINITE_SHOTS } from './resolve.js';

@@ -1,5 +1,6 @@
 import { ICONS } from '@/assets/icons';
-import { missionName } from './narrate';
+import { Card } from '@/components/cards/Card';
+import { cardById, missionName } from './narrate';
 
 /**
  * Um lugar na mesa.
@@ -14,12 +15,14 @@ import { missionName } from './narrate';
  */
 export function Seat({
     player,
+    ongoing = [],
     isYou,
     reveal,
     isCurrent,
     isSelectable,
     isSelected,
     onSelect,
+    onOpenOngoing,
     style
 }){
 
@@ -89,6 +92,20 @@ export function Seat({
                 </span>
             </span>
 
+            {/* A area de efeitos prolongados deste jogador: as cartas que
+                resolveram mas continuam valendo sobre ele ficam aqui, e nao no
+                descarte. Empilhadas porque varias podem estar ativas ao mesmo
+                tempo — e o numero diz quantas sao quando a pilha nao cabe. */}
+            {ongoing.length > 0 && <OngoingPile
+                entries={ongoing}
+                name={isYou ? 'você' : player.name}
+                // Cadeira selecionavel ja e um <button>, e botao dentro de
+                // botao nao existe: durante uma escolha a pilha vira so
+                // informacao, e volta a abrir quando a pergunta passar.
+                canOpen={!isSelectable && Boolean(onOpenOngoing)}
+                onOpen={() => onOpenOngoing?.(player.id)}
+            />}
+
             {player.equipment.length > 0 && <span className={`
                 flex items-center gap-0.5
                 px-1.5 py-0.5 rounded-lg
@@ -114,6 +131,66 @@ export function Seat({
                 `}>
                     {missionName(player.mission)}
                 </span>}
+        </Root>
+    );
+}
+
+/**
+ * A pilha de cartas ativas na cadeira.
+ *
+ * Sao cartas de verdade, e nao um icone com contador: e a mesma coisa que
+ * acontece na mesa fisica, a carta parada na frente de quem esta sofrendo o
+ * efeito. Tres folhas de cada vez, tortas, dao o volume de pilha sem virar uma
+ * fileira que empurra a cadeira para cima da vizinha.
+ */
+function OngoingPile({ entries, name, canOpen, onOpen }){
+
+    const Root = canOpen ? 'button' : 'span';
+    // As tres ultimas: a de cima e a que entrou por ultimo, como numa pilha.
+    const top = entries.slice(-3).map(entry => cardById(entry.idCard)).filter(Boolean);
+    if(top.length === 0) return null;
+
+    return (
+        <Root
+            {...(canOpen && {
+                type: 'button',
+                onClick: onOpen,
+                'aria-label': `Ver os ${entries.length} efeito(s) ativo(s) em ${name}`
+            })}
+            className={`
+                relative block h-[3.4rem] w-[2.4rem] shrink-0
+                ${canOpen ? `
+                    transition-transform active:scale-95
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-gold rounded-md
+                ` : ''}
+            `}
+        >
+            {top.map((card, i) => (
+                <span key={`${card.id}-${i}`}
+                    style={{
+                        transform: `rotate(${(i - 1) * 6}deg) translateY(${i * -2}px)`,
+                        zIndex: i
+                    }}
+                    className={`
+                        absolute inset-0 overflow-hidden rounded-md
+                        border border-gold/40
+                        shadow-[0_4px_10px_-6px_rgba(0,0,0,0.9)]
+                    `}
+                >
+                    <Card card={card} scale={0.128} />
+                </span>
+            ))}
+
+            <span className={`
+                absolute -right-1.5 -top-1.5 z-10
+                flex items-center justify-center
+                h-4 min-w-4 px-1 rounded-full
+                border border-gold/50 bg-base
+                text-[0.55rem] font-semibold tabular-nums text-gold
+            `}>
+                {entries.length}
+            </span>
         </Root>
     );
 }

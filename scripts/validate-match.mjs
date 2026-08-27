@@ -11,7 +11,9 @@
 //   2. as 116 cartas do catalogo, jogadas de verdade numa mesa de 5, com as
 //      escolhas respondidas automaticamente — nenhuma pode estourar excecao
 //      nem cair no ramo "acao sem handler";
-//   3. uma partida inteira, do primeiro turno ate a apuracao.
+//   3. uma partida inteira, do primeiro turno ate a apuracao;
+//   4. o alvo declarado antes da janela e a carta que fica na mesa enquanto o
+//      efeito prolongado dela corre.
 
 import { Command, apply, legalCommands } from '../domain/match/engine.js';
 import { botCommand } from '../domain/match/bot.js';
@@ -174,19 +176,33 @@ function jogar(state, idCard){
     player.hand = [idCard, ...player.hand];
 
     current = apply(current, { type: Command.play, playerId: player.id, idCard, now: 0 });
-    current = apply(current, { type: Command.tick, now: 999999 });
 
+    // Duas paradas ate a carta resolver, e nesta ordem: a declaracao dos alvos
+    // (que acontece *antes* da janela) e a resolucao em si. As duas param em
+    // `pending`, e entre elas corre a janela de interferencia — daí o tick.
+    // O relogio anda: a janela abre a partir do instante do comando, entao um
+    // `now` fixo abriria uma janela que nunca vence.
+    let now = 1000;
     let guarda = 0;
-    while(current.phase === Phase.pending && current.resolution){
-        if(guarda++ > 20) throw new Error('escolha em loop');
-        const request = current.pending[0];
-        current = apply(current, {
-            type: Command.answer,
-            playerId: request.chooserId,
-            value: responder(current),
-            now: 999999,
-        });
+    while(guarda++ < 40){
+        now += 60000;
+        if(current.phase === Phase.window){
+            current = apply(current, { type: Command.tick, now });
+            continue;
+        }
+        if(current.phase === Phase.pending && current.resolution){
+            const request = current.pending[0];
+            current = apply(current, {
+                type: Command.answer,
+                playerId: request.chooserId,
+                value: responder(current),
+                now,
+            });
+            continue;
+        }
+        break;
     }
+    if(guarda >= 40) throw new Error('escolha em loop');
     return current;
 }
 
@@ -371,7 +387,55 @@ for(const id of IDS){
     console.log(`partida simulada: ${turnos} turno(s), status ${state.status}`);
 }
 
-// ------------------------------------------- 6. mesa so de bots
+// ------------------------------- 6. alvo declarado e efeito prolongado
+
+// A carta 1 (A Bebida Infinita) e o caso completo das duas mecanicas: escolhe
+// alvo *antes* da janela, e fica valendo por tres vezes do escolhido em vez de
+// ir para o descarte na hora.
+{
+    let state = novaMesa(21);
+    state = apply(state, { type: Command.draw, playerId: 1, now: 0 });
+    state.players[0].hand = [1, ...state.players[0].hand];
+
+    state = apply(state, { type: Command.play, playerId: 1, idCard: 1, now: 0 });
+    check('a carta com alvo escolhido para antes da janela',
+        state.phase === Phase.pending && state.resolution?.declaring === true);
+    check('a janela ainda nao abriu na declaracao', state.phase !== Phase.window);
+
+    state = apply(state, { type: Command.answer, playerId: 1, value: [2], now: 100 });
+    check('escolhido o alvo, a janela abre', state.phase === Phase.window);
+    check('a mesa ve em quem a carta bate',
+        state.stack[state.stack.length - 1].targets.join() === '2');
+    check('a janela recomeca do zero depois da escolha', state.window.closesAt === 100 + 10000);
+
+    state = apply(state, { type: Command.tick, now: 100 + 10001 });
+    check('o efeito prolongado entra na mesa', state.ongoing.length === 1);
+    check('o prolongado sabe de que jogada veio', Boolean(state.ongoing[0].uid));
+    check('a carta prolongada nao vai para o descarte na hora',
+        !state.players[0].discard.includes(1)
+        && !state.discardPile.some(e => e.idCard === 1));
+
+    // Tres voltas da mesa: o alvo tem tres vezes, e bebe nas tres.
+    let now = 20000;
+    for(let i = 0; i < state.order.length * 3; i++){
+        now += 1000;
+        state.phase = Phase.end;
+        state = apply(state, { type: Command.endTurn, playerId: daVez(state).id, now });
+    }
+    check('o alvo bebeu uma vez por turno dele, tres vezes',
+        state.players[1].shots === 3);
+    check('quem jogou leva o credito das tres',
+        state.players[0].shotsGiven === 3);
+    check('a duracao acaba depois da terceira', state.ongoing.length === 0);
+    check('a carta cai no descarte quando a duracao acaba',
+        state.players[0].discard.includes(1)
+        && state.discardPile.some(e => e.idCard === 1 && e.playerId === 1));
+    check('o descarte da mesa e o do jogador continuam batendo', descarteBate(state));
+    check('o fim do prolongado aparece no log',
+        state.log.some(e => e.type === 'ongoing.end' && e.idCard === 1));
+}
+
+// ------------------------------------------- 7. mesa so de bots
 
 // O modo solo em cima da mesa: cinco bots jogam sozinhos ate a apuracao. Se
 // isto trava, e porque existe um estado em que ninguem tem comando legal — que
@@ -418,7 +482,7 @@ for(const id of IDS){
         + `vencedores ${state.winners?.join(', ') || 'ninguem'}`);
 }
 
-// ------------------------------ 7. solo com um humano na mesa
+// ------------------------------ 8. solo com um humano na mesa
 
 // O modo solo de verdade: bots mais uma pessoa. O humano aqui e o mais passivo
 // possivel — passa na janela, joga a primeira carta, responde a escolha com o
