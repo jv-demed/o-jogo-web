@@ -328,6 +328,16 @@ function applyTurnEffects(draft, now){
             slot: '',
             seedRef: draft,
         });
+        // O disparo entra no log. Sem isto, a unica marca de que a carta
+        // cobrou nesta vez sao os shots que ela mandou beber — e a mesa nao tem
+        // como ligar o shot a carta que estava parada na cadeira desde outro
+        // turno. E o que a tela usa para anunciar o efeito antes da jogada.
+        draft.log.push({ turn: draft.turnCount, type: 'ongoing.trigger',
+            idCard: ongoing.idCard, playerId: player.id, timing: ongoing.timing,
+            turnsLeft: ongoing.timing === Timing.onTargetTurn && ongoing.turnsLeft
+                ? ongoing.turnsLeft - 1
+                : ongoing.turnsLeft ?? null });
+
         if(ongoing.timing === Timing.delayed){
             finishOngoing(draft, ongoing);
             continue;

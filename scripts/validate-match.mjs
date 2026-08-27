@@ -433,6 +433,13 @@ for(const id of IDS){
     check('o descarte da mesa e o do jogador continuam batendo', descarteBate(state));
     check('o fim do prolongado aparece no log',
         state.log.some(e => e.type === 'ongoing.end' && e.idCard === 1));
+
+    // Cada cobranca vira um fato no log: e dele que a tela tira o anuncio no
+    // comeco da vez de quem sofre — o shot sozinho nao diz de que carta veio.
+    const cobrancas = state.log.filter(e => e.type === 'ongoing.trigger' && e.idCard === 1);
+    check('as tres cobrancas aparecem no log', cobrancas.length === 3);
+    check('cada cobranca diz quanto ainda falta',
+        cobrancas.map(e => e.turnsLeft).join() === '2,1,0');
 }
 
 // ------------------------------------------- 7. mesa so de bots

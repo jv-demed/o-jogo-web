@@ -86,6 +86,10 @@ export function narrate(entry, nameOf){
             return entry.idCard
                 ? `${cardName(entry.idCard)} ficou valendo sobre ${list(entry.targets)}.`
                 : null;
+        case 'ongoing.trigger':
+            return entry.idCard
+                ? `${cardName(entry.idCard)} cobrou de ${who(entry.playerId)}.`
+                : null;
         case 'ongoing.end':
             if(!entry.idCard) return null;
             return entry.returned
@@ -138,6 +142,25 @@ export function declaredEffectText(idCard){
     }
     return null;
 }
+
+/**
+ * O que a carta de efeito prolongado faz quando cobra, sem o prazo.
+ *
+ * A mesma frase da declaracao, menos a cauda de duracao: na hora do disparo o
+ * "pelas proximas 3 rodadas" ja nao e verdade, e quanto ainda falta e um dado
+ * do estado (`turnsLeft`), nao da carta.
+ */
+export function ongoingEffectText(idCard){
+    const effects = getCardEffects(idCard)?.effects ?? [];
+    for(const effect of effects){
+        if(NOW_TIMINGS.has(effect.timing ?? 'immediate')) continue;
+        const phrase = actionText(effect);
+        if(phrase) return phrase;
+    }
+    return null;
+}
+
+const NOW_TIMINGS = new Set(['immediate', 'reaction', 'passive', 'endgame']);
 
 /** `amount` em shots, incluindo as palavras do vocabulario. */
 function shotsOf(effect){

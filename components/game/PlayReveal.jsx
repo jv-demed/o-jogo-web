@@ -13,14 +13,15 @@ import { cardById, declaredEffectText } from './narrate';
  * texto dela de longe — e nao encosta na mao: e olhando para a carta que se
  * decide se vale gastar um bloqueio, e a carta do bloqueio esta na mao.
  *
- * Debaixo da carta vem em quem ela bate, e o que vai acontecer com ele. O alvo
- * e escolhido *antes* da janela abrir (ver a declaracao, em engine.js)
- * justamente para caber aqui: interferir so e decisao de verdade quando se sabe
- * quem ia sofrer — antes disso, gastar um cancelamento e adivinhacao.
+ * Com alvo apontado, a carta sai da tela e quem fica e o alvo: a bolinha, o
+ * nome grande e uma frase do que vai acontecer com ele. O alvo e escolhido
+ * *antes* da janela abrir (ver a declaracao, em engine.js) justamente para isso
+ * — interferir so e decisao de verdade quando se sabe quem ia sofrer.
  *
- * Nome grande e frase em vez do texto da carta: a carta esta logo acima e diz
- * tudo, inclusive o que nao e para este alvo. Quem esta decidindo se gasta um
- * bloqueio precisa de uma linha, nao de um paragrafo.
+ * A troca e proposital: a carta inteira e o texto dela, que fala de todo mundo
+ * e de todos os casos; a frase e o caso *deste* alvo, em uma linha. Quem esta
+ * decidindo se gasta um bloqueio le a linha, nao o paragrafo. O nome da carta
+ * continua no alto, junto de quem jogou, para a mesa saber do que se trata.
  *
  * Nao intercepta toque (`pointer-events-none`): o que existe para clicar
  * enquanto ela esta na tela mora fora da mesa.
@@ -30,9 +31,7 @@ export function PlayReveal({ play, players, you, closesAt }){
     const boxRef = useRef(null);
 
     const card = play ? cardById(play.idCard) : null;
-    // O bloco do alvo come altura da carta: sem reservar, a carta cresce ate o
-    // limite da mesa e empurra nome e frase para fora.
-    const scale = useRevealScale(boxRef, play?.targets?.length ? 168 : 72);
+    const scale = useRevealScale(boxRef, 72);
     if(!card) return null;
 
     const nameOf = id => (id === you?.id ? 'Você' : players.find(p => p.id === id)?.name);
@@ -56,14 +55,17 @@ export function PlayReveal({ play, players, you, closesAt }){
             {byName && <p className='text-xs text-cream-dim'>
                 <span className='font-semibold text-cream'>{byName}</span>
                 {' jogou'}
+                {targets.length > 0 && <span className='font-semibold text-cream'>
+                    {' ' + card.name}
+                </span>}
             </p>}
 
-            <div className={`
+            {targets.length === 0 && <div className={`
                 rounded-xl overflow-hidden animate-sheet-up
                 shadow-[0_18px_44px_-16px_rgba(0,0,0,0.95)]
             `}>
                 <Card card={card} scale={scale} />
-            </div>
+            </div>}
 
             {/* Em quem ela bate. Fica entre a carta e o relogio porque e o
                 par que decide a reacao: o que a carta faz, e com quem. */}
@@ -125,9 +127,10 @@ function WindowTimer({ closesAt, width }){
 /**
  * A carta tem 300x440 fixos e encolhe por transform, entao o tamanho e conta
  * nossa: a maior escala que cabe na area da mesa, com folga para a legenda em
- * cima e o relogio embaixo.
+ * cima e o relogio embaixo (`reserved`). `max` limita o crescimento — nem todo
+ * anuncio quer a carta do tamanho da mesa.
  */
-function useRevealScale(boxRef, reserved = 72){
+export function useRevealScale(boxRef, reserved = 72, max = 1){
 
     const [scale, setScale] = useState(0.5);
 
@@ -140,7 +143,7 @@ function useRevealScale(boxRef, reserved = 72){
             setScale(Math.max(0.3, Math.min(
                 (height - reserved) / 440,
                 (width - 40) / 300,
-                1
+                max
             )));
         }
 
@@ -148,7 +151,7 @@ function useRevealScale(boxRef, reserved = 72){
         const observer = new ResizeObserver(measure);
         observer.observe(element);
         return () => observer.disconnect();
-    }, [boxRef, reserved]);
+    }, [boxRef, reserved, max]);
 
     return scale;
 }

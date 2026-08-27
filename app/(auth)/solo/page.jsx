@@ -6,6 +6,7 @@ import { useUser } from '@/providers/UserProvider';
 import { useImmersive } from '@/providers/ImmersiveProvider';
 import { useSoloMatch } from '@/hooks/useSoloMatch';
 import { useLastPlay } from '@/hooks/useLastPlay';
+import { useTurnEffect } from '@/hooks/useTurnEffect';
 import { Command, isReaction } from '@/domain/match/engine';
 import { MISSIONS } from '@/domain/match/missions';
 import { MatchStatus, Phase, ongoingFor } from '@/domain/match/state';
@@ -18,6 +19,7 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 import { GameTable } from '@/components/game/GameTable';
 import { YouCorner } from '@/components/game/Seat';
 import { PlayReveal } from '@/components/game/PlayReveal';
+import { TurnEffectReveal } from '@/components/game/TurnEffectReveal';
 import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
 import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
@@ -85,6 +87,9 @@ export default function Solo(){
     useImmersive(Boolean(state));
 
     const lastPlay = useLastPlay(state);
+    // A carta que estava parada numa cadeira e acabou de cobrar. Sai da tela
+    // sozinha; nao ha decisao pendurada nela.
+    const turnEffect = useTurnEffect(state);
 
     // A colecao vem como lista plana com repeticao; o baralho quer ids unicos.
     const collectionIds = [...new Set(user.cards)];
@@ -254,6 +259,19 @@ export default function Solo(){
                                     closesAt={state.phase === Phase.window
                                         ? state.window?.closesAt
                                         : null}
+                                />}
+
+                                {/* A carta parada numa cadeira cobrando na vez
+                                    de quem sofre. Perde para o anuncio da
+                                    jogada: se uma carta esta em jogo agora, ela
+                                    e que precisa da tela — o aviso do efeito
+                                    prolongado ja e passado, e some sozinho. */}
+                                {turnEffect
+                                    && state.phase !== Phase.window
+                                    && !state.resolution && <TurnEffectReveal
+                                    trigger={turnEffect}
+                                    players={state.players}
+                                    you={you}
                                 />}
 
                                 {error && <div onClick={dismissError}
