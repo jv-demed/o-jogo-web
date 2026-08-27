@@ -118,6 +118,15 @@ export function botCommand(state, playerId, now = 0){
     const player = playerById(state, playerId);
     if(!player || player.out) return null;
 
+    // Fila de shots aberta: quem deve, bebe na hora — a confirmacao existe para
+    // o shot de verdade, e do outro lado da mesa de teste nao ha ninguem para
+    // beber. Quem nao deve nao faz nada, porque a mesa inteira esta parada.
+    if(state.drinks?.length){
+        return state.drinks.some(entry => entry.playerId === playerId)
+            ? { type: Command.drank, playerId, now }
+            : null;
+    }
+
     if(state.status === MatchStatus.guessing){
         return player.mission === 'sjehnsens'
             ? { type: Command.guess, playerId, value: buildGuess(state, player), now }

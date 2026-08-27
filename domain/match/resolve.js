@@ -54,11 +54,20 @@ function log(draft, entry){
  *
  * `shots.ignore` ativo no alvo faz o shot ser bebido e nao contar — a carta 135
  * do pack 2 e exatamente isso, e por isso e um flag e nao um desconto depois.
+ *
+ * O shot tambem entra em `draft.drinks`, a fila de confirmacao: o numero na
+ * tela muda agora, mas a bebida acontece na mesa de verdade, e a partida para
+ * ate quem bebeu dizer que bebeu. E regra, e nao enfeite de tela — por isso
+ * mora no estado e nao num aviso do cliente.
  */
 function drink(draft, ids, amount, ctx){
     for(const id of ids){
         const player = playerById(draft, id);
         if(!player) continue;
+        if(amount > 0){
+            draft.drinks = [...(draft.drinks ?? []),
+                { playerId: id, amount, idCard: ctx.idCard ?? null }];
+        }
 
         if(player.ignoringShots > 0){
             player.shotsIgnored += amount;

@@ -165,6 +165,27 @@ function responder(state){
 
 const daVez = state => state.players.find(p => p.id === state.order[state.turnIndex]);
 
+/**
+ * Bebe o que a mesa deve.
+ *
+ * Todo shot para a partida ate quem bebeu confirmar, entao nenhuma simulacao
+ * anda sem passar por aqui — que e exatamente o ponto da regra. Numa mesa de
+ * mentira todo mundo bebe na hora.
+ */
+function beber(state, now = 0){
+    let current = state;
+    let guarda = 0;
+    while(current.drinks?.length){
+        if(guarda++ > 200) throw new Error('fila de shots sem fim');
+        current = apply(current, {
+            type: Command.drank,
+            playerId: current.drinks[0].playerId,
+            now,
+        });
+    }
+    return current;
+}
+
 /** Joga uma carta e resolve tudo o que ela abrir, respondendo as escolhas. */
 function jogar(state, idCard){
     let current = state;
@@ -186,6 +207,10 @@ function jogar(state, idCard){
     let guarda = 0;
     while(guarda++ < 40){
         now += 60000;
+        if(current.drinks?.length){
+            current = beber(current, now);
+            continue;
+        }
         if(current.phase === Phase.window){
             current = apply(current, { type: Command.tick, now });
             continue;
@@ -269,6 +294,7 @@ for(const id of IDS){
         }
     }
 
+    state = beber(state, 999999);
     check('a carta cancelada nao faz efeito',
         state.players.every(p => p.shots === 0));
     check('o cancelamento aparece no log',
@@ -289,6 +315,11 @@ for(const id of IDS){
     check('tick antes do prazo nao resolve', cedo.phase === Phase.window);
 
     state = apply(state, { type: Command.tick, now: 999999 });
+    check('a mesa para ate os quatro confirmarem o shot', state.drinks.length === 4);
+    check('quem nao deve shot nao tem o que fazer',
+        legalCommands(state, 1).length === 0
+        && legalCommands(state, 2).join() === Command.drank);
+    state = beber(state, 999999);
     check('todos os outros bebem 1 quando a carta resolve',
         state.players.filter(p => p.id !== 1).every(p => p.shots === 1));
     check('quem jogou nao bebe', state.players[0].shots === 0);
@@ -336,6 +367,7 @@ for(const id of IDS){
 
     let turnos = 0;
     while(state.status === MatchStatus.progress && turnos < 60){
+        if(state.drinks.length){ state = beber(state); continue; }
         const player = daVez(state);
 
         if(state.phase === Phase.draw){
@@ -419,9 +451,17 @@ for(const id of IDS){
     let now = 20000;
     for(let i = 0; i < state.order.length * 3; i++){
         now += 1000;
+        if(state.drinks.length){
+            check('o shot cobrado e do alvo da carta',
+                state.drinks.every(entry => entry.playerId === 2 && entry.idCard === 1));
+            check('a mesa nao anda enquanto o alvo nao bebe',
+                legalCommands(state, 1).length === 0);
+        }
+        state = beber(state, now);
         state.phase = Phase.end;
         state = apply(state, { type: Command.endTurn, playerId: daVez(state).id, now });
     }
+    state = beber(state, now);
     check('o alvo bebeu uma vez por turno dele, tres vezes',
         state.players[1].shots === 3);
     check('quem jogou leva o credito das tres',
@@ -523,6 +563,10 @@ for(const id of IDS){
                 if(other.id !== 1) palpites[other.id] = other.mission;
             }
             state = apply(state, { type: Command.guess, playerId: 1, value: palpites, now: 0 });
+            continue;
+        }
+        if(acoes.includes(Command.drank)){
+            state = apply(state, { type: Command.drank, playerId: 1, now: 999999 });
             continue;
         }
         if(acoes.includes(Command.draw)){

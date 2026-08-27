@@ -32,6 +32,27 @@ export function TurnBar({
     dispatch
 }){
 
+    // Shot pendente vem antes da fase: a mesa inteira esta parada esperando
+    // alguem beber de verdade, e nao ha fase nenhuma acontecendo.
+    const owed = state.drinks ?? [];
+    if(owed.length){
+        if(owed.some(entry => entry.playerId === you.id)){
+            return (
+                <Bar>
+                    <ActionButton text='Bebi'
+                        variant='gold'
+                        icon={ICONS.shot}
+                        action={() => dispatch({ type: Command.drank, playerId: you.id })}
+                    />
+                </Bar>
+            );
+        }
+        const waiting = [...new Set(owed.map(entry => entry.playerId))]
+            .map(id => state.players.find(p => p.id === id)?.name)
+            .filter(Boolean);
+        return <Waiting text={`Esperando ${waiting.join(', ')} beber`} />;
+    }
+
     const request = state.phase === Phase.pending ? state.pending[0] : null;
     const isChooser = request?.chooserId === you.id;
     const top = state.stack[state.stack.length - 1];

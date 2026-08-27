@@ -29,6 +29,11 @@ import {
  *             cancelar chega a tempo de cancelar.
  *   end    -> passa a vez
  *
+ * Atravessado em tudo isso: a fila de shots. Todo shot que alguem tem que beber
+ * entra em `state.drinks` e a partida *para* ate a pessoa confirmar (`drank`) —
+ * beber acontece na mesa de verdade, e o jogo nao pode seguir sem que tenha
+ * acontecido. Nenhum outro comando passa enquanto a fila tiver alguem.
+ *
  * Escolhas (alvo, opcao, "quer beber?") param a resolucao: viram `pending`, e o
  * comando `answer` retoma. A retomada refaz a resolucao desde o inicio a partir
  * de um snapshot, em vez de continuar de onde parou — com a semente guardada no
@@ -38,6 +43,7 @@ import {
 
 export const Command = Object.freeze({
     draw:    'draw',
+    drank:   'drank',
     play:    'play',
     react:   'react',
     pass:    'pass',
@@ -511,8 +517,22 @@ export function apply(state, command){
     const draft = cloneState(state);
     const now = command.now ?? 0;
 
-    if(draft.status === MatchStatus.finished && command.type !== Command.guess){
+    // `drank` passa mesmo com a partida encerrada: o ultimo shot da partida foi
+    // cobrado antes do fim e continua a beber. Recusar aqui deixaria a fila
+    // presa por cima da tela de resultado, sem ninguem para esvaziar.
+    if(draft.status === MatchStatus.finished
+        && command.type !== Command.guess
+        && command.type !== Command.drank){
         fail('partida encerrada');
+    }
+
+    // A mesa congela enquanto alguem deve um shot. O `tick` e a excecao, e sai
+    // sem fazer nada: o relogio da janela e chamado de fora, a cada 200ms, e
+    // recusar cada um deles encheria a tela de erro por uma espera que e
+    // esperada. A janela e reaberta na ultima confirmacao, mais abaixo.
+    if(draft.drinks?.length && command.type !== Command.drank){
+        if(command.type === Command.tick) return draft;
+        fail('a mesa espera quem tem shot para beber');
     }
 
     switch(command.type){
@@ -576,6 +596,26 @@ export function apply(state, command){
         case Command.tick: {
             if(draft.phase === Phase.window && now >= draft.window.closesAt){
                 beginResolution(draft, now);
+            }
+            break;
+        }
+
+        // "Bebi." E a unica confirmacao do jogo que corresponde a uma acao
+        // fora dele — e por isso ela e um comando, e nao um botao que fecha um
+        // aviso: o servidor precisa saber que aconteceu.
+        case Command.drank: {
+            const index = (draft.drinks ?? []).findIndex(entry => entry.playerId === command.playerId);
+            if(index === -1) fail('voce nao tem shot para beber');
+            const [entry] = draft.drinks.splice(index, 1);
+            draft.log.push({ turn: draft.turnCount, type: 'drink.confirmed',
+                playerId: entry.playerId, amount: entry.amount });
+
+            // A mesa ficou parada esperando; a janela que estava aberta perdeu
+            // o tempo dela. Quem confirmou por ultimo devolve os 10s inteiros,
+            // em vez de a carta resolver no instante seguinte porque alguem
+            // demorou para beber.
+            if(draft.drinks.length === 0 && draft.phase === Phase.window && draft.window){
+                draft.window.closesAt = now + REACTION_WINDOW_MS;
             }
             break;
         }
@@ -662,6 +702,11 @@ function keyFor(choices, request, playerId, value){
 /** Conveniencia para a UI: o que este jogador pode fazer agora. */
 export function legalCommands(state, playerId){
     if(state.status !== MatchStatus.progress) return [];
+    // Deve shot, so ha uma coisa a fazer — e quem nao deve nao faz nada ate a
+    // mesa beber.
+    if(state.drinks?.length){
+        return state.drinks.some(entry => entry.playerId === playerId) ? [Command.drank] : [];
+    }
     const isTurn = currentPlayer(state)?.id === playerId;
     switch(state.phase){
         case Phase.draw:   return isTurn ? [Command.draw] : [];

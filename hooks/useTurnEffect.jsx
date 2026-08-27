@@ -20,9 +20,13 @@ const SHOW_MS = 3600;
  * identidade — o estado inteiro e clonado a cada comando, entao comparar o
  * objeto acusaria evento novo a cada tick da janela.
  *
+ * `hold` segura o aviso na tela em vez de conta-lo: quando o efeito mandou
+ * beber, quem decide quando o aviso sai e a pessoa apertando "bebi", e nao o
+ * relogio. Solto o hold, os 3,6s comecam a correr.
+ *
  * @returns {{idCard: number, playerId: number, turnsLeft: number|null}|null}
  */
-export function useTurnEffect(state){
+export function useTurnEffect(state, hold = false){
 
     const [shown, setShown] = useState(null);
 
@@ -47,9 +51,10 @@ export function useTurnEffect(state){
         // de 3,6s empilhados numa vez so, e o segundo cobriria o primeiro de
         // qualquer jeito.
         setShown({ index, ...logRef.current[index] });
+        if(hold) return;
         const timer = setTimeout(() => setShown(null), SHOW_MS);
         return () => clearTimeout(timer);
-    }, [index]);
+    }, [index, hold]);
 
     return shown?.index === index ? shown : null;
 }

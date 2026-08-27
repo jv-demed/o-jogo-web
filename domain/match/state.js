@@ -140,6 +140,11 @@ export function createMatch({ seed, players }){
         // unica lista que a mesa ve; as outras sao contabilidade de cada um.
         discardPile: [],
 
+        // Shots que a mesa deve beber e ainda nao confirmou. Beber e a unica
+        // parte deste jogo que acontece fora da tela: enquanto tiver alguem
+        // nesta fila, a partida nao anda: [{ playerId, amount, idCard }].
+        drinks: [],
+
         // Efeitos com duracao, que sobrevivem a jogada que os criou.
         ongoing: [],
         // Vinculos entre jogadores (link.shots, link.fate).
@@ -216,6 +221,10 @@ export function fromDiscard(state, player, idCard){
     );
     if(onTable !== -1) state.discardPile.splice(onTable, 1);
 }
+
+/** Os shots que este jogador ainda deve beber. */
+export const drinksOf = (state, playerId) =>
+    (state.drinks ?? []).filter(entry => entry.playerId === playerId);
 
 // ---------------------------------------------------- efeitos prolongados
 

@@ -30,6 +30,7 @@ import { CardPreview } from '@/components/game/CardPreview';
 import { CardActionModal } from '@/components/game/CardActionModal';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
+import { DrinkPrompt } from '@/components/game/DrinkPrompt';
 import { OngoingModal } from '@/components/game/OngoingModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
@@ -87,9 +88,12 @@ export default function Solo(){
     useImmersive(Boolean(state));
 
     const lastPlay = useLastPlay(state);
+    // Shot pendente na mesa. Enquanto tiver alguem devendo, a partida esta
+    // parada — o motor recusa qualquer outro comando.
+    const drinks = state?.drinks ?? [];
     // A carta que estava parada numa cadeira e acabou de cobrar. Sai da tela
-    // sozinha; nao ha decisao pendurada nela.
-    const turnEffect = useTurnEffect(state);
+    // sozinha, menos quando ela mandou beber: ai quem a tira e o "bebi".
+    const turnEffect = useTurnEffect(state, drinks.length > 0);
 
     // A colecao vem como lista plana com repeticao; o baralho quer ids unicos.
     const collectionIds = [...new Set(user.cards)];
@@ -406,6 +410,14 @@ export default function Solo(){
                 onPlay={() => handlePlay(choice.id)}
                 onInspect={() => { setPreview(choice); setChoice(null); }}
                 onClose={() => setChoice(null)}
+            />}
+
+            {/* Por cima de tudo, inclusive das gavetas: enquanto houver shot
+                para beber nao existe outra coisa a fazer na tela. */}
+            {drinks.length > 0 && <DrinkPrompt
+                entries={drinks}
+                playerId={you.id}
+                dispatch={dispatch}
             />}
 
             {preview && <CardPreview card={preview}
