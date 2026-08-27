@@ -151,7 +151,8 @@ export function Seat({
  * cadeira no meio da mesa so tirava espaco de quem voce precisa olhar.
  *
  * Por isso e uma tira de badges, e nao a cadeira em miniatura: no rodape cada
- * linha disputa altura com a mao. Os mesmos numeros da cadeira, deitados.
+ * linha disputa altura com a mao. Os mesmos numeros da cadeira, deitados — e
+ * sem nome: dizer "Voce" em cima da sua propria mao e legendar o obvio.
  */
 export function YouCorner({
     player,
@@ -184,13 +185,6 @@ export function YouCorner({
                 ${isSelectable ? 'cursor-pointer active:scale-95 transition-transform' : ''}
             `}
         >
-            <span className={`
-                text-[0.6rem] font-semibold uppercase tracking-wide
-                ${isCurrent ? 'text-brand-light' : 'text-cream-dim'}
-            `}>
-                Você
-            </span>
-
             <span className={`
                 flex items-center gap-0.5
                 px-1.5 py-0.5 rounded-lg

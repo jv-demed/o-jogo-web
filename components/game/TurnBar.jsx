@@ -13,6 +13,11 @@ import { promptText } from './narrate';
  * pode subir e descer a cada troca de fase, com o dedo ja a caminho. Botao que
  * some e alvo que se move.
  *
+ * O texto da fase mora dentro do botao, e nao numa linha acima dele. Uma frase
+ * explicando o botao logo acima do botao e a mesma informacao dita duas vezes,
+ * e custava uma linha de altura da mao em todas as fases. Botao apagado ja e
+ * uma frase: `Vez de Ana` nao pede um `Espere` em cima.
+ *
  * Uma fase, um controle. A alternativa — todos os botoes na tela, os que nao
  * valem desabilitados — nao funciona num jogo em que a fase muda sozinha (a
  * janela fecha no relogio, o bot joga na sua frente): o jogador ficaria caçando
@@ -45,7 +50,7 @@ export function TurnBar({
     switch(state.phase){
         case Phase.draw:
             return isYourTurn
-                ? <Bar hint='Sua vez. Comece comprando.'>
+                ? <Bar>
                     <div className='flex gap-2'>
                         <ActionButton text='Comprar carta'
                             variant='gold'
@@ -77,16 +82,16 @@ export function TurnBar({
 
         case Phase.play:
             return isYourTurn
-                ? <Waiting text='Escolha uma carta da mão'
-                    hint='Segure a carta para ler.'
-                />
+                ? <Waiting text='Escolha uma carta da mão' />
                 : <Waiting text={`${currentName} está escolhendo`} />;
 
         case Phase.window: {
             const canPass = top?.byId !== you.id && !state.window.passed.includes(you.id);
             return canPass
-                ? <Bar hint='Reaja com uma carta ou passe.'>
-                    <ActionButton text='Passar'
+                // "Sem reagir" e o que o botao faz *em vez* de: e ele que
+                // conta que a mao tambem e uma saida daqui.
+                ? <Bar>
+                    <ActionButton text='Passar sem reagir'
                         variant='secondary'
                         action={() => dispatch({ type: Command.pass, playerId: you.id })}
                     />
@@ -99,7 +104,7 @@ export function TurnBar({
 
         case Phase.end:
             return isYourTurn
-                ? <Bar hint='Turno encerrado.'>
+                ? <Bar>
                     <ActionButton text='Passar a vez'
                         action={() => dispatch({ type: Command.endTurn, playerId: you.id })}
                     />
@@ -111,12 +116,11 @@ export function TurnBar({
     }
 }
 
-// A linha da dica existe mesmo vazia: e ela que mantem o botao — e a mao logo
-// abaixo dele — na mesma altura em todas as fases.
-function Bar({ hint, children }){
+// So o controle da fase. Nada acima dele: a altura da barra e a altura do
+// botao, igual em todas as fases, e o que sobra e da mao.
+function Bar({ children }){
     return (
         <div className='flex flex-col gap-1.5 w-full'>
-            <p className='min-h-4 text-center text-xs text-cream-dim'>{hint}</p>
             {children}
         </div>
     );
@@ -127,9 +131,9 @@ function Bar({ hint, children }){
  * esperando — o lugar dele na tela e informacao, e some-lo devolveria a mao
  * pulando de altura a cada turno.
  */
-function Waiting({ text, hint }){
+function Waiting({ text }){
     return (
-        <Bar hint={hint}>
+        <Bar>
             <ActionButton text={text} variant='secondary' disabled />
         </Bar>
     );
@@ -139,7 +143,12 @@ function Waiting({ text, hint }){
  * A pergunta que travou a resolucao. Sao tres formatos, e nao um generico:
  * aceitar ou nao um efeito opcional, escolher entre opcoes da carta, e escolher
  * jogador — este ultimo mora num modal (a lista da mesa nao cabe na barra), e
- * aqui fica so a porta para ele.
+ * aqui a pergunta e o proprio texto da porta.
+ *
+ * A pergunta e a unica coisa que ainda aparece acima do botao, e so quando a
+ * resposta e sim/nao ou uma lista de opcoes: `Sim` e `Opcao 2` nao dizem a que
+ * vieram, e sem a pergunta o jogador responderia no escuro. Nao e dica de
+ * fase — e o que esta sendo perguntado.
  */
 function Prompt({ request, you, onOpenPicker, dispatch }){
 
@@ -147,7 +156,8 @@ function Prompt({ request, you, onOpenPicker, dispatch }){
 
     if(request.kind === 'optIn'){
         return (
-            <Bar hint={promptText(request)}>
+            <Bar>
+                <Question text={promptText(request)} />
                 <div className='flex gap-2'>
                     <ActionButton text='Não' variant='secondary' width='50%'
                         action={() => answer(false)} />
@@ -160,7 +170,8 @@ function Prompt({ request, you, onOpenPicker, dispatch }){
 
     if(request.kind === 'option'){
         return (
-            <Bar hint={promptText(request)}>
+            <Bar>
+                <Question text={promptText(request)} />
                 <div className='flex gap-2'>
                     {Array.from({ length: request.options }).map((_, i) => (
                         <ActionButton key={i}
@@ -176,11 +187,17 @@ function Prompt({ request, you, onOpenPicker, dispatch }){
     }
 
     return (
-        <Bar hint={promptText(request)}>
-            <ActionButton text='Escolher'
+        <Bar>
+            <ActionButton text={promptText(request)}
                 variant='gold'
                 action={onOpenPicker}
             />
         </Bar>
+    );
+}
+
+function Question({ text }){
+    return (
+        <p className='text-center text-xs text-cream-dim'>{text}</p>
     );
 }
