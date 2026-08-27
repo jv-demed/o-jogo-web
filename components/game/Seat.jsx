@@ -10,13 +10,16 @@ import { cardById, missionName } from './narrate';
  * continua secreta — o estado da partida tem `mission` de todo mundo porque o
  * motor precisa dela, e vazar isso na tela seria acabar com o jogo.
  *
- * E estreito de proposito: sao ate sete lugares em volta da pilha, numa tela de
+ * E estreito de proposito: sao ate seis lugares em volta da pilha, numa tela de
  * celular. O que nao cabe em duas linhas nao entra.
+ *
+ * So dos outros: voce nao senta na mesa. O seu par de numeros mora no rodape,
+ * em `YouCorner`, colado na mao — a cadeira que voce mais consulta e a que
+ * menos precisa de lugar no feltro.
  */
 export function Seat({
     player,
     ongoing = [],
-    isYou,
     reveal,
     isCurrent,
     isSelectable,
@@ -63,7 +66,7 @@ export function Seat({
             </span>
 
             <span className='max-w-full truncate text-[0.7rem] font-semibold leading-tight'>
-                {isYou ? 'Você' : player.name}
+                {player.name}
             </span>
 
             <span className='flex items-center gap-1'>
@@ -98,7 +101,7 @@ export function Seat({
                 tempo — e o numero diz quantas sao quando a pilha nao cabe. */}
             {ongoing.length > 0 && <OngoingPile
                 entries={ongoing}
-                name={isYou ? 'você' : player.name}
+                name={player.name}
                 // Cadeira selecionavel ja e um <button>, e botao dentro de
                 // botao nao existe: durante uma escolha a pilha vira so
                 // informacao, e volta a abrir quando a pergunta passar.
@@ -191,6 +194,132 @@ function OngoingPile({ entries, name, canOpen, onOpen }){
             `}>
                 {entries.length}
             </span>
+        </Root>
+    );
+}
+
+/**
+ * O seu canto: bebida, baralho e o que esta ativo em voce.
+ *
+ * E a sua cadeira, so que fora do feltro — encostada na direita, logo acima do
+ * botao de acao. Voce e o unico jogador que nao precisa ser *localizado* na
+ * roda: a sua mao, a sua acao e os seus numeros sao a mesma regiao da tela, e a
+ * cadeira no meio da mesa so tirava espaco de quem voce precisa olhar.
+ *
+ * Por isso e uma tira de badges, e nao a cadeira em miniatura: no rodape cada
+ * linha disputa altura com a mao. Os mesmos numeros da cadeira, deitados.
+ */
+export function YouCorner({
+    player,
+    ongoing = [],
+    isCurrent,
+    isSelectable,
+    isSelected,
+    onSelect,
+    onOpenOngoing
+}){
+
+    const Root = isSelectable ? 'button' : 'div';
+
+    return (
+        <Root
+            {...(isSelectable && {
+                type: 'button',
+                onClick: () => onSelect(player.id),
+                'aria-pressed': isSelected,
+                'aria-label': 'Escolher você'
+            })}
+            className={`
+                flex items-center gap-1.5 self-end shrink-0
+                px-2 py-1 rounded-xl border
+                ${isSelected
+                    ? 'border-gold bg-gold/10 ring-2 ring-gold/40'
+                    : isCurrent
+                        ? 'border-brand-light/60 bg-brand/15'
+                        : 'border-line bg-elevated/60'}
+                ${isSelectable ? 'cursor-pointer active:scale-95 transition-transform' : ''}
+            `}
+        >
+            <span className={`
+                text-[0.6rem] font-semibold uppercase tracking-wide
+                ${isCurrent ? 'text-brand-light' : 'text-cream-dim'}
+            `}>
+                Você
+            </span>
+
+            <span className={`
+                flex items-center gap-0.5
+                px-1.5 py-0.5 rounded-lg
+                border border-gold/30 bg-gold/10
+                text-[0.65rem] font-semibold tabular-nums text-gold
+            `}>
+                <ICONS.shot />
+                {player.shots}
+            </span>
+
+            {/* O baralho, como na cadeira dos outros: e ele que conta o fim da
+                partida. A mao esta logo abaixo, contada carta a carta. */}
+            <span className={`
+                flex items-center gap-0.5
+                px-1.5 py-0.5 rounded-lg
+                border border-line bg-base
+                text-[0.65rem] tabular-nums
+                ${player.deck.length === 0 ? 'text-danger' : 'text-cream-dim'}
+            `}>
+                <ICONS.deck />
+                {player.deck.length}
+            </span>
+
+            {player.equipment.length > 0 && <span className={`
+                flex items-center gap-0.5
+                px-1.5 py-0.5 rounded-lg
+                border border-line bg-base
+                text-[0.65rem] tabular-nums text-cream-dim
+            `}>
+                <ICONS.equip />
+                {player.equipment.length}
+            </span>}
+
+            {/* Os efeitos ativos em voce viram contador, e nao a pilha de
+                cartas da cadeira: aqui a altura de uma carta seria a altura que
+                falta para a mao. O toque abre a mesma gaveta. */}
+            {ongoing.length > 0 && <Ongoing
+                count={ongoing.length}
+                // Dentro de uma escolha o canto inteiro ja e um <button>, e
+                // botao dentro de botao nao existe: a pilha vira so numero e
+                // volta a abrir quando a pergunta passar.
+                canOpen={!isSelectable && Boolean(onOpenOngoing)}
+                onOpen={() => onOpenOngoing?.(player.id)}
+            />}
+        </Root>
+    );
+}
+
+function Ongoing({ count, canOpen, onOpen }){
+
+    const Root = canOpen ? 'button' : 'span';
+
+    return (
+        <Root
+            {...(canOpen && {
+                type: 'button',
+                onClick: onOpen,
+                'aria-label': `Ver os ${count} efeito(s) ativo(s) em você`
+            })}
+            className={`
+                flex items-center gap-0.5
+                px-1.5 py-0.5 rounded-lg
+                border border-gold/40 bg-gold/10
+                text-[0.65rem] font-semibold tabular-nums text-gold
+                ${canOpen ? `
+                    transition-transform active:scale-95
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-gold
+                ` : ''}
+            `}
+        >
+            <ICONS.effect />
+            {count}
         </Root>
     );
 }

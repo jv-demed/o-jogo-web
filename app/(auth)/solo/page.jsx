@@ -8,7 +8,7 @@ import { useSoloMatch } from '@/hooks/useSoloMatch';
 import { useLastPlay } from '@/hooks/useLastPlay';
 import { Command, isReaction } from '@/domain/match/engine';
 import { MISSIONS } from '@/domain/match/missions';
-import { MatchStatus, Phase } from '@/domain/match/state';
+import { MatchStatus, Phase, ongoingFor } from '@/domain/match/state';
 import { SOLO_DECK_SIZE } from '@/domain/match/solo';
 import { Main } from '@/components/containers/Main';
 import { Box } from '@/components/containers/Box';
@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/elements/PageHeader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { GameTable } from '@/components/game/GameTable';
+import { YouCorner } from '@/components/game/Seat';
 import { PlayReveal } from '@/components/game/PlayReveal';
 import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
@@ -270,6 +271,24 @@ export default function Solo(){
                                 px-3 pt-1
                                 pb-[max(0.5rem,env(safe-area-inset-bottom))]
                             `}>
+                                {/* O seu canto: os numeros que ficariam na
+                                    cadeira, encostados na direita logo acima da
+                                    acao. Fora do feltro eles nao disputam
+                                    espaco com a roda, e ficam no mesmo lugar
+                                    para onde o dedo ja vai. */}
+                                <YouCorner player={you}
+                                    ongoing={ongoingFor(state, you.id)}
+                                    isCurrent={isYourTurn}
+                                    isSelectable={request?.chooserId === you.id
+                                        && (request.candidates ?? []).includes(you.id)}
+                                    isSelected={selected.includes(you.id)}
+                                    onSelect={handleSelect}
+                                    onOpenOngoing={id => {
+                                        setOngoingOf(id);
+                                        setOpenPanel('ongoing');
+                                    }}
+                                />
+
                                 <div className='flex items-end gap-2'>
                                     <MissionButton onClick={() => setOpenPanel('mission')} />
                                     <div className='flex-1 min-w-0'>
@@ -286,7 +305,7 @@ export default function Solo(){
                                     playable={playable}
                                     onChoose={setChoice}
                                     onInspect={setPreview}
-                                    scale={0.38}
+                                    scale={0.3}
                                 />
                             </div>
                         </>}

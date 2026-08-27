@@ -15,16 +15,21 @@ import { cardById } from './narrate';
  * o numero de cadeiras e o numero de jogadores: a mesma disposicao serve para
  * dois e para sete.
  *
- * Voce senta embaixo, colado na sua mao, e os outros seguem na ordem de turno a
- * partir dali — quem joga depois de voce e a cadeira seguinte no sentido
- * horario. A ordem vem de `state.order`, e nao do array de jogadores: carta que
- * rearranja a mesa mexe numa e nao na outra.
+ * Voce nao tem cadeira: seu lugar e o rodape inteiro — a mao, a acao e o seu
+ * cantinho de bebida e cartas (ver `YouCorner`). Uma cadeira sua no feltro
+ * repetia o que ja esta a um palmo do dedo e roubava a maior area da mesa, que
+ * e justamente a de baixo. O que sobra e o que voce precisa olhar: os outros.
+ *
+ * Mesmo sem aparecer, voce continua ocupando o lugar de baixo da roda: os
+ * angulos saem de `order` inteira, entao a cadeira seguinte a sua e a primeira
+ * a esquerda embaixo e a ordem segue no sentido horario. E o buraco que fica
+ * embaixo aponta para o seu canto, em vez de virar espaco morto.
  */
 
 // Raios da elipse, em % do container. Sobra margem para a largura da cadeira
 // (5.5rem) nao vazar pela borda nas laterais.
-const RADIUS_X = 34;
-const RADIUS_Y = 33;
+const RADIUS_X = 36;
+const RADIUS_Y = 36;
 
 export function GameTable({
     state,
@@ -46,7 +51,9 @@ export function GameTable({
                 player: state.players.find(p => p.id === id),
                 seat: (index - mine + size) % size
             }))
-            .filter(entry => entry.player)
+            // A sua cadeira sai daqui depois do calculo do lugar, e nao antes:
+            // e ela que ancora a roda embaixo e da o passo dos outros.
+            .filter(entry => entry.player && entry.player.id !== you.id)
             .sort((a, b) => a.seat - b.seat)
             .map(({ player, seat }) => {
                 // 90 graus e o pe da elipse (o eixo y da tela cresce para
@@ -89,7 +96,6 @@ export function GameTable({
                     ongoing={ongoingFor(state, player.id)}
                     onOpenOngoing={onOpenOngoing}
                     style={style}
-                    isYou={player.id === you.id}
                     reveal={reveal}
                     isCurrent={player.id === currentId}
                     isSelectable={selectable.includes(player.id)}
