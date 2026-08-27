@@ -1,6 +1,5 @@
 import { ICONS } from '@/assets/icons';
-import { Card } from '@/components/cards/Card';
-import { cardById, missionName } from './narrate';
+import { missionName } from './narrate';
 
 /**
  * Um lugar na mesa.
@@ -55,14 +54,33 @@ export function Seat({
         >
             {/* A vez e a informacao mais volatil da mesa: ganha o marcador no
                 lugar fixo, em vez de mudar a cor do nome. */}
-            <span className={`
-                flex items-center justify-center
-                h-8 w-8 rounded-full text-xs
-                border ${isCurrent
-                    ? 'border-brand-light/60 bg-brand/30 text-brand-light'
-                    : 'border-line bg-elevated text-cream-dim'}
-            `}>
-                {isCurrent ? <ICONS.play /> : <ICONS.user />}
+            <span className='relative'>
+                <span className={`
+                    flex items-center justify-center
+                    h-8 w-8 rounded-full text-xs
+                    border ${isCurrent
+                        ? 'border-brand-light/60 bg-brand/30 text-brand-light'
+                        : 'border-line bg-elevated text-cream-dim'}
+                `}>
+                    {isCurrent ? <ICONS.play /> : <ICONS.user />}
+                </span>
+
+                {/* Carta de efeito prolongado nao vai para o descarte: fica
+                    valendo sobre este jogador. Aqui e so o aviso de que existe,
+                    do tamanho de um contador e colado na foto — desenhar as
+                    cartas na cadeira esticava o lugar para baixo, e sao ate
+                    seis deles em volta do feltro. Qual carta, de quem veio e
+                    quanto ainda falta abrem no toque, como no seu canto. */}
+                {ongoing.length > 0 && <Ongoing
+                    count={ongoing.length}
+                    name={player.name}
+                    className='absolute -right-2.5 -top-1'
+                    // Cadeira selecionavel ja e um <button>, e botao dentro de
+                    // botao nao existe: durante uma escolha o aviso vira so
+                    // informacao, e volta a abrir quando a pergunta passar.
+                    canOpen={!isSelectable && Boolean(onOpenOngoing)}
+                    onOpen={() => onOpenOngoing?.(player.id)}
+                />}
             </span>
 
             <span className='max-w-full truncate text-[0.7rem] font-semibold leading-tight'>
@@ -95,20 +113,6 @@ export function Seat({
                 </span>
             </span>
 
-            {/* A area de efeitos prolongados deste jogador: as cartas que
-                resolveram mas continuam valendo sobre ele ficam aqui, e nao no
-                descarte. Empilhadas porque varias podem estar ativas ao mesmo
-                tempo — e o numero diz quantas sao quando a pilha nao cabe. */}
-            {ongoing.length > 0 && <OngoingPile
-                entries={ongoing}
-                name={player.name}
-                // Cadeira selecionavel ja e um <button>, e botao dentro de
-                // botao nao existe: durante uma escolha a pilha vira so
-                // informacao, e volta a abrir quando a pergunta passar.
-                canOpen={!isSelectable && Boolean(onOpenOngoing)}
-                onOpen={() => onOpenOngoing?.(player.id)}
-            />}
-
             {player.equipment.length > 0 && <span className={`
                 flex items-center gap-0.5
                 px-1.5 py-0.5 rounded-lg
@@ -134,66 +138,6 @@ export function Seat({
                 `}>
                     {missionName(player.mission)}
                 </span>}
-        </Root>
-    );
-}
-
-/**
- * A pilha de cartas ativas na cadeira.
- *
- * Sao cartas de verdade, e nao um icone com contador: e a mesma coisa que
- * acontece na mesa fisica, a carta parada na frente de quem esta sofrendo o
- * efeito. Tres folhas de cada vez, tortas, dao o volume de pilha sem virar uma
- * fileira que empurra a cadeira para cima da vizinha.
- */
-function OngoingPile({ entries, name, canOpen, onOpen }){
-
-    const Root = canOpen ? 'button' : 'span';
-    // As tres ultimas: a de cima e a que entrou por ultimo, como numa pilha.
-    const top = entries.slice(-3).map(entry => cardById(entry.idCard)).filter(Boolean);
-    if(top.length === 0) return null;
-
-    return (
-        <Root
-            {...(canOpen && {
-                type: 'button',
-                onClick: onOpen,
-                'aria-label': `Ver os ${entries.length} efeito(s) ativo(s) em ${name}`
-            })}
-            className={`
-                relative block h-[3.4rem] w-[2.4rem] shrink-0
-                ${canOpen ? `
-                    transition-transform active:scale-95
-                    focus:outline-none focus-visible:ring-2
-                    focus-visible:ring-gold rounded-md
-                ` : ''}
-            `}
-        >
-            {top.map((card, i) => (
-                <span key={`${card.id}-${i}`}
-                    style={{
-                        transform: `rotate(${(i - 1) * 6}deg) translateY(${i * -2}px)`,
-                        zIndex: i
-                    }}
-                    className={`
-                        absolute inset-0 overflow-hidden rounded-md
-                        border border-gold/40
-                        shadow-[0_4px_10px_-6px_rgba(0,0,0,0.9)]
-                    `}
-                >
-                    <Card card={card} scale={0.128} />
-                </span>
-            ))}
-
-            <span className={`
-                absolute -right-1.5 -top-1.5 z-10
-                flex items-center justify-center
-                h-4 min-w-4 px-1 rounded-full
-                border border-gold/50 bg-base
-                text-[0.55rem] font-semibold tabular-nums text-gold
-            `}>
-                {entries.length}
-            </span>
         </Root>
     );
 }
@@ -295,7 +239,13 @@ export function YouCorner({
     );
 }
 
-function Ongoing({ count, canOpen, onOpen }){
+/**
+ * O contador de efeitos prolongados. Serve ao seu canto e as cadeiras da mesa:
+ * e a mesma informacao nos dois lugares, e o `className` so decide onde ele
+ * pousa — no canto, deitado ao lado dos outros numeros; na cadeira, grudado no
+ * canto da foto.
+ */
+function Ongoing({ count, name = 'você', className = '', canOpen, onOpen }){
 
     const Root = canOpen ? 'button' : 'span';
 
@@ -304,9 +254,10 @@ function Ongoing({ count, canOpen, onOpen }){
             {...(canOpen && {
                 type: 'button',
                 onClick: onOpen,
-                'aria-label': `Ver os ${count} efeito(s) ativo(s) em você`
+                'aria-label': `Ver os ${count} efeito(s) ativo(s) em ${name}`
             })}
             className={`
+                ${className}
                 flex items-center gap-0.5
                 px-1.5 py-0.5 rounded-lg
                 border border-gold/40 bg-gold/10

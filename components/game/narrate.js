@@ -1,4 +1,5 @@
 import { CARDS } from '@/assets/cards';
+import { getCardEffects } from '@/domain/cards/effects';
 import { MISSIONS } from '@/domain/match/missions';
 
 /**
@@ -111,6 +112,122 @@ export function narrate(entry, nameOf){
                 : 'Fim. Ninguém ganhou.';
         default:
             return null;
+    }
+}
+
+/**
+ * O que a carta vai fazer com quem foi apontado, em uma frase.
+ *
+ * Sai do efeito estruturado (`domain/cards/effects/`), e nao de uma coluna
+ * nova: o `amount`, o `timing` e a `duration` ja estao modelados como dado —
+ * "beber 1, na vez dele, por 3 turnos" e exatamente o que a carta 1 diz em
+ * `pack1.js`. Guardar a frase pronta seria guardar duas versoes da mesma regra,
+ * e uma delas ia envelhecer.
+ *
+ * So fala do efeito *escolhido* (alvo `choose`/`manual`), que e o unico que a
+ * declaracao aponta. Acao que ainda nao tem frase devolve null e a tela mostra
+ * so o nome — melhor faltar frase do que narrar errado.
+ */
+export function declaredEffectText(idCard){
+    const effects = getCardEffects(idCard)?.effects ?? [];
+    for(const effect of effects){
+        const kind = effect.target?.kind ?? effect.between?.kind;
+        if(kind !== 'choose' && kind !== 'manual') continue;
+        const phrase = actionText(effect);
+        if(phrase) return phrase + durationTail(effect);
+    }
+    return null;
+}
+
+/** `amount` em shots, incluindo as palavras do vocabulario. */
+function shotsOf(effect){
+    const amount = effect.amount ?? 1;
+    if(typeof amount === 'number') return shots(amount);
+    switch(amount){
+        case 'half':        return 'metade dos shots';
+        case 'all':         return 'todos os shots';
+        case 'infinity':    return 'infinitos shots';
+        case 'perOpponent': return '1 shot por adversário';
+        default:            return '1 shot';
+    }
+}
+
+/** `amount` contando outra coisa (carta, vez, equipamento). */
+function countOf(effect, noun){
+    const amount = effect.amount ?? 1;
+    if(typeof amount !== 'number') return `${noun}s`;
+    return `${amount} ${noun}${amount === 1 ? '' : 's'}`;
+}
+
+function actionText(effect){
+    switch(effect.action){
+        case 'drink':          return `Irá beber ${shotsOf(effect)}`;
+        case 'shots.add':      return `Vai somar ${shotsOf(effect)} à conta`;
+        case 'shots.remove':   return `Vai tirar ${shotsOf(effect)} da conta`;
+        case 'shots.set':      return effect.amount === 'infinity'
+            ? 'Vai ficar com shots infinitos'
+            : `Vai ficar com ${shotsOf(effect)}`;
+        case 'shots.halve':    return 'Vai ficar com metade dos shots';
+        case 'shots.swap':     return 'Vai trocar os shots com quem jogou';
+        // `between` com um alvo so completa a dupla com quem jogou, e a
+        // transferencia sai de quem jogou para o escolhido.
+        case 'shots.transfer': return `Vai receber ${shotsOf(effect)} de quem jogou`;
+        case 'shots.ignore':   return 'Vai beber sem contar';
+        case 'turn.skip':      return `Vai perder ${countOf(effect, 'vez')}`;
+        case 'turn.extraPlay': return `Vai jogar mais ${countOf(effect, 'vez')}`;
+        case 'hand.draw':      return `Vai comprar ${countOf(effect, 'carta')}`;
+        case 'hand.discard':   return `Vai descartar ${countOf(effect, 'carta')}`;
+        case 'hand.redraw':    return 'Vai trocar a mão inteira';
+        case 'hand.steal':     return `Vai perder ${countOf(effect, 'carta')} da mão`;
+        case 'hand.give':      return `Vai receber ${countOf(effect, 'carta')}`;
+        case 'hand.reveal':    return `Vai revelar ${countOf(effect, 'carta')} da mão`;
+        case 'deck.peek':      return 'Vai ter o baralho espiado';
+        case 'deck.return':    return `Vai devolver ${countOf(effect, 'carta')} ao baralho`;
+        case 'mission.swap':   return 'Vai trocar de missão';
+        case 'mission.rotate': return 'Vai passar a missão adiante';
+        case 'mission.take':   return 'Vai ter a missão tomada';
+        case 'mission.peek':   return 'Vai ter a missão espiada';
+        case 'mission.reveal': return 'Vai ter a missão revelada para a mesa';
+        case 'mission.setGoal':return 'Vai jogar por outro objetivo';
+        case 'mission.lock':   return 'Fica com a missão trancada';
+        case 'equip':          return 'Fica com a carta equipada';
+        case 'equipment.destroy':  return 'Vai perder um equipamento';
+        case 'equipment.transfer': return 'Vai passar um equipamento';
+        case 'link.shots':     return 'Fica com os shots ligados a quem jogou';
+        case 'link.fate':      return 'Fica com o destino ligado a quem jogou';
+        case 'game.win':       return 'Ganha a partida na hora';
+        case 'game.lose':      return 'Perde a partida na hora';
+        case 'manual':         return effect.instruction ?? null;
+        default:               return null;
+    }
+}
+
+/** Quando e por quanto tempo, colado no fim da frase. */
+function durationTail(effect){
+    const turns = effect.duration?.kind === 'turns' ? effect.duration.turns : null;
+
+    if(effect.timing === 'onTargetTurn'){
+        if(turns === null) return ', na vez dele';
+        return turns === 1
+            ? ', na próxima rodada dele'
+            : `, nas próximas ${turns} rodadas dele`;
+    }
+    if(effect.timing === 'eachTurn'){
+        return turns === null
+            ? ', a cada turno'
+            : `, a cada turno, pelos próximos ${turns} turnos`;
+    }
+    if(effect.timing === 'delayed' && turns !== null){
+        return turns === 1 ? ', daqui a 1 turno' : `, daqui a ${turns} turnos`;
+    }
+
+    switch(effect.duration?.kind){
+        case 'turns':              return `, pelos próximos ${turns} turnos`;
+        case 'untilDrinks':        return `, até beber ${shots(effect.duration.amount)}`;
+        case 'untilMissionChange': return ', até uma troca de missão';
+        case 'untilDestroyed':     return ', enquanto a carta estiver na mesa';
+        case 'permanent':          return ', até o fim da partida';
+        default:                   return '';
     }
 }
 
