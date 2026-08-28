@@ -12,7 +12,7 @@ O que ainda falta. Itens concluídos saem daqui — o histórico está no git.
 
 Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque os itens abaixo dependem delas.
 
-- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas. A 0008 (`users.is_dev`, para as ferramentas de dev) está versionada em `supabase/migrations/` e **falta aplicar** — rode-a no SQL Editor e marque o seu jogador com `update o_jogo.users set is_dev = true where name = '<você>'`.
+- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas. Duas estão versionadas em `supabase/migrations/` e **faltam aplicar**, na ordem: a 0008 (`users.is_dev`, para as ferramentas de dev — depois de rodá-la, marque o seu jogador com `update o_jogo.users set is_dev = true where name = '<você>'`) e a 0009 (assentos de bot no lobby, abaixo).
 - **Cadastro fechado**: usuários criados manualmente pelo dono, sem fluxo de signup. Policies checam participação no jogo via `o_jogo.current_player_id()`, nunca só `auth.uid() is not null`.
 - **`o_jogo.cards` é a fonte única** de id, nível, preço, tipo, pack e efeito, para o servidor validar jogada e preço dentro da RPC. A arte continua estática em `public/cards/{id}.png`.
 - **Economia só por RPC** (`buy_pack`, `sell_card`): não existe grant de `UPDATE` em `o_jogo.users` para o cliente.
@@ -30,6 +30,12 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
   ⚠️ Decisão pendente e não trivial: o motor é JS e o servidor é Postgres. Ou a RPC vira uma Edge Function em Deno (importa `domain/match/` direto, que é justamente por isso que a camada é pura e sem bundler), ou o motor é reescrito em plpgsql — e aí passam a existir duas implementações da mesma regra, que é o que a camada pura foi feita para evitar. A Edge Function é o caminho natural.
 
 - [ ] **Reescrever `game` sobre o motor.** A tela de partida multijogador (`/game/[id]`) continua mostrando só quem está na mesa: sem estado de partida no banco, não há o que desenhar. A UI já existe e é reaproveitável — `components/game/` (`GameTable`, `Hand`, `TurnBar`, `MatchLog`, `MatchResult`) foi escrita para o modo solo e só conhece `state` + `dispatch`, então o que sobra é trocar a origem do estado (hook local → realtime). O que o motor entrega para a UI: `legalCommands(state, playerId)` diz o que habilitar, `state.pending[0]` é a pergunta da vez, `state.window.closesAt` é o relógio da janela e `state.log` é a narração da mesa.
+
+- [ ] **Mesa mista — falta a metade de cima.** O lobby já monta a mesa com humanos e bots juntos: a migration 0009 abre `match_players` para assento sem dono (`id_user` nulo, `bot_name` preenchido, PK nova em `id`), com `add_match_bot` / `remove_match_bot` (host apenas, só no lobby) e `reorder_match_seats`, que substitui `reorder_match_players` — ids de usuário deixam de descrever a mesa no instante em que um assento não tem dono. `start_match` passa a contar bots no mínimo de 2, e ganhou o máximo de 7, que é o número de missões.
+
+  Não é um terceiro modo, e essa é a decisão: o motor nunca soube o que é um bot — `createMatch({ players })` só quer `{ id, name, deck }` e `botCommand()` devolve um comando que qualquer jogador poderia mandar. O modo solo é o caso particular "1 humano + N bots"; o que varia é quem comanda cada assento. Por isso `BOT_NAMES` e `isBot` mudaram de `solo.js` para `bot.js`.
+
+  O que **falta** para a mesa mista virar partida jogada é o item acima (a partida no banco). Enquanto o `state` não existe do lado do servidor, a mesa mista para no lobby. Quando existir, o resto do caminho já está desenhado: `useSoloMatch` vira `useMatch({ transport })` com dois transportes (memória e Supabase), `botIds` vira "os assentos que **eu** comando" (no cliente do convidado, lista vazia — o laço dos bots nem roda), e o `you` deixa de ser "o único que não é bot" (`useSoloMatch.jsx:113`, que quebra com dois humanos) e passa a ser o `user.id` do `UserProvider`.
 
 - [ ] **Missões como carta.** Hoje a missão é sorteada direto no `createMatch` e vive só no estado. Virar carta (com arte, como as outras) é o próximo passo — o motor já trata identidade e missão como um par só, então é trabalho de catálogo e de UI, não de regra.
 

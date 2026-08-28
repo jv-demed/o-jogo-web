@@ -44,34 +44,66 @@ export async function getMatch(idMatch){
 }
 
 /**
- * Jogadores da partida, em ordem de turno. O nome vem embutido de
- * o_jogo.users: a policy users_read_opponents libera a leitura de quem
- * divide partida com o jogador atual.
+ * Os assentos da mesa, em ordem de turno. Assento de bot vem com `idUser`
+ * nulo e o nome na propria linha; o de gente traz o nome embutido de
+ * o_jogo.users, que a policy users_read_opponents libera para quem divide
+ * partida com o jogador atual.
  *
- * @returns {Promise<{id: number, name: string, position: number}[]>}
+ * O `id` e do assento, e nao do usuario: e a unica identidade que serve para
+ * os dois, e e por ela que a reordenacao anda (migration 0009).
+ *
+ * @returns {Promise<{id: number, idUser: number|null, name: string,
+ *                    isBot: boolean, position: number}[]>}
  */
 export async function getMatchPlayers(idMatch){
     const { data, error } = await supabase
         .from('match_players')
-        .select('id_user, position, users(name)')
+        .select('id, id_user, bot_name, position, users(name)')
         .eq('id_match', idMatch)
         .order('position', { ascending: true });
     if(error) throw error;
     return (data ?? []).map(row => ({
-        id: row.id_user,
-        name: row.users?.name ?? '???',
+        id: row.id,
+        idUser: row.id_user,
+        name: row.bot_name ?? row.users?.name ?? '???',
+        isBot: row.id_user === null,
         position: row.position
     }));
 }
 
 /**
- * Grava a ordem dos turnos. `ids` precisa ser uma permutacao exata dos
- * jogadores da partida - a RPC recusa lista incompleta ou com estranho.
+ * Grava a ordem dos turnos. `ids` sao ids de *assento*, e precisam ser uma
+ * permutacao exata dos assentos da partida - a RPC recusa lista incompleta ou
+ * com estranho.
  */
-export async function reorderMatchPlayers(idMatch, ids){
-    const { error } = await supabase.rpc('reorder_match_players', {
+export async function reorderMatchSeats(idMatch, ids){
+    const { error } = await supabase.rpc('reorder_match_seats', {
         p_id_match: idMatch,
         p_ids: ids
+    });
+    if(error) throw error;
+}
+
+/**
+ * Poe um bot na mesa. So o host, so no lobby: bot nao entra sozinho porque
+ * nao tem JWT, entao nao ha policy de insert que o cobrisse - e RPC.
+ *
+ * @returns {Promise<number>} id do assento criado.
+ */
+export async function addMatchBot(idMatch, name){
+    const { data, error } = await supabase.rpc('add_match_bot', {
+        p_id_match: idMatch,
+        p_name: name
+    });
+    if(error) throw error;
+    return data;
+}
+
+/** Tira um bot da mesa. A RPC recusa assento que tenha dono. */
+export async function removeMatchBot(idMatch, idSeat){
+    const { error } = await supabase.rpc('remove_match_bot', {
+        p_id_match: idMatch,
+        p_id_seat: idSeat
     });
     if(error) throw error;
 }

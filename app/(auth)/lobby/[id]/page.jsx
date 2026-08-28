@@ -4,14 +4,17 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import {
+    addMatchBot,
     cancelMatch,
     getMatch,
     getMatchPlayers,
     joinMatch,
     leaveMatch,
-    reorderMatchPlayers,
+    removeMatchBot,
+    reorderMatchSeats,
     startMatch
 } from '@/presenters/matchesPresenter';
+import { BOT_NAMES } from '@/domain/match/bot';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { Actions } from '@/components/containers/Actions';
@@ -33,7 +36,23 @@ import { ActionButton } from '@/components/buttons/ActionButton';
  * que a RLS permite - `match_players_join_self` autoriza o INSERT da propria
  * linha numa partida aberta, mas `matches_read_participant` so deixa LER a
  * partida depois de estar dentro. Dai o join vir antes das leituras.
+ *
+ * A mesa pode ser mista: o host completa com bots os assentos que faltam. Nao
+ * e um modo a parte - o motor nunca soube o que e um bot, e o que muda aqui e
+ * so quem comanda cada assento (migration 0009).
  */
+
+// Sao 7 missoes, sorteadas sem reposicao, uma por jogador. A RPC recusa mesa
+// maior; o botao some antes disso para o host nao descobrir no erro.
+const MAX_SEATS = 7;
+
+/** O proximo nome livre da lista. Esgotada, numera. */
+function nextBotName(players){
+    const usados = new Set(players.map(player => player.name));
+    return BOT_NAMES.find(name => !usados.has(name))
+        ?? `Bot ${players.filter(player => player.isBot).length + 1}`;
+}
+
 export default function Lobby({ params }){
 
     const router = useRouter();
@@ -133,10 +152,29 @@ export default function Lobby({ params }){
         setPlayers(reordered);
 
         try{
-            await reorderMatchPlayers(idMatch, reordered.map(player => player.id));
+            await reorderMatchSeats(idMatch, reordered.map(player => player.id));
         }catch(err){
             setError(err);
             await loadPlayers();
+        }
+    }
+
+    async function handleAddBot(){
+        try{
+            await addMatchBot(idMatch, nextBotName(players));
+            await loadPlayers();
+        }catch(err){
+            setError(err);
+        }
+    }
+
+    async function handleRemoveBot(idSeat){
+        setSelectedIndex(null);
+        try{
+            await removeMatchBot(idMatch, idSeat);
+            await loadPlayers();
+        }catch(err){
+            setError(err);
         }
     }
 
@@ -187,14 +225,14 @@ export default function Lobby({ params }){
                                     {players.map((player, i) => {
                                         const isSelected = selectedIndex === i;
                                         return (
-                                            <li key={player.id}>
+                                            <li key={player.id} className='flex items-center gap-2'>
                                                 <button
                                                     type='button'
                                                     disabled={!isHost}
                                                     onClick={() => handlePlayerClick(i)}
                                                     className={`
-                                                        flex items-center gap-3
-                                                        px-3 py-2.5 w-full min-h-14 rounded-2xl
+                                                        flex flex-1 items-center gap-3 min-w-0
+                                                        px-3 py-2.5 min-h-14 rounded-2xl
                                                         bg-base text-left
                                                         border transition-transform
                                                         ${isSelected
@@ -223,14 +261,21 @@ export default function Lobby({ params }){
                                                         {player.name}
                                                     </span>
                                                     <span className='ml-auto flex shrink-0 gap-1.5'>
-                                                        {player.id === match.id_host && <span className={`
+                                                        {player.isBot && <span className={`
+                                                            px-2 py-0.5 rounded-full
+                                                            border border-line bg-elevated
+                                                            text-[0.65rem] uppercase tracking-wider text-cream-dim
+                                                        `}>
+                                                            bot
+                                                        </span>}
+                                                        {player.idUser === match.id_host && <span className={`
                                                             px-2 py-0.5 rounded-full
                                                             border border-gold/30 bg-gold/10
                                                             text-[0.65rem] uppercase tracking-wider text-gold
                                                         `}>
                                                             host
                                                         </span>}
-                                                        {player.id === user.id && <span className={`
+                                                        {player.idUser === user.id && <span className={`
                                                             px-2 py-0.5 rounded-full
                                                             border border-line bg-elevated
                                                             text-[0.65rem] uppercase tracking-wider text-cream-dim
@@ -239,10 +284,50 @@ export default function Lobby({ params }){
                                                         </span>}
                                                     </span>
                                                 </button>
+                                                {/* Fora do botao da linha, e
+                                                    nao dentro: botao aninhado
+                                                    em botao nao e HTML valido,
+                                                    e o toque na linha ja tem
+                                                    dono (a troca de lugar). */}
+                                                {isHost && player.isBot && <button
+                                                    type='button'
+                                                    aria-label={`Tirar ${player.name} da mesa`}
+                                                    onClick={() => handleRemoveBot(player.id)}
+                                                    className={`
+                                                        flex items-center justify-center shrink-0
+                                                        h-14 w-11 rounded-2xl
+                                                        border border-line bg-elevated
+                                                        text-lg leading-none text-cream-dim
+                                                        transition-transform active:scale-95
+                                                        focus:outline-none focus-visible:ring-2
+                                                        focus-visible:ring-brand-light
+                                                    `}
+                                                >
+                                                    ×
+                                                </button>}
                                             </li>
                                         );
                                     })}
                                 </ul>
+                                {isHost && <button
+                                    type='button'
+                                    disabled={players.length >= MAX_SEATS}
+                                    onClick={handleAddBot}
+                                    className={`
+                                        flex items-center justify-center gap-2
+                                        min-h-12 w-full rounded-2xl
+                                        border border-dashed border-line bg-base/50
+                                        text-sm text-cream-dim
+                                        transition-transform active:scale-[0.99]
+                                        disabled:opacity-40 disabled:active:scale-100
+                                        focus:outline-none focus-visible:ring-2
+                                        focus-visible:ring-brand-light
+                                    `}
+                                >
+                                    {players.length >= MAX_SEATS
+                                        ? 'A mesa está cheia'
+                                        : '+ Adicionar bot'}
+                                </button>}
                                 {!isHost && <SpinLoader color='text-cream-dim' />}
                             </div>
                             <Actions justifyContent='justify-between'>

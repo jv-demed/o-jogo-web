@@ -26,6 +26,22 @@ import { MatchStatus, Phase, currentPlayer, playerById } from './state.js';
  *   - palpite do Sjehnsens: usa o que espiou, e chuta o resto sem repetir.
  */
 
+/**
+ * Nomes de bot. Vivem aqui, e nao no solo, porque bot nao e coisa do modo
+ * solo: o lobby tambem completa a mesa com eles quando faltam humanos para
+ * testar. O modo e so quantos assentos sao de gente.
+ */
+export const BOT_NAMES = Object.freeze([
+    'Brasa', 'Kitumbras', 'Negrao', 'Cesar', 'Jp', 'Gladso',
+]);
+
+/**
+ * Ids de bot sao negativos: o id de um humano vem de o_jogo.users e nunca
+ * colide com esses, entao qualquer log deixa obvio que a linha e de um
+ * jogador que nao existe no banco.
+ */
+export const isBot = playerId => playerId < 0;
+
 const effectsOf = idCard => getCardEffects(idCard)?.effects ?? [];
 
 const hasAction = (idCard, action) => effectsOf(idCard).some(effect => effect.action === action);

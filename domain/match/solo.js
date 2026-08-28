@@ -1,5 +1,6 @@
 import { sample, shuffle } from './rng.js';
 import { createMatch } from './state.js';
+import { BOT_NAMES } from './bot.js';
 
 /**
  * Partida solo: voce mais os bots, montada inteira em memoria.
@@ -18,10 +19,6 @@ import { createMatch } from './state.js';
 // um baralho acaba: 20 cartas dao ~20 turnos por jogador, que na mesa e uma
 // partida inteira sem virar maratona.
 export const SOLO_DECK_SIZE = 20;
-
-export const BOT_NAMES = Object.freeze([
-    'Brasa', 'Kitumbras', 'Negrao', 'Cesar', 'Jp', 'Gladso',
-]);
 
 /**
  * Baralho aleatorio a partir do catalogo. Sem repetir carta: repeticao existe
@@ -56,9 +53,7 @@ export function createSoloMatch({ seed, you, botCount, pool, deckSize = SOLO_DEC
         you = { ...you, deck: embaralhado.items };
     }
 
-    // Ids negativos para os bots: a mesa de verdade usa o id de o_jogo.users, e
-    // um id que nunca colide com aquele deixa obvio, em qualquer log, que a
-    // linha e de um jogador que nao existe no banco.
+    // Ids negativos para os bots (ver `isBot`, em bot.js).
     const bots = [];
     for(let i = 0; i < botCount; i++){
         const sorteado = randomDeck(rng, pool, deckSize);
@@ -75,5 +70,3 @@ export function createSoloMatch({ seed, you, botCount, pool, deckSize = SOLO_DEC
         botIds: bots.map(bot => bot.id),
     };
 }
-
-export const isBot = playerId => playerId < 0;
