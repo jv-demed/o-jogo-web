@@ -14,13 +14,15 @@
 //   3. uma partida inteira, do primeiro turno ate a apuracao;
 //   4. o alvo declarado antes da janela e a carta que fica na mesa enquanto o
 //      efeito prolongado dela corre;
-//   5. a mesa mista do lobby - gente e bot no mesmo tabuleiro.
+//   5. a mesa mista do lobby - gente e bot no mesmo tabuleiro;
+//   6. o replay: estado inicial + comandos reproduz a partida inteira.
 
 import { Command, apply, legalCommands } from '../domain/match/engine.js';
 import { botCommand } from '../domain/match/bot.js';
 import { createSoloMatch } from '../domain/match/solo.js';
 import { createSeatedMatch } from '../domain/match/setup.js';
 import { isBot } from '../domain/match/bot.js';
+import { replayMatch } from '../domain/match/replay.js';
 import { CARD_EFFECTS } from '../domain/cards/effects/index.js';
 import { MISSIONS, evaluateMissions } from '../domain/match/missions.js';
 import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
@@ -643,29 +645,74 @@ for(const id of IDS){
     check('as missoes da mesa mista sao distintas',
         new Set(inicial.players.map(p => p.mission)).size === 4);
 
+    // O log, como o host o escreve: cada comando aplicado, com o relogio que
+    // ele carimbou. E o mesmo conteudo das linhas de o_jogo.match_commands.
+    const log = [];
+    // A primeira janela de interferencia aberta, guardada para o teste do
+    // relogio la embaixo.
+    let janelaAberta = null;
+
     let state = inicial;
     let passos = 0;
+    let relogio = 1_700_000_000_000;
     while(state.status !== MatchStatus.finished && passos < 5000){
         passos++;
+        relogio += 250;
+
         const comando = state.players
-            .map(player => botCommand(state, player.id, 999999))
-            .find(Boolean);
+            .map(player => botCommand(state, player.id, relogio))
+            .find(Boolean)
+            ?? (state.phase === Phase.window ? { type: Command.tick } : null);
+
         if(!comando){
-            if(state.phase === Phase.window){
-                state = apply(state, { type: Command.tick, now: 999999 });
-                continue;
-            }
             erro(`mesa mista travada na fase ${state.phase}`);
             break;
         }
-        state = apply(state, comando);
+
+        const aplicado = { ...comando, now: comando.type === Command.tick ? relogio + 11000 : relogio };
+        const antes = state;
+        state = apply(state, aplicado);
+
+        // O host so escreve no log o que mudou a mesa: tick que nao fecha
+        // janela nao aconteceu, e replay nenhum precisa dele.
+        if(aplicado.type !== Command.tick || state.phase !== antes.phase) log.push(aplicado);
+        if(!janelaAberta && state.phase === Phase.window) janelaAberta = state;
     }
 
     check('a mesa mista chega ao fim', state.status === MatchStatus.finished);
     check('o descarte da mesa mista bate com os montes', descarteBate(state));
     check('a mesa mista apura', Array.isArray(state.results));
+
+    // ------------------------------------------- o replay
+    //
+    // A razao de o log existir. Se isto quebrar, `match_commands` voltou a ser
+    // uma tabela que guarda texto: o que esta escrito nela nao reproduz a
+    // partida que aconteceu.
+    const refeito = replayMatch(inicial, log);
+
+    check('o replay chega ao mesmo estado', JSON.stringify(refeito) === JSON.stringify(state));
+    check('o replay usa menos comandos que a mesa rodou', log.length <= passos);
+
+    check('todo comando do log leva o relogio de quando foi aplicado',
+        log.every(comando => typeof comando.now === 'number'));
+
+    // Por que o relogio precisa estar gravado, no unico ponto em que ele decide
+    // alguma coisa: a janela de interferencia. Nesta simulacao ela quase sempre
+    // fecha por consenso (todo mundo passa), entao o teste e direto sobre uma
+    // janela aberta que a partida produziu - com o relogio errado, o mesmo tick
+    // deixa a mesa onde estava, e o comando seguinte do log nao caberia mais.
+    if(janelaAberta){
+        const cedo  = apply(janelaAberta, { type: Command.tick, now: 0 });
+        const tarde = apply(janelaAberta, { type: Command.tick, now: janelaAberta.window.closesAt });
+        check('tick antes da hora nao fecha a janela', cedo.phase === Phase.window);
+        check('tick na hora fecha a janela', tarde.phase !== Phase.window);
+    }else{
+        erro('a mesa mista nao abriu nenhuma janela de interferencia');
+    }
+
     console.log(`mesa mista: ${passos} comando(s), ${state.turnCount} turnos, `
         + `vencedores ${state.winners?.join(', ') || 'ninguem'}`);
+    console.log(`replay: ${log.length} comando(s) no log reproduzem a partida inteira`);
 }
 
 // ------------------------------------------------------------- panorama

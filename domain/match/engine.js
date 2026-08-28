@@ -666,12 +666,22 @@ export function apply(state, command){
     return settle(draft);
 }
 
-let uidCounter = 0;
-
+/**
+ * O contador dos uid vive *dentro* do estado, e nao neste modulo.
+ *
+ * Era `let uidCounter` aqui fora, e isso furava a pureza do `apply` num ponto
+ * que so aparece quando alguem tenta refazer a partida: o uid dependia de
+ * quantas cartas o processo inteiro tinha jogado, entao duas partidas na mesma
+ * aba se contaminavam e o replay do log (domain/match/replay.js) chegava a um
+ * estado igual em tudo, menos nos uid. Dentro do estado, a mesma entrada da a
+ * mesma saida — que e o que `apply` sempre prometeu.
+ *
+ * `?? 0` porque partida gravada antes disso nao tem o campo.
+ */
 function makeItem(draft, command, respondsTo){
-    uidCounter++;
+    draft.uidSeq = (draft.uidSeq ?? 0) + 1;
     return {
-        uid: `${draft.turnCount}:${uidCounter}`,
+        uid: `${draft.turnCount}:${draft.uidSeq}`,
         idCard: command.idCard,
         byId: command.playerId,
         choices: command.choices ?? {},

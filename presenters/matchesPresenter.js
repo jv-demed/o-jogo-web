@@ -151,30 +151,67 @@ export async function saveMatchState(idMatch, state, version){
 }
 
 /**
- * Enfileira um comando. E assim que joga quem nao e o host: o comando espera
- * na fila ate o browser do host aplica-lo pelo `apply` e regravar o estado.
+ * Grava a mesa recem-montada. Uma vez so por partida: a RPC nao reescreve
+ * partida ja montada, senao o log de comandos dela perderia o ponto de partida.
+ */
+export async function seedMatchState(idMatch, state){
+    const { error } = await supabase.rpc('seed_match_state', {
+        p_id_match: idMatch,
+        p_state: state
+    });
+    if(error) throw error;
+}
+
+/**
+ * Manda um comando sem aplica-lo. E assim que joga quem nao e o host: a linha
+ * entra sem `seq`, e fica esperando o host aplica-la.
  *
- * `now` nao viaja de proposito - o relogio que vale e o de quem aplica, e
- * mandar o proprio seria deixar o cliente adiantar a janela de interferencia.
+ * `now` nao viaja: o relogio que vale e o de quem aplica, e mandar o proprio
+ * seria deixar o cliente adiantar a janela de interferencia. Quem carimba e o
+ * host, e o carimbo dele e que fica gravado (`applied_now`).
  */
 export async function pushMatchCommand(idMatch, idUser, command){
     const { now, ...rest } = command;
     const { error } = await supabase
         .from('match_commands')
-        .insert({ id_match: idMatch, id_user: idUser, command: rest });
+        .insert({ id_match: idMatch, id_user: idUser, command: rest, seq: null });
     if(error) throw error;
 }
 
 /**
- * A fila, na ordem em que chegou. Quem le e o host.
+ * Escreve no log um comando que o host acabou de aplicar - o dele proprio ou o
+ * de um bot. Ja entra numerado, porque a ordem que vale e a ordem em que ele
+ * *aplicou*, e nao a ordem em que as linhas chegaram ao banco.
+ *
+ * `idUser` vem nulo quando o comando e de bot: bot nao tem conta, e quem
+ * responde pela linha e o host.
+ */
+export async function logMatchCommand({ idMatch, idUser, command, seq, now }){
+    const { now: _ignored, ...rest } = command;
+    const { error } = await supabase
+        .from('match_commands')
+        .insert({
+            id_match: idMatch,
+            id_user: idUser ?? null,
+            command: rest,
+            seq,
+            applied_now: now
+        });
+    if(error) throw error;
+}
+
+/**
+ * O que ainda nao foi aplicado, na ordem em que chegou. Quem le e o host.
  *
  * @returns {Promise<{id: number, idUser: number, command: object}[]>}
  */
-export async function getMatchCommands(idMatch){
+export async function getPendingCommands(idMatch){
     const { data, error } = await supabase
         .from('match_commands')
         .select('id, id_user, command')
         .eq('id_match', idMatch)
+        .is('seq', null)
+        .is('refused', null)
         .order('id', { ascending: true });
     if(error) throw error;
     return (data ?? []).map(row => ({
@@ -185,16 +222,26 @@ export async function getMatchCommands(idMatch){
 }
 
 /**
- * Apaga o que ja foi aplicado. Inclusive o comando que o motor recusou: ele
- * foi respondido - com um erro - e deixa-lo na fila o faria ser recusado de
- * novo a cada volta.
+ * O veredito do host sobre um comando que estava esperando: onde ele entrou na
+ * historia e com que relogio, ou por que nao entrou.
+ *
+ * Substitui o `delete` da 0010. Comando recusado tambem para de esperar - ele
+ * ja foi respondido, e deixa-lo pendente o faria ser recusado de novo a cada
+ * volta -, mas fica escrito: sem seq, fora do replay, e com o motivo.
  */
-export async function clearMatchCommands(ids){
-    if(!ids.length) return;
+export async function markCommandApplied(id, seq, now){
     const { error } = await supabase
         .from('match_commands')
-        .delete()
-        .in('id', ids);
+        .update({ seq, applied_now: now })
+        .eq('id', id);
+    if(error) throw error;
+}
+
+export async function markCommandRefused(id, reason){
+    const { error } = await supabase
+        .from('match_commands')
+        .update({ refused: reason })
+        .eq('id', id);
     if(error) throw error;
 }
 

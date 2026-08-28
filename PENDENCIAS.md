@@ -12,7 +12,7 @@ O que ainda falta. Itens concluídos saem daqui — o histórico está no git.
 
 Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque os itens abaixo dependem delas.
 
-- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas. A 0009 (assentos de bot) já está aplicada. Falta aplicar, na ordem: a 0008 (`users.is_dev`, para as ferramentas de dev — depois de rodá-la, marque o seu jogador com `update o_jogo.users set is_dev = true where name = '<você>'`) e a **0010** (`matches.state` e a fila `match_commands`, abaixo).
+- **Schema dedicado `o_jogo`**, colunas em snake_case. Migrations 0001–0007 aplicadas. A 0009 (assentos de bot) já está aplicada. Falta aplicar, na ordem: a 0008 (`users.is_dev`, para as ferramentas de dev — depois de rodá-la, marque o seu jogador com `update o_jogo.users set is_dev = true where name = '<você>'`) a **0010** (`matches.state` e `match_commands`) e a **0011** (o log de comandos, abaixo).
 - **Cadastro fechado**: usuários criados manualmente pelo dono, sem fluxo de signup. Policies checam participação no jogo via `o_jogo.current_player_id()`, nunca só `auth.uid() is not null`.
 - **`o_jogo.cards` é a fonte única** de id, nível, preço, tipo, pack e efeito, para o servidor validar jogada e preço dentro da RPC. A arte continua estática em `public/cards/{id}.png`.
 - **Economia só por RPC** (`buy_pack`, `sell_card`): não existe grant de `UPDATE` em `o_jogo.users` para o cliente.
@@ -25,11 +25,23 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
   Cartas cuja leitura ficou em aberto e que merecem uma decisão de regra antes de existir resolvedor: **74 Extreme Zero** (a escolha é por missão, não por jogador — virou alvo `manual`), **79 Largando a Medicina** (o texto não diz quem recebe a metade dos shots), **85 Jp da Ganância** ("até a mão se estabilizar" não tem duração equivalente no vocabulário, ficou em nota), **101 Valeu Valeu** e **105 Não é o Momento** (dependem do alvo da jogada em curso, e não do alvo da própria carta).
 
+- **A partida é reproduzível.** `match_commands` deixou de ser fila apagável e virou o log do que aconteceu (migration 0011): cada comando aplicado fica com `seq` (a ordem em que o host o aplicou), `applied_now` (o relógio que ele carimbou) e, quando o motor recusou, `refused` com o motivo. Junto com `matches.initial_state`, isso refaz a partida inteira — `replayMatch` em `domain/match/replay.js`, três linhas, porque o trabalho já estava feito: `apply` é puro e a aleatoriedade é semeada.
+
+  `matches.state` continua gravado, mas mudou de papel: é **cache**, para o convidado não refazer 400 comandos a cada mudança e para quem recarrega começar na hora. A verdade é `initial_state` + log, e o banco impõe a relação entre os dois — `save_match_state` recusa estado que aponte para um comando que não está no log.
+
+  Isso já cobrou um preço e pagou: o `uid` das jogadas vinha de um `let uidCounter` no módulo do `engine.js`, fora do estado. O `apply` não era puro nessa beirada, duas partidas na mesma aba se contaminavam, e o replay chegava a um estado igual em tudo menos nos uid. O contador foi para dentro do estado (`state.uidSeq`), e quem achou isso foi o próprio teste de replay no `validate-match`.
+
+  Pendências que nasceram com ele:
+
+  - [ ] **Buraco no log se a escrita falhar.** O host aplica local, escreve o comando e grava o estado, nessa ordem. Se o `insert` do comando falhar, o estado local já andou e o `seq` já foi consumido — o erro aparece na tela, mas a partida segue com um número faltando no log, e aí o replay diverge em silêncio. O certo é a mesa **parar** na falha de escrita, e não seguir torta.
+  - [ ] **O convidado não sabe que foi recusado.** O motivo fica escrito em `refused`, mas nada o lê: o canal do convidado escuta só `matches`. Falta escutar as próprias linhas e mostrar o erro — hoje a jogada dele simplesmente não acontece.
+  - [ ] **Nada lê o log ainda.** Ele é escrito e está correto (o `validate-match` prova que reproduz), mas não existe tela nem script que refaça uma partida gravada. É o próximo uso óbvio: replay de bug com o estado exato.
+
 - [ ] **Servidor autoritativo.** A partida já vive no banco (migration 0010): `matches.state` guarda o estado, `matches.state_version` ordena as gravações e `match_commands` é a fila por onde joga quem não é host. Mas **quem aplica o `apply` é o browser do host** — é ele que roda o motor, comanda os bots e regrava o estado; os outros leem por realtime.
 
   Isso é deliberado e é o que pôs a mesa de pé sem duplicar a regra em plpgsql, mas cobra três coisas que valem estar escritas: **o host vê a mão de todo mundo** (o estado inteiro passa pela aba dele), **o host pode trapacear** (nada confere o que ele grava) e **se o host fecha a aba, a mesa para** — ela não se perde, o estado está gravado, mas ninguém a conduz até ele voltar.
 
-  A saída é a mesma de sempre, e agora com o caminho pronto: uma Edge Function em Deno importando `domain/match/`, com a RPC aplicando o comando do lado do servidor. O que muda quando ela existir é pouco — `useTableMatch` para de chamar `apply` e passa a enfileirar como o convidado já faz, e `match_commands` deixa de ser fila do host para ser fila do servidor. O `apply` continua sendo a única porta, que é o que a camada pura sempre foi feita para permitir.
+  A saída é a mesma de sempre, e agora com o caminho pronto: uma Edge Function em Deno importando `domain/match/`, com a RPC aplicando o comando do lado do servidor. O que muda quando ela existir é pouco — `useTableMatch` para de chamar `apply` e passa a mandar o comando como o convidado já faz, e quem numera o log passa a ser o servidor em vez do host. O `apply` continua sendo a única porta, que é o que a camada pura sempre foi feita para permitir.
 
 - [ ] **Baralho da mesa é sorteado, não escolhido.** Todo assento da partida do lobby entra com 20 cartas sorteadas do catálogo, humano ou bot (`createSeatedMatch`). O deck montado em `/decks` não entra ainda por um motivo de RLS e não de UI: `decks_own` só libera o dono, então o host — que é quem monta a mesa — não consegue ler o deck de mais ninguém. Resolver exige uma RPC `match_decks(p_id_match)` em SECURITY DEFINER, e antes disso uma decisão: qual dos decks do jogador é *o* deck da partida, já que não existe deck ativo no schema.
 

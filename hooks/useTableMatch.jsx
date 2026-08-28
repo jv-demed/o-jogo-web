@@ -3,12 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import {
-    clearMatchCommands,
-    getMatchCommands,
     getMatchPlayers,
     getMatchRow,
+    getPendingCommands,
+    logMatchCommand,
+    markCommandApplied,
+    markCommandRefused,
     pushMatchCommand,
-    saveMatchState
+    saveMatchState,
+    seedMatchState
 } from '@/presenters/matchesPresenter';
 import { Command, apply } from '@/domain/match/engine';
 import { isBot } from '@/domain/match/bot';
@@ -23,16 +26,22 @@ const EMPTY = [];
 /**
  * A partida da mesa do lobby: humanos e bots, com o estado vivendo no banco.
  *
- * **O host e a autoridade** (migration 0010). O browser dele roda o mesmo
- * `apply` do solo, grava o estado em `matches.state` e comanda os bots; quem
- * nao e host le o estado por realtime e joga enfileirando comando em
- * `match_commands`, que o host consome. Nao e o desenho final — o servidor
+ * **O host e a autoridade** (migrations 0010 e 0011). O browser dele roda o
+ * mesmo `apply` do solo, escreve cada comando aplicado no log e regrava o
+ * estado; quem nao e host le o estado por realtime e joga mandando comando sem
+ * numero, que fica esperando o host aplicar. Nao e o desenho final — o servidor
  * autoritativo esta em PENDENCIAS.md — mas e o que poe a mesa de pe sem
  * duplicar a regra em plpgsql: o `apply` continua sendo a unica porta.
  *
- * Tres coisas so o host faz, e e por isso que elas sao condicionais aqui:
- * aplicar comando, gravar estado e dirigir a mesa (bots e relogio da janela).
- * Se o convidado tambem dirigisse, cada bot jogaria uma vez por aba aberta.
+ * Duas coisas ficam gravadas, e vale saber qual e qual: a **verdade** da
+ * partida e `matches.initial_state` mais o log de `match_commands`, que
+ * reproduz tudo porque o motor e puro e a semente e fixa; o `matches.state` e
+ * **cache** dela, para o convidado nao refazer 400 comandos a cada mudanca e
+ * para quem recarrega a pagina comecar na hora.
+ *
+ * Tres coisas so o host faz: aplicar comando, gravar estado e dirigir a mesa
+ * (bots e relogio da janela). Se o convidado tambem dirigisse, cada bot jogaria
+ * uma vez por aba aberta.
  *
  * @param {number} idMatch
  * @param {number[]} pool ids de carta para sortear os baralhos (o catalogo).
@@ -48,11 +57,15 @@ export function useTableMatch(idMatch, pool){
     const [isLoading, setIsLoading] = useState(true);
 
     // O estado que o host aplica em cima. Vive num ref, e nao so no state do
-    // React, porque o `dispatch` precisa do estado *agora* — dentro do
+    // React, porque o `applyAsHost` precisa do estado *agora*: dentro do
     // atualizador do setState ele nao poderia gravar no banco, que e efeito
     // colateral, e fora dele leria um valor velho.
     const stateRef = useRef(null);
-    const versionRef = useRef(0);
+    // O numero do ultimo comando aplicado. E o mesmo numero que vai para o
+    // `seq` da linha e para o `state_version` da partida — sao a mesma coisa
+    // dita duas vezes, e e por isso que o banco consegue conferir uma contra a
+    // outra.
+    const seqRef = useRef(0);
     // O host monta a mesa uma vez. Sem isto, o efeito que monta correria de
     // novo entre o `setState` e a chegada do estado gravado.
     const buildingRef = useRef(false);
@@ -70,14 +83,29 @@ export function useTableMatch(idMatch, pool){
         setState(next);
     }, []);
 
+    /**
+     * As escritas do host, uma de cada vez e na ordem em que ele aplicou.
+     *
+     * Precisa ser fila, e nao chamada solta, por causa do invariante que a 0011
+     * poe no banco: o estado so pode apontar para um comando que ja esta no
+     * log. Duas jogadas rapidas soltas na rede chegariam em qualquer ordem, e a
+     * gravacao do estado da segunda poderia passar na frente do comando dela.
+     */
+    const writeChain = useRef(Promise.resolve());
+    const enqueueWrite = useCallback(task => {
+        writeChain.current = writeChain.current
+            .then(task)
+            .catch(err => setError(err));
+    }, []);
+
     const readMatch = useCallback(async () => {
         const row = await getMatchRow(idMatch);
         if(!row) throw new Error('Partida não encontrada.');
         setMatch(row);
         // O host e a autoridade: o que o banco tem e o que ele mesmo gravou, e
         // reler por cima do que ele acabou de aplicar seria voltar no tempo.
-        if(row.id_host !== user.id && row.state_version >= versionRef.current){
-            versionRef.current = row.state_version;
+        if(row.id_host !== user.id && row.state_version >= seqRef.current){
+            seqRef.current = row.state_version;
             applyState(row.state);
         }
         return row;
@@ -92,7 +120,7 @@ export function useTableMatch(idMatch, pool){
                 // O host carrega o que ja gravou; o `readMatch` nao faz isso
                 // por ele, e na montagem e justamente o que ele precisa.
                 if(row.id_host === user.id && row.state){
-                    versionRef.current = row.state_version;
+                    seqRef.current = row.state_version;
                     applyState(row.state);
                 }
             })
@@ -101,45 +129,75 @@ export function useTableMatch(idMatch, pool){
         return () => { isMounted = false; };
     }, [idMatch, user.id, readMatch, applyState]);
 
-    const persist = useCallback(async next => {
-        const version = versionRef.current + 1;
-        versionRef.current = version;
+    /**
+     * O host aplicando um comando: roda o motor, escreve o comando no log e
+     * regrava o estado — nessa ordem, que e a ordem que o banco cobra.
+     *
+     * @param {object} command
+     * @param {number|null} idRow  a linha que ja existe, quando o comando veio
+     *        de um convidado. Nesse caso o host nao insere: ele *marca* onde o
+     *        comando entrou na historia, ou por que nao entrou.
+     */
+    const applyAsHost = useCallback((command, idRow = null) => {
+        const prev = stateRef.current;
+        if(!prev) return;
+
+        const now = Date.now();
+        let next;
         try{
-            await saveMatchState(idMatch, next, version);
+            next = apply(prev, { ...command, now });
         }catch(err){
             setError(err);
+            // Comando recusado nao aconteceu: fica sem `seq`, fora do replay, e
+            // com o motivo escrito. Antes ele era simplesmente apagado, e quem
+            // mandou nunca ficava sabendo por que a jogada sumiu.
+            if(idRow) enqueueWrite(() => markCommandRefused(idRow, String(err.message ?? err)));
+            return;
         }
-    }, [idMatch]);
+
+        applyState(next);
+
+        // O tick nao vale ida ao banco: ele bate cinco vezes por segundo e, fora
+        // do instante em que a janela vence, o proprio motor o trata como
+        // inofensivo. Quando vence, ele muda a fase — e ai ele fez parte da
+        // partida, entao entra no log como qualquer outro comando.
+        if(command.type === Command.tick && next.phase === prev.phase) return;
+
+        const seq = seqRef.current + 1;
+        seqRef.current = seq;
+
+        enqueueWrite(async () => {
+            if(idRow){
+                await markCommandApplied(idRow, seq, now);
+            }else{
+                // Bot nao tem conta: a linha fica sem dono, e quem responde por
+                // ela e o host. O `tick` tambem e dele — e o relogio da mesa.
+                await logMatchCommand({
+                    idMatch,
+                    idUser: isBot(command.playerId) ? null : user.id,
+                    command,
+                    seq,
+                    now
+                });
+            }
+            await saveMatchState(idMatch, next, seq);
+        });
+    }, [idMatch, user.id, applyState, enqueueWrite]);
 
     /**
-     * A porta de entrada da partida, para os dois lados. O host aplica na hora
-     * e grava; o convidado enfileira e espera o estado voltar. O convidado nao
-     * aplica localmente de proposito: previsao otimista aqui significaria duas
-     * verdades sobre a mesma mesa, e a que perdesse teria que ser desfeita.
+     * A porta de entrada da partida, para os dois lados. O host aplica na hora;
+     * o convidado manda o comando sem numero e espera o estado voltar. O
+     * convidado nao aplica localmente de proposito: previsao otimista aqui
+     * significaria duas verdades sobre a mesma mesa, e a que perdesse teria que
+     * ser desfeita.
      */
     const dispatch = useCallback(command => {
         if(!isHost){
             pushMatchCommand(idMatch, user.id, command).catch(setError);
             return;
         }
-
-        const prev = stateRef.current;
-        if(!prev) return;
-        try{
-            const next = apply(prev, { ...command, now: Date.now() });
-            applyState(next);
-
-            // O tick nao vale ida ao banco: ele bate cinco vezes por segundo e,
-            // fora do instante em que a janela vence, o proprio motor o trata
-            // como inofensivo. Quando vence, ele muda a fase — e e essa mudanca
-            // que os outros precisam ver.
-            if(command.type !== Command.tick || next.phase !== prev.phase){
-                persist(next);
-            }
-        }catch(err){
-            setError(err);
-        }
-    }, [isHost, idMatch, user.id, applyState, persist]);
+        applyAsHost(command);
+    }, [isHost, idMatch, user.id, applyAsHost]);
 
     // O host monta a mesa na primeira vez que entra. E aqui, e nao no
     // `start_match`, porque montar exige o motor: sortear missao, embaralhar e
@@ -161,44 +219,44 @@ export function useTableMatch(idMatch, pool){
                 })),
                 pool
             });
+            seqRef.current = 0;
             applyState(built);
-            persist(built);
+            // Vai para `initial_state`, que e o ponto de partida do replay e
+            // nao pode ser reescrito depois: mexer nele invalidaria o log
+            // inteiro de uma vez.
+            enqueueWrite(() => seedMatchState(idMatch, built));
         }catch(err){
             setError(err);
             buildingRef.current = false;
         }
-    }, [isHost, state, seats, status, pool, applyState, persist]);
+    }, [isHost, state, seats, status, idMatch, pool, applyState, enqueueWrite]);
 
     /**
-     * A fila dos convidados. O comando e reassinado com o `id_user` da linha,
-     * e nao com o `playerId` que veio dentro dele: quem inseriu a linha e o
-     * unico dado que a RLS garantiu, e aceitar a assinatura de dentro deixaria
-     * qualquer um jogar pela mao alheia.
+     * Os comandos que os convidados mandaram e ainda ninguem aplicou.
      *
-     * O que o motor recusar sai da fila do mesmo jeito. Um comando ilegal ja
-     * foi respondido — com erro — e deixa-lo ali o faria ser recusado de novo a
-     * cada volta.
+     * O comando e reassinado com o `id_user` da linha, e nao com o `playerId`
+     * que veio dentro dele: quem inseriu a linha e o unico dado que a RLS
+     * garantiu, e aceitar a assinatura de dentro deixaria qualquer um jogar
+     * pela mao alheia.
      */
     const drain = useCallback(async () => {
-        // Sem mesa montada nao ha onde aplicar, e aplicar no vazio apagaria o
-        // comando sem que ele tivesse acontecido. Ele fica na fila; o efeito
-        // abaixo drena de novo assim que o estado existe.
+        // Sem mesa montada nao ha onde aplicar. Os comandos ficam esperando; o
+        // efeito abaixo drena de novo assim que o estado existe — que e
+        // justamente o que a fila permanente permite.
         if(!stateRef.current) return;
         try{
-            const queued = await getMatchCommands(idMatch);
-            if(!queued.length) return;
-            for(const row of queued){
-                dispatch({ ...row.command, playerId: row.idUser });
+            const pending = await getPendingCommands(idMatch);
+            for(const row of pending){
+                applyAsHost({ ...row.command, playerId: row.idUser }, row.id);
             }
-            await clearMatchCommands(queued.map(row => row.id));
         }catch(err){
             setError(err);
         }
-    }, [idMatch, dispatch]);
+    }, [idMatch, applyAsHost]);
 
-    // Dois canais: o convidado escuta o estado novo, o host escuta a fila. Na
-    // montagem o host ainda drena uma vez, para o comando que chegou enquanto
-    // ele estava fora nao ficar esperando um evento que ja passou.
+    // Dois canais: o convidado escuta o estado novo, o host escuta o que
+    // chegou. Na montagem o host ainda drena uma vez, para o comando que chegou
+    // enquanto ele estava fora nao ficar esperando um evento que ja passou.
     useEffect(() => {
         if(idHost === null) return;
 

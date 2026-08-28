@@ -11,7 +11,8 @@
  *     `createMatch` a partir dos jogadores ja com baralho;
  *   - `apply(state, command)` e a unica porta de entrada para mudar a partida;
  *   - `legalCommands(state, playerId)` diz a UI o que habilitar;
- *   - `evaluateMissions(state)` apura, e `MISSIONS` descreve cada uma.
+ *   - `evaluateMissions(state)` apura, e `MISSIONS` descreve cada uma;
+ *   - `replayMatch(initialState, commands)` refaz a partida a partir do log.
  */
 
 export { Command, RuleError, apply, isReaction, legalCommands } from './engine.js';
@@ -21,4 +22,5 @@ export {
     HAND_SIZE, MatchStatus, PLAYS_PER_TURN, Phase, REACTION_WINDOW_MS,
     createMatch, currentPlayer, ongoingFor, playerById, playersAfter,
 } from './state.js';
+export { replayMatch } from './replay.js';
 export { INFINITE_SHOTS } from './resolve.js';
