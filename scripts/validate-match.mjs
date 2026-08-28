@@ -13,11 +13,14 @@
 //      nem cair no ramo "acao sem handler";
 //   3. uma partida inteira, do primeiro turno ate a apuracao;
 //   4. o alvo declarado antes da janela e a carta que fica na mesa enquanto o
-//      efeito prolongado dela corre.
+//      efeito prolongado dela corre;
+//   5. a mesa mista do lobby - gente e bot no mesmo tabuleiro.
 
 import { Command, apply, legalCommands } from '../domain/match/engine.js';
 import { botCommand } from '../domain/match/bot.js';
 import { createSoloMatch } from '../domain/match/solo.js';
+import { createSeatedMatch } from '../domain/match/setup.js';
+import { isBot } from '../domain/match/bot.js';
 import { CARD_EFFECTS } from '../domain/cards/effects/index.js';
 import { MISSIONS, evaluateMissions } from '../domain/match/missions.js';
 import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
@@ -608,6 +611,61 @@ for(const id of IDS){
     check('o humano chegou a jogar', jogadasDoHumano > 0);
     console.log(`solo: ${passos} comando(s), ${state.turnCount} turnos, `
         + `${jogadasDoHumano} jogadas suas`);
+}
+
+// ----------------------------------------- 9. a mesa mista do lobby
+
+// Humanos e bots na mesma mesa, montada como o `useTableMatch` a monta a partir
+// dos assentos: id de usuario para quem tem conta, id do assento negativo para
+// quem nao tem. E o caso que o solo nunca exercita — la o humano e sempre um
+// so, e um bug que dependa de *dois* ids positivos na ordem da mesa passaria
+// batido.
+//
+// Todo mundo dirigido pela politica do bot, humanos inclusive. Nao e a partida
+// de verdade; e a prova de que a mesa mista percorre o motor inteiro e termina.
+{
+    const assentos = [
+        { id: 7,   name: 'voce' },
+        { id: 12,  name: 'a outra pessoa' },
+        { id: -31, name: 'Brasa' },
+        { id: -32, name: 'Kitumbras' },
+    ];
+
+    const inicial = createSeatedMatch({ seed: 20260828, seats: assentos, pool: IDS });
+
+    check('a mesa mista tem os quatro assentos', inicial.players.length === 4);
+    check('a ordem dos assentos e a ordem dos turnos',
+        inicial.order.join() === assentos.map(a => a.id).join());
+    check('o host comanda so os bots',
+        inicial.players.filter(p => isBot(p.id)).map(p => p.id).join() === '-31,-32');
+    check('cada assento tem baralho proprio',
+        new Set(inicial.players.map(p => p.deck.join(','))).size === 4);
+    check('as missoes da mesa mista sao distintas',
+        new Set(inicial.players.map(p => p.mission)).size === 4);
+
+    let state = inicial;
+    let passos = 0;
+    while(state.status !== MatchStatus.finished && passos < 5000){
+        passos++;
+        const comando = state.players
+            .map(player => botCommand(state, player.id, 999999))
+            .find(Boolean);
+        if(!comando){
+            if(state.phase === Phase.window){
+                state = apply(state, { type: Command.tick, now: 999999 });
+                continue;
+            }
+            erro(`mesa mista travada na fase ${state.phase}`);
+            break;
+        }
+        state = apply(state, comando);
+    }
+
+    check('a mesa mista chega ao fim', state.status === MatchStatus.finished);
+    check('o descarte da mesa mista bate com os montes', descarteBate(state));
+    check('a mesa mista apura', Array.isArray(state.results));
+    console.log(`mesa mista: ${passos} comando(s), ${state.turnCount} turnos, `
+        + `vencedores ${state.winners?.join(', ') || 'ninguem'}`);
 }
 
 // ------------------------------------------------------------- panorama

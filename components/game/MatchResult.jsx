@@ -65,9 +65,18 @@ export function MatchResult({ state, you, onRestart, onLeave }){
                 ))}
             </ul>
 
+            {/* "De novo" so quando ha como recomecar. Na mesa do lobby nao ha:
+                remontar a partida dali seria refazer a mesa por baixo de quem
+                ainda esta nela — voltar ao lobby e o caminho. */}
             <div className='flex gap-2'>
-                <ActionButton text='Sair' variant='secondary' width='40%' action={onLeave} />
-                <ActionButton text='Jogar de novo' variant='gold' width='55%' action={onRestart} />
+                <ActionButton text='Sair' variant='secondary'
+                    width={onRestart ? '40%' : '100%'}
+                    action={onLeave}
+                />
+                {onRestart && <ActionButton text='Jogar de novo' variant='gold'
+                    width='55%'
+                    action={onRestart}
+                />}
             </div>
         </div>
     );

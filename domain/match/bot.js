@@ -101,10 +101,18 @@ function preferredTargets(state, request, playerId){
             const player = playerById(state, id);
             return player && !player.out;
         });
-    const others = pool.filter(id => id !== playerId);
-    const ranked = [...(others.length ? others : pool)].sort((a, b) =>
-        (playerById(state, a).shots ?? 0) - (playerById(state, b).shots ?? 0));
-    const count = request.upTo ? Math.min(1, request.count) : request.count;
+    const others = pool
+        .filter(id => id !== playerId)
+        .sort((a, b) => (playerById(state, a).shots ?? 0) - (playerById(state, b).shots ?? 0));
+
+    // Ele mesmo vai para o fim da fila, e nao para fora dela: "escolha 3" numa
+    // mesa de 3 e a mesa inteira, e devolver so os outros dois seria escolha
+    // invalida — o motor recusa, e um bot que erra a resposta trava a mesa. So
+    // aparece em mesa pequena, que e o que a mesa mista do lobby permite montar.
+    const ranked = [...others, ...pool.filter(id => id === playerId)];
+    const count = request.upTo
+        ? Math.min(1, request.count)
+        : Math.min(request.count, pool.length);
     return ranked.slice(0, count);
 }
 

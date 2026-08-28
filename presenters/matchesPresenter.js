@@ -116,6 +116,89 @@ export async function startMatch(idMatch){
 }
 
 /**
+ * A partida com o estado dentro. Separada de `getMatch` porque o `state` e o
+ * documento inteiro da mesa: o lobby, que so quer saber de host e status, nao
+ * tem por que arrasta-lo em toda leitura.
+ *
+ * @returns {Promise<{id: number, id_host: number, status: string,
+ *                    state: object|null, state_version: number}>}
+ */
+export async function getMatchRow(idMatch){
+    const { data, error } = await supabase
+        .from('matches')
+        .select('id, id_host, status, state, state_version')
+        .eq('id', idMatch)
+        .maybeSingle();
+    if(error) throw error;
+    return data;
+}
+
+/**
+ * Grava o estado da partida. So o host consegue: a RPC confere, e tambem
+ * descarta gravacao mais velha que a gravada - a rede nao promete ordem, e a
+ * mesa voltando no tempo seria uma carta jogada duas vezes.
+ *
+ * @returns {Promise<number>} a versao que ficou valendo.
+ */
+export async function saveMatchState(idMatch, state, version){
+    const { data, error } = await supabase.rpc('save_match_state', {
+        p_id_match: idMatch,
+        p_state: state,
+        p_version: version
+    });
+    if(error) throw error;
+    return data;
+}
+
+/**
+ * Enfileira um comando. E assim que joga quem nao e o host: o comando espera
+ * na fila ate o browser do host aplica-lo pelo `apply` e regravar o estado.
+ *
+ * `now` nao viaja de proposito - o relogio que vale e o de quem aplica, e
+ * mandar o proprio seria deixar o cliente adiantar a janela de interferencia.
+ */
+export async function pushMatchCommand(idMatch, idUser, command){
+    const { now, ...rest } = command;
+    const { error } = await supabase
+        .from('match_commands')
+        .insert({ id_match: idMatch, id_user: idUser, command: rest });
+    if(error) throw error;
+}
+
+/**
+ * A fila, na ordem em que chegou. Quem le e o host.
+ *
+ * @returns {Promise<{id: number, idUser: number, command: object}[]>}
+ */
+export async function getMatchCommands(idMatch){
+    const { data, error } = await supabase
+        .from('match_commands')
+        .select('id, id_user, command')
+        .eq('id_match', idMatch)
+        .order('id', { ascending: true });
+    if(error) throw error;
+    return (data ?? []).map(row => ({
+        id: row.id,
+        idUser: row.id_user,
+        command: row.command
+    }));
+}
+
+/**
+ * Apaga o que ja foi aplicado. Inclusive o comando que o motor recusou: ele
+ * foi respondido - com um erro - e deixa-lo na fila o faria ser recusado de
+ * novo a cada volta.
+ */
+export async function clearMatchCommands(ids){
+    if(!ids.length) return;
+    const { error } = await supabase
+        .from('match_commands')
+        .delete()
+        .in('id', ids);
+    if(error) throw error;
+}
+
+/**
  * Sai da partida. Nao e RPC: a policy match_players_leave_self ja permite o
  * jogador apagar a propria linha, e so enquanto a partida esta no lobby.
  */
