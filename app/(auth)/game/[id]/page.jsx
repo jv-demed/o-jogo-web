@@ -53,7 +53,15 @@ export default function Game({ params }){
                                     `}
                                 >
                                     <span className='truncate'>{row.name}</span>
-                                    {row.id === user.id && <span className={`
+                                    {row.isBot && <span className={`
+                                        ml-auto shrink-0
+                                        px-2 py-0.5 rounded-full
+                                        border border-line bg-elevated
+                                        text-[0.65rem] uppercase tracking-wider text-cream-dim
+                                    `}>
+                                        bot
+                                    </span>}
+                                    {row.idUser === user.id && <span className={`
                                         ml-auto shrink-0
                                         px-2 py-0.5 rounded-full
                                         border border-line bg-elevated
