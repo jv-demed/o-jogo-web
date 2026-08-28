@@ -32,7 +32,7 @@ import { MatchStatus, Phase, currentPlayer, playerById } from './state.js';
  * testar. O modo e so quantos assentos sao de gente.
  */
 export const BOT_NAMES = Object.freeze([
-    'Brasa', 'Kitumbras', 'Negrao', 'Cesar', 'Jp', 'Gladso',
+    'Chutador', 'Tchori Tchori', 'Silvério', 'Dentinho', 'Cauê', 'Eron',
 ]);
 
 /**
