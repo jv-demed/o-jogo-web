@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
@@ -85,6 +85,13 @@ export default function Lobby({ params }){
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Tres refs para uma pergunta so: ao desmontar, este assento deve ser
+    // solto? Nao deve quando a partida comecou (o desmonte e a ida para a
+    // mesa) e nao deve quando quem saiu ja soltou o assento pelo botao.
+    const isStartingRef = useRef(false);
+    const hasLeftRef = useRef(false);
+    const releaseRef = useRef(null);
+
     const isHost = match?.id_host === user.id;
     const status = match?.status;
 
@@ -158,11 +165,42 @@ export default function Lobby({ params }){
     // sair ja levou a sala junto, nao ha assento para soltar, e isso e o
     // sucesso, nao uma falha para mostrar a quem esta indo embora.
     useEffect(() => {
-        if(status === 'progress') router.push(`/game/${idMatch}`);
+        if(status === 'progress'){
+            // O desmonte que vem a seguir e a ida para a mesa, e nao uma
+            // saida: o assento tem que continuar de pe.
+            isStartingRef.current = true;
+            router.push(`/game/${idMatch}`);
+        }
         if(status === 'finished'){
+            hasLeftRef.current = true;
             leaveMatch(idMatch).catch(() => {}).finally(() => router.push('/home'));
         }
     }, [status, idMatch, router]);
+
+    /**
+     * Soltar o assento ao sair da tela por qualquer caminho.
+     *
+     * O botao de sair nunca foi o unico jeito de sair do lobby: a seta do
+     * cabecalho, o menu do header e o voltar do navegador tambem tiram a
+     * pessoa dali, e por nenhum deles o banco ficava sabendo. O assento
+     * continuava ocupado, e por isso a sala nao se apagava — o trigger da 0014
+     * so e chamado quando alguem *sai*.
+     *
+     * O `setTimeout` nao e atraso, e cancelamento: em dev o React monta,
+     * desmonta e remonta de proposito (StrictMode), e uma saida sincrona no
+     * desmonte cancelaria a sala do host no instante em que ele a abrisse. A
+     * saida fica agendada para o proximo tick, e uma remontagem a cancela
+     * antes de acontecer.
+     */
+    useEffect(() => {
+        clearTimeout(releaseRef.current);
+        return () => {
+            if(isStartingRef.current || hasLeftRef.current) return;
+            releaseRef.current = setTimeout(() => {
+                leaveMatch(idMatch).catch(() => {});
+            }, 0);
+        };
+    }, [idMatch]);
 
     async function handlePlayerClick(index){
         if(!isHost) return;
@@ -209,6 +247,7 @@ export default function Lobby({ params }){
     }
 
     async function handleLeave(){
+        hasLeftRef.current = true;
         try{
             // Uma chamada so para os dois: sendo o host, a RPC encerra a sala
             // antes de soltar o assento dele — e o `status` que tira os
@@ -216,6 +255,9 @@ export default function Lobby({ params }){
             await leaveMatch(idMatch);
             router.push('/home');
         }catch(err){
+            // Nao saiu: o assento continua ocupado, entao o desmonte volta a
+            // ser responsavel por solta-lo.
+            hasLeftRef.current = false;
             setError(err);
         }
     }
@@ -239,7 +281,9 @@ export default function Lobby({ params }){
 
     return (
         <Main>
-            <PageHeader title={`Partida #${params.id}`} />
+            {/* A seta sai pelo mesmo caminho do botao: ela tambem esta
+                deixando um assento para tras. */}
+            <PageHeader title={`Partida #${params.id}`} onReturn={handleLeave} />
             <Box fullH>
                 {isLoading
                     ? <SpinLoader marginTop='20px' />
