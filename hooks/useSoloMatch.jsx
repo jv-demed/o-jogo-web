@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useState } from 'react';
 import { apply } from '@/domain/match/engine';
+import { applyDev } from '@/domain/match/dev';
 import { createSoloMatch } from '@/domain/match/solo';
 import { MatchStatus, currentPlayer } from '@/domain/match/state';
 import { useMatchDriver } from '@/hooks/useMatchDriver';
@@ -49,15 +50,19 @@ export function useSoloMatch(){
     }, []);
 
     /**
-     * Poder de dev: aplica um transformador de domain/match/dev.js sobre o
-     * estado. Nao passa pelo `apply` de proposito — o motor nao conhece dev, e
-     * e assim que ele continua seguro para rodar no servidor.
+     * Poder de dev. Nao passa pelo `apply` de proposito — o motor nao conhece
+     * dev, e e assim que ele continua seguro para rodar no servidor.
+     *
+     * Recebe um comando `dev.*`, e nao mais uma funcao: e o mesmo formato que
+     * a mesa do lobby manda pela rede desde a partida com cheats (migration
+     * 0013), e o mesmo que o painel produz. Aqui o comando nem sai da aba, mas
+     * ter uma forma so evita o painel ter dois jeitos de pedir a mesma coisa.
      */
-    const devApply = useCallback(transform => {
+    const devDispatch = useCallback(command => {
         setMatch(prev => {
             if(!prev) return prev;
             try{
-                return { ...prev, state: transform(prev.state) };
+                return { ...prev, state: applyDev(prev.state, { ...command, now: Date.now() }) };
             }catch(err){
                 setError(err);
                 return prev;
@@ -97,7 +102,7 @@ export function useSoloMatch(){
         start,
         leave,
         dispatch,
-        devApply,
+        devDispatch,
         botsPaused,
         setBotsPaused,
         stepBots,

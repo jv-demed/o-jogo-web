@@ -26,7 +26,7 @@ import { DrinkPrompt } from '@/components/game/DrinkPrompt';
 import { OngoingModal } from '@/components/game/OngoingModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
-import { closeWindowNow, giveCard, stackDeck } from '@/domain/match/dev';
+import { DevCommand } from '@/domain/match/dev';
 
 const CATALOG_IDS = CARDS.map(card => card.id);
 
@@ -40,9 +40,12 @@ const CATALOG_IDS = CARDS.map(card => card.id);
  * oferece nos dois casos.
  *
  * @param {object} [props.dev] ferramentas de dev, quando a partida as aceita.
- *        So o solo passa: elas mexem no estado por fora do `apply`, e por fora
- *        do `apply` nada e gravado — numa mesa com outra gente, o poder de dev
- *        so dessincronizaria a tela do host da dos outros.
+ *        Passam o solo e a partida com cheats (migration 0013). Na mesa, o
+ *        poder de dev viaja como comando `dev.*` e entra no log como qualquer
+ *        jogada — antes disso ele nao podia sair do solo, porque mexer no
+ *        estado por fora do `apply` dessincronizaria a tela de quem clicou da
+ *        dos outros. `dev.canDriveBots` diz se esta aba comanda os bots: so o
+ *        host comanda, e pausa-los da tela do convidado nao pararia nada.
  * @param {Function} [props.onRestart] quando existe, o fim de partida oferece
  *        "de novo". A mesa do lobby nao oferece: recomecar ali e voltar ao
  *        lobby, e nao remontar a mesa por baixo de quem esta nela.
@@ -127,9 +130,9 @@ export function MatchScreen({
      */
     function handleDevPick(card){
         if(devPick === 'hand'){
-            dev.devApply(state => giveCard(state, you.id, card.id));
+            dev.devDispatch({ type: DevCommand.giveCard, playerId: you.id, idCard: card.id });
         }else{
-            dev.devApply(state => stackDeck(state, you.id, card.id));
+            dev.devDispatch({ type: DevCommand.stackDeck, playerId: you.id, idCard: card.id });
             if(devPick === 'draw') dispatch({ type: Command.draw, playerId: you.id });
         }
         setDevPick(null);
@@ -334,13 +337,17 @@ export function MatchScreen({
             {openPanel === 'dev' && isDev && <DevPanel state={state} you={you}
                 reveal={reveal}
                 onToggleReveal={() => setReveal(on => !on)}
+                canDriveBots={dev.canDriveBots !== false}
                 botsPaused={dev.botsPaused}
                 onToggleBots={() => dev.setBotsPaused(on => !on)}
                 onStepBots={dev.stepBots}
                 hasBotCommand={dev.hasBotCommand}
                 onPickForDeck={() => { closePanel(); setDevPick('deck'); }}
                 onPickForHand={() => { closePanel(); setDevPick('hand'); }}
-                onCloseWindow={() => { dev.devApply(closeWindowNow); closePanel(); }}
+                onCloseWindow={() => {
+                    dev.devDispatch({ type: DevCommand.closeWindow, playerId: you.id });
+                    closePanel();
+                }}
                 onInspect={setPreview}
                 onClose={closePanel}
             />}

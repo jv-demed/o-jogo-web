@@ -2,7 +2,7 @@ import { BsFire, BsLightningCharge, BsClockHistory } from 'react-icons/bs';
 import { RiErrorWarningLine, RiSpyLine } from 'react-icons/ri';
 import { PiBeerBottleBold, PiSword, PiCross } from 'react-icons/pi';
 import { AiOutlineLogin, AiOutlineLogout, AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl, FaShieldAlt, FaRegStar, FaPlay, FaStore, FaLayerGroup, FaCoins, FaBookOpen, FaUser, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaCheck, FaListUl, FaShieldAlt, FaRegStar, FaPlay, FaStore, FaLayerGroup, FaCoins, FaBookOpen, FaUser, FaLock, FaWhatsapp, FaLink } from 'react-icons/fa';
 import { IoEyeOutline, IoEyeOffOutline, IoClose, IoAddOutline, IoChevronDown, IoChevronUp, IoChevronBack, IoChevronForward, IoList, IoAppsSharp, IoMenu } from 'react-icons/io5';
 
 export const ICONS = {
@@ -28,6 +28,7 @@ export const ICONS = {
     eyeOff: IoEyeOffOutline,
     investigation: RiSpyLine,
     list: FaListUl,
+    link: FaLink,
     lock: FaLock,
     login: AiOutlineLogin,
     logout: AiOutlineLogout,
@@ -39,5 +40,6 @@ export const ICONS = {
     star: FaRegStar,
     store: FaStore,
     user: FaUser,
-    warning: RiErrorWarningLine
+    warning: RiErrorWarningLine,
+    whatsapp: FaWhatsapp
 }

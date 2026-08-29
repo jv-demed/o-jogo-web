@@ -36,7 +36,7 @@ export async function joinMatch(idMatch){
 export async function getMatch(idMatch){
     const { data, error } = await supabase
         .from('matches')
-        .select('id, id_host, status')
+        .select('id, id_host, status, cheats')
         .eq('id', idMatch)
         .maybeSingle();
     if(error) throw error;
@@ -121,12 +121,12 @@ export async function startMatch(idMatch){
  * tem por que arrasta-lo em toda leitura.
  *
  * @returns {Promise<{id: number, id_host: number, status: string,
- *                    state: object|null, state_version: number}>}
+ *                    cheats: boolean, state: object|null, state_version: number}>}
  */
 export async function getMatchRow(idMatch){
     const { data, error } = await supabase
         .from('matches')
-        .select('id, id_host, status, state, state_version')
+        .select('id, id_host, status, cheats, state, state_version')
         .eq('id', idMatch)
         .maybeSingle();
     if(error) throw error;
@@ -246,27 +246,48 @@ export async function markCommandRefused(id, reason){
 }
 
 /**
- * Sai da partida. Nao e RPC: a policy match_players_leave_self ja permite o
- * jogador apagar a propria linha, e so enquanto a partida esta no lobby.
+ * Sai da partida, seja quem for.
+ *
+ * Virou RPC na 0014, e o motivo e o host: o clique dele precisa encerrar a
+ * sala (`status = 'finished'`, que e o que tira os convidados do lobby pelo
+ * realtime) e soltar o assento dele na mesma transacao. Em duas chamadas, a
+ * aba fechada no meio deixaria a sala meio cancelada.
+ *
+ * Saindo o ultimo humano de uma partida que nunca comecou, o trigger
+ * `match_players_drop_empty` apaga a sala e os bots dela. Nao ha o que chamar
+ * daqui: a sala vazia se apaga.
  */
-export async function leaveMatch(idMatch, idUser){
-    const { error } = await supabase
-        .from('match_players')
-        .delete()
-        .eq('id_match', idMatch)
-        .eq('id_user', idUser);
+export async function leaveMatch(idMatch){
+    const { error } = await supabase.rpc('leave_match', {
+        p_id_match: idMatch
+    });
     if(error) throw error;
 }
 
 /**
- * O host nao "sai": ele encerra. Apagar a partida nao e opcao (matches nao
- * tem policy de DELETE), e o trigger matches_status_flow aceita
- * lobby -> finished.
+ * Quantos devs estao sentados na mesa. E RPC porque `users.is_dev` do vizinho
+ * nao e leitura do cliente: o lobby precisa do numero (2+ libera o cheque de
+ * cheats), nao de quem e quem.
+ *
+ * @returns {Promise<number>}
  */
-export async function cancelMatch(idMatch){
-    const { error } = await supabase
-        .from('matches')
-        .update({ status: 'finished' })
-        .eq('id', idMatch);
+export async function getMatchDevCount(idMatch){
+    const { data, error } = await supabase.rpc('match_dev_count', {
+        p_id_match: idMatch
+    });
+    if(error) throw error;
+    return data ?? 0;
+}
+
+/**
+ * Marca a partida como partida com cheats. Host apenas, so no lobby, e a RPC
+ * recusa se nao houver 2+ devs na mesa - a UI esconde o cheque, mas quem
+ * autoriza e o banco.
+ */
+export async function setMatchCheats(idMatch, on){
+    const { error } = await supabase.rpc('set_match_cheats', {
+        p_id_match: idMatch,
+        p_on: on
+    });
     if(error) throw error;
 }

@@ -33,7 +33,7 @@ export default function Solo(){
     const {
         state, you, error, dismissError,
         isYourTurn, isOver, start, leave, dispatch,
-        devApply, botsPaused, setBotsPaused, stepBots, hasBotCommand
+        devDispatch, botsPaused, setBotsPaused, stepBots, hasBotCommand
     } = useSoloMatch();
 
     const [botCount, setBotCount] = useState(3);
@@ -80,7 +80,7 @@ export default function Solo(){
             dispatch={dispatch}
             onLeave={leave}
             onRestart={handleStart}
-            dev={{ isDev, devApply, botsPaused, setBotsPaused, stepBots, hasBotCommand }}
+            dev={{ isDev, devDispatch, botsPaused, setBotsPaused, stepBots, hasBotCommand }}
         />
     );
 }

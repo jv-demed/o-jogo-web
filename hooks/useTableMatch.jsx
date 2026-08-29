@@ -14,6 +14,7 @@ import {
     seedMatchState
 } from '@/presenters/matchesPresenter';
 import { Command, apply } from '@/domain/match/engine';
+import { applyDev, isDevCommand } from '@/domain/match/dev';
 import { isBot } from '@/domain/match/bot';
 import { createSeatedMatch } from '@/domain/match/setup';
 import { MatchStatus, currentPlayer } from '@/domain/match/state';
@@ -55,6 +56,9 @@ export function useTableMatch(idMatch, pool){
     const [state, setState] = useState(null);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Ferramenta de dev, e so do host: os bots sao dele, e pausa-los na tela do
+    // convidado nao pararia mesa nenhuma.
+    const [botsPaused, setBotsPaused] = useState(false);
 
     // O estado que o host aplica em cima. Vive num ref, e nao so no state do
     // React, porque o `applyAsHost` precisa do estado *agora*: dentro do
@@ -143,9 +147,17 @@ export function useTableMatch(idMatch, pool){
         if(!prev) return;
 
         const now = Date.now();
+        const isDev = isDevCommand(command);
         let next;
         try{
-            next = apply(prev, { ...command, now });
+            // Poder de dev nao passa pelo motor: `apply` nao conhece dev, e e
+            // assim que ele continua seguro para rodar no servidor quando a
+            // partida sair do browser do host. O que a partida com cheats muda
+            // nao e isso — e o comando dev.* ser gravado no log como qualquer
+            // outro, com autor e lugar na ordem, em vez de acontecer so na tela
+            // de quem clicou.
+            if(isDev && !match?.cheats) throw new Error('Esta partida não aceita cheats.');
+            next = isDev ? applyDev(prev, { ...command, now }) : apply(prev, { ...command, now });
         }catch(err){
             setError(err);
             // Comando recusado nao aconteceu: fica sem `seq`, fora do replay, e
@@ -182,7 +194,7 @@ export function useTableMatch(idMatch, pool){
             }
             await saveMatchState(idMatch, next, seq);
         });
-    }, [idMatch, user.id, applyState, enqueueWrite]);
+    }, [idMatch, user.id, match?.cheats, applyState, enqueueWrite]);
 
     /**
      * A porta de entrada da partida, para os dois lados. O host aplica na hora;
@@ -280,6 +292,18 @@ export function useTableMatch(idMatch, pool){
         return () => removeChannel(channel);
     }, [idHost, isHost, idMatch, hasState, readMatch, drain]);
 
+    /**
+     * Poder de dev, pela mesma porta da jogada. O host aplica na hora; o
+     * convidado manda e espera — igualzinho a jogar uma carta, e de proposito:
+     * duas portas seriam duas ordens possiveis para os mesmos eventos.
+     *
+     * Quem autoriza nao e esta linha: o trigger `match_commands_check_dev`
+     * recusa comando `dev.*` fora de partida com cheats ou de quem nao e dev.
+     */
+    const devDispatch = useCallback(command => {
+        dispatch(command);
+    }, [dispatch]);
+
     // Os assentos que esta aba comanda: os bots, e so para o host.
     const botIds = useMemo(() => (isHost && state)
         ? state.players.filter(player => isBot(player.id)).map(player => player.id)
@@ -289,7 +313,8 @@ export function useTableMatch(idMatch, pool){
         state,
         botIds,
         dispatch,
-        active: isHost
+        active: isHost,
+        botsPaused
     });
 
     // Voce e quem tem o seu id. Diferente do solo, que procurava "o unico que
@@ -306,7 +331,11 @@ export function useTableMatch(idMatch, pool){
         dismissError: () => setError(null),
         isYourTurn: Boolean(state && you && currentPlayer(state)?.id === you.id),
         isOver: state?.status === MatchStatus.finished,
+        cheats: Boolean(match?.cheats),
         dispatch,
+        devDispatch,
+        botsPaused,
+        setBotsPaused,
         stepBots,
         hasBotCommand
     };

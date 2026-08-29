@@ -21,11 +21,30 @@ export default function LoginPage(){
         password: ''
     });
 
+    /**
+     * Para onde ir depois de entrar.
+     *
+     * O middleware poe o destino em `?next=` quando manda para ca quem nao
+     * estava logado — e assim que o link de uma sala sobrevive ao login. Lido
+     * so na hora do clique, e nao por `useSearchParams`, para esta pagina
+     * continuar podendo ser gerada estaticamente.
+     *
+     * A conferencia nao e preciosismo: `next` vem da URL, e qualquer um
+     * consegue escrever uma. Aceitar so caminho absoluto deste site — e barrar
+     * `//outro.site`, que o browser leria como host — e o que impede o link de
+     * login virar redirecionamento para fora.
+     */
+    function destination(){
+        const next = new URLSearchParams(window.location.search).get('next');
+        const isInternal = next?.startsWith('/') && !next.startsWith('//');
+        return isInternal ? next : '/home';
+    }
+
     async function handleSubmit(){
         setError();
         await login(auth).then(res => {
             if(res.success){
-                router.push('/home');
+                router.push(destination());
             } else {
                 setError(res);
             }

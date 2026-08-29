@@ -1,6 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation';
 import { CARDS } from '@/assets/cards';
+import { useUser } from '@/providers/UserProvider';
 import { useTableMatch } from '@/hooks/useTableMatch';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
@@ -32,11 +33,13 @@ const CATALOG_IDS = CARDS.map(card => card.id);
 export default function Game({ params }){
 
     const router = useRouter();
+    const { isDev } = useUser();
     const idMatch = Number(params.id);
 
     const {
         state, you, isHost, isLoading, error, dismissError,
-        isYourTurn, isOver, dispatch
+        isYourTurn, isOver, cheats, dispatch, devDispatch,
+        botsPaused, setBotsPaused, stepBots, hasBotCommand
     } = useTableMatch(idMatch, CATALOG_IDS);
 
     // Sair da partida e sair da tela: a mesa continua no banco, e voltar pelo
@@ -56,6 +59,22 @@ export default function Game({ params }){
                 isOver={isOver}
                 dispatch={dispatch}
                 onLeave={leave}
+                {...(cheats && isDev ? {
+                    // O painel de dev na mesa, para a partida que o host marcou
+                    // com cheats no lobby (migration 0013). Nao e gate de
+                    // seguranca: quem autoriza e o trigger que recusa comando
+                    // `dev.*` fora de partida com cheats ou de quem nao e dev.
+                    // Aqui so se decide o que aparece na tela.
+                    dev: {
+                        isDev,
+                        devDispatch,
+                        canDriveBots: isHost,
+                        botsPaused,
+                        setBotsPaused,
+                        stepBots,
+                        hasBotCommand
+                    }
+                } : {})}
             />
         );
     }

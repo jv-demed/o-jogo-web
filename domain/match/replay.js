@@ -1,4 +1,5 @@
 import { apply } from './engine.js';
+import { applyDev, isDevCommand } from './dev.js';
 
 /**
  * Refaz a partida a partir do inicio.
@@ -17,10 +18,21 @@ import { apply } from './engine.js';
  * novo seria outra partida. E por isso que a linha guarda o `applied_now` que o
  * host carimbou.
  *
+ * Comando `dev.*` (partida com cheats, migration 0013) e refeito por `applyDev`,
+ * e nao pelo `apply` — o motor nao conhece dev, e e assim que ele continua
+ * seguro para rodar no servidor. Este arquivo e o unico fora do host que
+ * precisa conhecer os dois: refazer uma partida com cheats *sem* as cirurgias
+ * daria outra partida, e um replay que diverge nao serve para nada.
+ *
  * @param {object} initialState  a mesa recem-montada (`matches.initial_state`).
  * @param {object[]} commands    os comandos aplicados, em ordem de `seq`.
  * @returns {object} o estado depois do ultimo comando.
  */
 export function replayMatch(initialState, commands){
-    return commands.reduce((state, command) => apply(state, command), initialState);
+    return commands.reduce(
+        (state, command) => isDevCommand(command)
+            ? applyDev(state, command)
+            : apply(state, command),
+        initialState
+    );
 }

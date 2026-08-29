@@ -19,12 +19,18 @@ import { cardById, cardName, missionName } from '@/components/game/narrate';
  *
  * Todo poder daqui e cirurgia no estado (`domain/match/dev.js`), nunca comando
  * do motor — ver o cabecalho de la para o porque.
+ *
+ * Vale nos dois lugares: no solo, e na partida marcada com cheats (migration
+ * 0013), onde a cirurgia viaja como comando `dev.*` e fica escrita no log. O
+ * que nao vale nos dois e o ritmo: os bots sao comandados pelo host, e o botao
+ * de pausa na tela do convidado nao pararia nada — dai `canDriveBots`.
  */
 export function DevPanel({
     state,
     you,
     reveal,
     onToggleReveal,
+    canDriveBots = true,
     botsPaused,
     onToggleBots,
     onStepBots,
@@ -53,8 +59,8 @@ export function DevPanel({
                         DEV
                     </span>
                     <p className='text-xs text-cream-dim'>
-                        Só no jogo solo, só na sua tela. Tudo que você mexer aqui
-                        aparece no log da partida.
+                        Tudo que você mexer aqui aparece no log da partida — e,
+                        numa mesa com outra gente, com o seu nome.
                     </p>
                 </header>
 
@@ -77,17 +83,22 @@ export function DevPanel({
                 </Section>
 
                 <Section title='Ritmo'>
-                    <Toggle label='Pausar os bots'
-                        hint='O relógio da janela continua correndo.'
-                        active={botsPaused}
-                        onToggle={onToggleBots}
-                    />
-                    <ActionButton text='Um passo dos bots'
-                        variant='secondary'
-                        icon={ICONS.play}
-                        disabled={!botsPaused || !hasBotCommand}
-                        action={onStepBots}
-                    />
+                    {/* Parar os bots e coisa de quem os comanda. Numa mesa, e
+                        o host: para o convidado os dois controles seriam
+                        botoes que nao fazem nada. */}
+                    {canDriveBots && <>
+                        <Toggle label='Pausar os bots'
+                            hint='O relógio da janela continua correndo.'
+                            active={botsPaused}
+                            onToggle={onToggleBots}
+                        />
+                        <ActionButton text='Um passo dos bots'
+                            variant='secondary'
+                            icon={ICONS.play}
+                            disabled={!botsPaused || !hasBotCommand}
+                            action={onStepBots}
+                        />
+                    </>}
                     <ActionButton text='Fechar a janela agora'
                         variant='secondary'
                         icon={ICONS.history}

@@ -83,3 +83,50 @@ export function closeWindowNow(state){
     log(draft, { type: 'dev.window.close' });
     return draft;
 }
+
+/**
+ * Os poderes com nome, para poderem viajar.
+ *
+ * As funcoes acima recebem estado e devolvem estado, o que basta para o solo:
+ * a aba chama a funcao e guarda o resultado. Numa mesa com outra gente isso
+ * nao viaja — funcao nao cabe num jsonb, e o poder de dev que so acontece na
+ * tela de quem clicou dessincroniza a mesa em silencio.
+ *
+ * Entao o poder vira um **comando**: `{ type: 'dev.*', playerId, ... }`, o
+ * mesmo formato que o motor usa, gravado no mesmo log (`match_commands`, com
+ * `seq` e autor) e refeito pelo mesmo replay. Cirurgia continua sendo cirurgia
+ * — o que muda e que ela fica escrita na historia da partida, e e so isso que
+ * a separa de trapaca.
+ *
+ * O que **nao** muda, e nao pode mudar: nada disto passa pelo `apply`. O motor
+ * continua sem conhecer dev, e por isso continua seguro para rodar no servidor
+ * quando a partida sair do browser do host (ver PENDENCIAS.md). Quem roteia e
+ * quem chama — `applyDev` de um lado, `apply` do outro.
+ */
+export const DevCommand = Object.freeze({
+    stackDeck:   'dev.stackDeck',
+    giveCard:    'dev.giveCard',
+    closeWindow: 'dev.closeWindow',
+});
+
+/** Se o comando e cirurgia de dev, e nao jogada. */
+export const isDevCommand = command =>
+    typeof command?.type === 'string' && command.type.startsWith('dev.');
+
+/**
+ * O `apply` dos poderes de dev. Mesma fronteira do motor — recebe estado e
+ * comando, devolve estado novo — para que quem despacha nao precise saber qual
+ * dos dois esta chamando.
+ *
+ * @param {object} state
+ * @param {{type: string, playerId?: number, idCard?: number}} command
+ * @returns {object} estado novo, ou o mesmo quando o comando nao se aplica.
+ */
+export function applyDev(state, command){
+    switch(command.type){
+        case DevCommand.stackDeck:   return stackDeck(state, command.playerId, command.idCard);
+        case DevCommand.giveCard:    return giveCard(state, command.playerId, command.idCard);
+        case DevCommand.closeWindow: return closeWindowNow(state);
+        default: return state;
+    }
+}

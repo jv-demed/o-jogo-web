@@ -5,23 +5,27 @@ import { useUser } from '@/providers/UserProvider';
 import { getRealtime, removeChannel } from '@/supabase/realtime';
 import {
     addMatchBot,
-    cancelMatch,
     getMatch,
+    getMatchDevCount,
     getMatchPlayers,
     joinMatch,
     leaveMatch,
     removeMatchBot,
     reorderMatchSeats,
+    setMatchCheats,
     startMatch
 } from '@/presenters/matchesPresenter';
 import { BOT_NAMES } from '@/domain/match/bot';
+import { ICONS } from '@/assets/icons';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { Actions } from '@/components/containers/Actions';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
+import { DotsLoader } from '@/components/elements/DotsLoader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
+import { InviteBox } from '@/components/lobby/InviteBox';
 
 /**
  * Sala de espera da partida.
@@ -46,11 +50,21 @@ import { ActionButton } from '@/components/buttons/ActionButton';
 // maior; o botao some antes disso para o host nao descobrir no erro.
 const MAX_SEATS = 7;
 
-/** O proximo nome livre da lista. Esgotada, numera. */
+/**
+ * Um nome livre da lista, sorteado. Esgotada, numera.
+ *
+ * Sorteado e nao "o primeiro que sobrou": pegando sempre da frente, toda mesa
+ * de teste saia com os mesmos bots na mesma ordem, e a mesa de tres era sempre
+ * Chutador, Tchori Tchori e Silverio. Aqui o sorteio nao e do motor e nao vai
+ * para estado nenhum — e enfeite —, entao e `Math.random` mesmo, e nao o `rng`
+ * semeado de domain/match/.
+ */
 function nextBotName(players){
     const usados = new Set(players.map(player => player.name));
-    return BOT_NAMES.find(name => !usados.has(name))
-        ?? `Bot ${players.filter(player => player.isBot).length + 1}`;
+    const livres = BOT_NAMES.filter(name => !usados.has(name));
+    return livres.length
+        ? livres[Math.floor(Math.random() * livres.length)]
+        : `Bot ${players.filter(player => player.isBot).length + 1}`;
 }
 
 export default function Lobby({ params }){
@@ -63,6 +77,10 @@ export default function Lobby({ params }){
 
     const [match, setMatch] = useState(null);
     const [players, setPlayers] = useState([]);
+    // Quantos devs estao sentados. Vem de RPC, e nao da lista: `users.is_dev`
+    // do vizinho nao e leitura do cliente, e o que o lobby precisa saber e o
+    // numero, nao quem e quem.
+    const [devCount, setDevCount] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -85,7 +103,12 @@ export default function Lobby({ params }){
 
     const loadPlayers = useCallback(async () => {
         try{
-            setPlayers(await getMatchPlayers(idMatch));
+            const [list, devs] = await Promise.all([
+                getMatchPlayers(idMatch),
+                getMatchDevCount(idMatch)
+            ]);
+            setPlayers(list);
+            setDevCount(devs);
         }catch(err){
             setError(err);
         }
@@ -129,9 +152,16 @@ export default function Lobby({ params }){
 
     // Quem tira todo mundo do lobby e o status da partida, nao o clique do
     // host: assim o convidado sai junto, pelo evento de realtime.
+    //
+    // Saindo, o convidado solta o assento dele — e o que permite a sala vazia
+    // se apagar (migration 0014). O erro e engolido de proposito: se o ultimo a
+    // sair ja levou a sala junto, nao ha assento para soltar, e isso e o
+    // sucesso, nao uma falha para mostrar a quem esta indo embora.
     useEffect(() => {
         if(status === 'progress') router.push(`/game/${idMatch}`);
-        if(status === 'finished') router.push('/home');
+        if(status === 'finished'){
+            leaveMatch(idMatch).catch(() => {}).finally(() => router.push('/home'));
+        }
     }, [status, idMatch, router]);
 
     async function handlePlayerClick(index){
@@ -180,9 +210,20 @@ export default function Lobby({ params }){
 
     async function handleLeave(){
         try{
-            if(isHost) await cancelMatch(idMatch);
-            else await leaveMatch(idMatch, user.id);
+            // Uma chamada so para os dois: sendo o host, a RPC encerra a sala
+            // antes de soltar o assento dele — e o `status` que tira os
+            // convidados daqui, pelo realtime.
+            await leaveMatch(idMatch);
             router.push('/home');
+        }catch(err){
+            setError(err);
+        }
+    }
+
+    async function handleToggleCheats(){
+        try{
+            await setMatchCheats(idMatch, !match.cheats);
+            await loadMatch();
         }catch(err){
             setError(err);
         }
@@ -207,20 +248,34 @@ export default function Lobby({ params }){
                         {match && <>
                             <div className='flex flex-col flex-1 gap-4 justify-center w-full'>
                                 <div className='flex flex-col items-center gap-1.5'>
-                                    <span className={`
-                                        flex items-center gap-2
-                                        px-3 py-1 rounded-full
-                                        border border-line bg-elevated
-                                        text-xs uppercase tracking-widest text-cream-dim
-                                    `}>
-                                        {players.length} na mesa
-                                    </span>
+                                    <div className='flex items-center gap-1.5'>
+                                        <span className={`
+                                            flex items-center gap-2
+                                            px-3 py-1 rounded-full
+                                            border border-line bg-elevated
+                                            text-xs uppercase tracking-widest text-cream-dim
+                                        `}>
+                                            {players.length} na mesa
+                                        </span>
+                                        {match.cheats && <span className={`
+                                            flex items-center gap-1
+                                            px-3 py-1 rounded-full
+                                            border border-gold/40 bg-gold/10
+                                            text-xs uppercase tracking-widest text-gold
+                                        `}>
+                                            cheats
+                                        </span>}
+                                    </div>
                                     <span className='text-sm text-cream-dim text-center'>
                                         {isHost
                                             ? 'Toque em dois jogadores para trocá-los de lugar. A ordem é a ordem dos turnos.'
                                             : 'Aguardando o host começar...'}
                                     </span>
                                 </div>
+                                {/* So para o host: quem ja esta dentro nao
+                                    convida ninguem — a RLS nao deixaria, e o
+                                    link e dele. */}
+                                {isHost && <InviteBox id={params.id} />}
                                 <ul className='flex flex-col gap-2 w-full'>
                                     {players.map((player, i) => {
                                         const isSelected = selectedIndex === i;
@@ -328,12 +383,63 @@ export default function Lobby({ params }){
                                         ? 'A mesa está cheia'
                                         : '+ Adicionar bot'}
                                 </button>}
-                                {!isHost && <SpinLoader color='text-cream-dim' />}
+                                {/* Dois ou mais devs na mesa liberam a partida
+                                    com cheats: o painel de dev, que so existia
+                                    no solo, aparece na mesa para eles. Um dev
+                                    sozinho nao libera — poder de cirurgia sobre
+                                    a mesa dos outros so vale entre pares que
+                                    sabem o que estao testando. Quem autoriza e
+                                    a RPC; isto aqui e o interruptor. */}
+                                {devCount >= 2 && <button
+                                    type='button'
+                                    disabled={!isHost}
+                                    aria-pressed={Boolean(match.cheats)}
+                                    onClick={handleToggleCheats}
+                                    className={`
+                                        flex items-center justify-between gap-3
+                                        w-full px-3 py-2.5 rounded-2xl
+                                        border text-left transition-transform
+                                        ${match.cheats
+                                            ? 'border-gold bg-gold/10 text-gold'
+                                            : 'border-line bg-elevated text-cream'}
+                                        ${isHost
+                                            ? 'active:scale-[0.99]'
+                                            : 'opacity-70 cursor-default'}
+                                        focus:outline-none focus-visible:ring-2
+                                        focus-visible:ring-brand-light
+                                    `}
+                                >
+                                    <span className='flex flex-col gap-0.5 min-w-0'>
+                                        <span className='text-sm font-semibold'>
+                                            Partida com cheats
+                                        </span>
+                                        <span className='text-[0.65rem] text-cream-dim'>
+                                            {devCount} devs na mesa. Libera as ferramentas
+                                            de dev durante a partida, e tudo que
+                                            elas fizerem fica no log.
+                                        </span>
+                                    </span>
+                                    <span className={`
+                                        shrink-0 flex items-center justify-center
+                                        h-6 w-6 rounded-full border text-xs
+                                        ${match.cheats
+                                            ? 'border-gold bg-gold/20 text-gold'
+                                            : 'border-line'}
+                                    `}>
+                                        {match.cheats && <ICONS.check />}
+                                    </span>
+                                </button>}
+                                {/* Nao e spinner: nao esta carregando nada, esta
+                                    se esperando o host decidir comecar. */}
+                                {!isHost && <DotsLoader label='Aguardando o host' />}
                             </div>
                             <Actions justifyContent='justify-between'>
+                                {/* O convidado nao tem o botao de comecar ao
+                                    lado, entao sair ocupa a linha inteira em
+                                    vez de deixar 60% de vazio. */}
                                 <ActionButton text={isHost ? 'Cancelar' : 'Sair'}
                                     variant='secondary'
-                                    width='40%'
+                                    width={isHost ? '40%' : '100%'}
                                     action={handleLeave}
                                 />
                                 {isHost && <ActionButton text='Começar'

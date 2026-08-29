@@ -141,6 +141,19 @@ ul {
     animation: table-spin 5.6s linear infinite;
 }
 
+/* A espera do convidado no lobby: um, dois, tres pontinhos. Substituiu o
+   spinner, que promete carregamento — aqui nao esta carregando nada, esta se
+   esperando uma pessoa decidir comecar. */
+@keyframes dot-step {
+    0%, 70%, 100% { opacity: 0.2; transform: translateY(0); }
+    35%           { opacity: 1;   transform: translateY(-3px); }
+}
+
+@utility animate-dot-step {
+    /* O atraso chega inline: e ele que poe os tres pontos em fila. */
+    animation: dot-step 1.2s ease-in-out infinite;
+}
+
 /* Quem pediu menos movimento no sistema nao recebe nenhuma das entradas. */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

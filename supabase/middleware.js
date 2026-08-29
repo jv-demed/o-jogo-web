@@ -37,8 +37,16 @@ export async function updateSession(request){
     const {data: { user }} = await supabase.auth.getUser();
 
     if(!user && !isPublicPath(request.nextUrl.pathname)){
+        // O destino viaja junto. Sem isto, o link de uma sala mandado por
+        // WhatsApp levava quem nao estava logado para a tela de login e
+        // acabava ali: depois de entrar, a pessoa caia em /home sem saber para
+        // qual partida tinha sido chamada. O `next` e sempre um caminho deste
+        // site (vem do proprio pathname), e a tela de login confere de novo
+        // antes de navegar.
         const url = request.nextUrl.clone();
         url.pathname = '/';
+        url.search = '';
+        url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
         return NextResponse.redirect(url);
     }
 
