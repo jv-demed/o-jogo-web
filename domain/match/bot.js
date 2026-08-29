@@ -146,7 +146,7 @@ export function botCommand(state, playerId, now = 0){
     // o shot de verdade, e do outro lado da mesa de teste nao ha ninguem para
     // beber. Quem nao deve nao faz nada, porque a mesa inteira esta parada.
     if(state.drinks?.length){
-        return state.drinks.some(entry => entry.playerId === playerId)
+        return state.drinks.some(entry => entry.playerId === playerId && !entry.confirmed)
             ? { type: Command.drank, playerId, now }
             : null;
     }

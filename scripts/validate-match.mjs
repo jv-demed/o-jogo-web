@@ -180,11 +180,13 @@ const daVez = state => state.players.find(p => p.id === state.order[state.turnIn
 function beber(state, now = 0){
     let current = state;
     let guarda = 0;
+    // A entrada confirmada continua na fila ate o ultimo beber — quem falta e
+    // quem ainda nao tem `confirmed`.
     while(current.drinks?.length){
         if(guarda++ > 200) throw new Error('fila de shots sem fim');
         current = apply(current, {
             type: Command.drank,
-            playerId: current.drinks[0].playerId,
+            playerId: current.drinks.find(entry => !entry.confirmed).playerId,
             now,
         });
     }
@@ -324,7 +326,19 @@ for(const id of IDS){
     check('quem nao deve shot nao tem o que fazer',
         legalCommands(state, 1).length === 0
         && legalCommands(state, 2).join() === Command.drank);
+
+    // O ok de um nao tira a cobranca da tela dos outros: a entrada fica na
+    // fila, marcada, ate o ultimo beber. E o que faz a mesa ver quem falta.
+    const primeiro = apply(state, { type: Command.drank, playerId: 2, now: 999999 });
+    check('o ok marca a entrada em vez de tira-la da fila',
+        primeiro.drinks.length === 4
+        && primeiro.drinks.filter(entry => entry.confirmed).length === 1);
+    check('quem ja bebeu nao bebe de novo', legalCommands(primeiro, 2).length === 0);
+    check('a mesa segue parada com um so confirmado',
+        primeiro.phase === state.phase && legalCommands(primeiro, 1).length === 0);
+
     state = beber(state, 999999);
+    check('a fila esvazia quando o ultimo confirma', state.drinks.length === 0);
     check('todos os outros bebem 1 quando a carta resolve',
         state.players.filter(p => p.id !== 1).every(p => p.shots === 1));
     check('quem jogou nao bebe', state.players[0].shots === 0);

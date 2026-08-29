@@ -33,6 +33,8 @@ import {
  * entra em `state.drinks` e a partida *para* ate a pessoa confirmar (`drank`) —
  * beber acontece na mesa de verdade, e o jogo nao pode seguir sem que tenha
  * acontecido. Nenhum outro comando passa enquanto a fila tiver alguem.
+ * Confirmar marca a entrada (`confirmed`) em vez de tira-la: a fila so esvazia
+ * quando o ultimo bebe, e ate la todo mundo ve quem ja deu o ok e quem falta.
  *
  * Escolhas (alvo, opcao, "quer beber?") param a resolucao: viram `pending`, e o
  * comando `answer` retoma. A retomada refaz a resolucao desde o inicio a partir
@@ -604,18 +606,28 @@ export function apply(state, command){
         // fora dele — e por isso ela e um comando, e nao um botao que fecha um
         // aviso: o servidor precisa saber que aconteceu.
         case Command.drank: {
-            const index = (draft.drinks ?? []).findIndex(entry => entry.playerId === command.playerId);
-            if(index === -1) fail('voce nao tem shot para beber');
-            const [entry] = draft.drinks.splice(index, 1);
+            const entry = (draft.drinks ?? []).find(
+                item => item.playerId === command.playerId && !item.confirmed);
+            if(!entry) fail('voce nao tem shot para beber');
+
+            // Confirmar *marca*, nao tira da fila. A cobranca de uma carta e
+            // da mesa inteira, e nao de cada um por si: enquanto sobrar quem
+            // deve, a fila continua na tela de todo mundo que bebeu, com o ok
+            // ja dado ao lado do nome. Ver quem falta e o que faz a mesa
+            // cobrar a mesa — e e por isso que a marca mora no estado.
+            entry.confirmed = true;
             draft.log.push({ turn: draft.turnCount, type: 'drink.confirmed',
                 playerId: entry.playerId, amount: entry.amount });
 
-            // A mesa ficou parada esperando; a janela que estava aberta perdeu
-            // o tempo dela. Quem confirmou por ultimo devolve os 10s inteiros,
-            // em vez de a carta resolver no instante seguinte porque alguem
-            // demorou para beber.
-            if(draft.drinks.length === 0 && draft.phase === Phase.window && draft.window){
-                draft.window.closesAt = now + REACTION_WINDOW_MS;
+            if(draft.drinks.every(item => item.confirmed)){
+                draft.drinks = [];
+                // A mesa ficou parada esperando; a janela que estava aberta
+                // perdeu o tempo dela. A ultima confirmacao devolve os 10s
+                // inteiros, em vez de a carta resolver no instante seguinte
+                // porque alguem demorou para beber.
+                if(draft.phase === Phase.window && draft.window){
+                    draft.window.closesAt = now + REACTION_WINDOW_MS;
+                }
             }
             break;
         }
@@ -715,7 +727,8 @@ export function legalCommands(state, playerId){
     // Deve shot, so ha uma coisa a fazer — e quem nao deve nao faz nada ate a
     // mesa beber.
     if(state.drinks?.length){
-        return state.drinks.some(entry => entry.playerId === playerId) ? [Command.drank] : [];
+        return state.drinks.some(entry => entry.playerId === playerId && !entry.confirmed)
+            ? [Command.drank] : [];
     }
     const isTurn = currentPlayer(state)?.id === playerId;
     switch(state.phase){

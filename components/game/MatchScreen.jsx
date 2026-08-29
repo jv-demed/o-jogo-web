@@ -384,6 +384,7 @@ export function MatchScreen({
                 para beber nao existe outra coisa a fazer na tela. */}
             {drinks.length > 0 && <DrinkPrompt
                 entries={drinks}
+                players={state.players}
                 playerId={you.id}
                 dispatch={dispatch}
             />}

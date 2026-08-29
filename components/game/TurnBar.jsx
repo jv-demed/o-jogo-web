@@ -36,7 +36,9 @@ export function TurnBar({
     // alguem beber de verdade, e nao ha fase nenhuma acontecendo.
     const owed = state.drinks ?? [];
     if(owed.length){
-        if(owed.some(entry => entry.playerId === you.id)){
+        // So quem ainda nao confirmou tem o que fazer. Quem ja bebeu volta a
+        // esperar a mesa, mesmo com a propria entrada ainda na fila.
+        if(owed.some(entry => entry.playerId === you.id && !entry.confirmed)){
             return (
                 <Bar>
                     <ActionButton text='Bebi'
@@ -47,7 +49,8 @@ export function TurnBar({
                 </Bar>
             );
         }
-        const waiting = [...new Set(owed.map(entry => entry.playerId))]
+        const waiting = [...new Set(owed.filter(entry => !entry.confirmed)
+            .map(entry => entry.playerId))]
             .map(id => state.players.find(p => p.id === id)?.name)
             .filter(Boolean);
         return <Waiting text={`Esperando ${waiting.join(', ')} beber`} />;
