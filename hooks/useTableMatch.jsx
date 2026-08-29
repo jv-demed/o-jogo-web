@@ -269,28 +269,53 @@ export function useTableMatch(idMatch, pool){
     // Dois canais: o convidado escuta o estado novo, o host escuta o que
     // chegou. Na montagem o host ainda drena uma vez, para o comando que chegou
     // enquanto ele estava fora nao ficar esperando um evento que ja passou.
+    //
+    // `hasState` nao entra nas dependencias, e nao e esquecimento: ele muda
+    // assim que a mesa aparece, e refazer o efeito por isso derrubaria o canal
+    // para reinscrever outro com o mesmo nome — que e justamente como o
+    // convidado ficava sem receber nada. Quem cuida do estado que chega
+    // atrasado e o efeito logo abaixo.
     useEffect(() => {
         if(idHost === null) return;
 
         if(!isHost){
             const channel = getRealtime({
+                // O lobby escuta esta mesma partida com este mesmo filtro, e
+                // ele esta desmontando enquanto esta tela monta. Sem o escopo,
+                // os dois disputam o mesmo canal e o convidado fica esperando
+                // a mesa abrir para sempre.
+                scope: 'game',
                 table: 'matches',
                 filter: `id=eq.${idMatch}`,
                 event: 'UPDATE',
-                callback: () => { readMatch().catch(setError); }
+                callback: () => { readMatch().catch(setError); },
+                // O host monta a mesa no instante em que abre a tela dele. Se
+                // isso acontecer entre a leitura inicial e o canal ficar de pe,
+                // nao ha evento para receber: a releitura e o que fecha essa
+                // janela.
+                onReady: () => { readMatch().catch(setError); }
             });
             return () => removeChannel(channel);
         }
 
         drain();
         const channel = getRealtime({
+            scope: 'game',
             table: 'match_commands',
             filter: `id_match=eq.${idMatch}`,
             event: 'INSERT',
-            callback: drain
+            callback: drain,
+            onReady: drain
         });
         return () => removeChannel(channel);
-    }, [idHost, isHost, idMatch, hasState, readMatch, drain]);
+    }, [idHost, isHost, idMatch, readMatch, drain]);
+
+    // A mesa acabou de ser montada: o host drena o que chegou antes de existir
+    // onde aplicar. `drain` sai cedo enquanto nao ha estado, entao os comandos
+    // que chegaram nesse meio tempo ficaram esperando este momento.
+    useEffect(() => {
+        if(isHost && hasState) drain();
+    }, [isHost, hasState, drain]);
 
     /**
      * Poder de dev, pela mesma porta da jogada. O host aplica na hora; o

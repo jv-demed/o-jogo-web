@@ -141,15 +141,22 @@ export default function Lobby({ params }){
     useEffect(() => {
         if(!isValidId) return;
         const playersChannel = getRealtime({
+            scope: 'lobby',
             table: 'match_players',
             filter: `id_match=eq.${idMatch}`,
-            callback: loadPlayers
+            callback: loadPlayers,
+            onReady: loadPlayers
         });
         const matchChannel = getRealtime({
+            scope: 'lobby',
             table: 'matches',
             filter: `id=eq.${idMatch}`,
             event: 'UPDATE',
-            callback: loadMatch
+            callback: loadMatch,
+            // Relendo quando o canal fica de pe: o host pode ter comecado a
+            // partida entre a leitura da montagem e esta inscricao, e o
+            // convidado ficaria no lobby de uma partida que ja esta rolando.
+            onReady: loadMatch
         });
         return () => {
             removeChannel(playersChannel);
