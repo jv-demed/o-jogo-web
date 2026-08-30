@@ -4,6 +4,7 @@ import { CARDS } from '@/assets/cards';
 import { useImmersive } from '@/providers/ImmersiveProvider';
 import { useLastPlay } from '@/hooks/useLastPlay';
 import { useTurnEffect } from '@/hooks/useTurnEffect';
+import { useTurnIntro } from '@/hooks/useTurnIntro';
 import { Command, isReaction } from '@/domain/match/engine';
 import { MISSIONS } from '@/domain/match/missions';
 import { MatchStatus, Phase, ongoingFor } from '@/domain/match/state';
@@ -12,6 +13,7 @@ import { GameTable } from '@/components/game/GameTable';
 import { YouCorner } from '@/components/game/Seat';
 import { PlayReveal } from '@/components/game/PlayReveal';
 import { TurnEffectReveal } from '@/components/game/TurnEffectReveal';
+import { TurnIntro } from '@/components/game/TurnIntro';
 import { Hand } from '@/components/game/Hand';
 import { TurnBar } from '@/components/game/TurnBar';
 import { MatchResult, MissionGuess } from '@/components/game/MatchResult';
@@ -94,9 +96,16 @@ export function MatchScreen({
     // O ritual da carta (cantar, dizer a frase) para a mesa antes do shot: o
     // motor nem aceita `drank` enquanto ele estiver aberto.
     const rituals = state?.rituals ?? [];
+    // Quem joga agora, apresentado por dois segundos quando a vez vira. A vez
+    // passa sozinha desde que o botao de "passar a vez" saiu, e sem este
+    // anuncio a mesa nao veria a troca acontecer.
+    const turnIntro = useTurnIntro(state);
     // A carta que estava parada numa cadeira e acabou de cobrar. Sai da tela
     // sozinha, menos quando ela mandou beber: ai quem a tira e o "bebi".
-    const turnEffect = useTurnEffect(state, drinks.length > 0);
+    // O anuncio da vez tambem segura: os dois nascem no mesmo instante — o
+    // efeito prolongado cobra dentro da virada — e o aviso da carta ficaria
+    // escondido atras da apresentacao, gastando o tempo dele sem ser lido.
+    const turnEffect = useTurnEffect(state, drinks.length > 0 || Boolean(turnIntro));
 
     const request = state?.phase === Phase.pending ? state.pending[0] : null;
 
@@ -243,6 +252,16 @@ export function MatchScreen({
                                     && !state.resolution && <TurnEffectReveal
                                     trigger={turnEffect}
                                     players={state.players}
+                                    you={you}
+                                />}
+
+                                {/* Por cima dos dois anuncios: a vez virou, e
+                                    o que importa nesses dois segundos e de
+                                    quem ela e. O aviso de efeito prolongado
+                                    espera atras (ele esta segurado) e recomeça
+                                    a contar quando esta apresentacao sai. */}
+                                {turnIntro && <TurnIntro player={turnIntro}
+                                    state={state}
                                     you={you}
                                 />}
 

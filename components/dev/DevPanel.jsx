@@ -88,11 +88,11 @@ export function DevPanel({
                         botoes que nao fazem nada. */}
                     {canDriveBots && <>
                         <Toggle label='Pausar os bots'
-                            hint='O relógio da janela continua correndo.'
+                            hint='Segura também a passagem de vez; o relógio da janela continua correndo.'
                             active={botsPaused}
                             onToggle={onToggleBots}
                         />
-                        <ActionButton text='Um passo dos bots'
+                        <ActionButton text='Um passo da mesa'
                             variant='secondary'
                             icon={ICONS.play}
                             disabled={!botsPaused || !hasBotCommand}

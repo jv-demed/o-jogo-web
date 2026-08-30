@@ -146,13 +146,14 @@ export function TurnBar({
         case Phase.pending:
             return <Waiting text='A mesa está resolvendo' />;
 
+        // A vez passa sozinha (ver `useMatchDriver`): o turno acabou e nao ha
+        // mais decisao nenhuma, entao pedir um toque para dizer "acabou" era
+        // cobrar pedagio de quem ja tinha jogado. O que fica no lugar do botao
+        // e o aviso de que a mesa esta virando — e logo em seguida a tela
+        // apresenta quem joga agora.
         case Phase.end:
             return isYourTurn
-                ? <Bar>
-                    <ActionButton text='Passar a vez'
-                        action={() => dispatch({ type: Command.endTurn, playerId: you.id })}
-                    />
-                </Bar>
+                ? <Waiting text='Passando a vez…' />
                 : <Waiting text={`${currentName} está terminando`} />;
 
         default:

@@ -206,6 +206,18 @@ function beber(state, now = 0){
 /** A mesa tem alguma pendencia humana (ritual ou shot) travando a partida? */
 const parada = state => Boolean(state.rituals?.length || state.drinks?.length);
 
+/**
+ * A passagem de vez automatica, como o `useMatchDriver` faz na tela: com o
+ * turno resolvido nao sobra decisao nenhuma, e a mesa passa sozinha em vez de
+ * esperar um toque. Aqui ela precisa existir porque o bot deixou de devolver
+ * `endTurn` — sem isto a simulacao trava na fase `end`.
+ */
+const passagem = state => (state.status === MatchStatus.progress
+    && state.phase === Phase.end
+    && !parada(state))
+    ? { type: Command.endTurn, playerId: daVez(state)?.id, now: 999999 }
+    : null;
+
 /** Joga uma carta e resolve tudo o que ela abrir, respondendo as escolhas. */
 function jogar(state, idCard){
     let current = state;
@@ -590,7 +602,7 @@ for(const id of IDS){
         passos++;
         const comando = state.players
             .map(player => botCommand(state, player.id, 999999))
-            .find(Boolean);
+            .find(Boolean) ?? passagem(state);
         if(!comando){
             // Ninguem tem o que fazer: so pode ser janela esperando o relogio.
             if(state.phase === Phase.window){
@@ -637,6 +649,10 @@ for(const id of IDS){
         const doBot = botIds.map(id => botCommand(state, id, 999999)).find(Boolean);
         if(doBot){ state = apply(state, doBot); continue; }
 
+        // A vez passa sozinha, de bot ou de gente: e o que a tela faz.
+        const passa = passagem(state);
+        if(passa){ state = apply(state, passa); continue; }
+
         const eu = state.players.find(p => p.id === 1);
         const acoes = legalCommands(state, 1);
 
@@ -674,10 +690,6 @@ for(const id of IDS){
             state = apply(state, {
                 type: Command.answer, playerId: 1, value: responder(state), now: 999999,
             });
-            continue;
-        }
-        if(acoes.includes(Command.endTurn)){
-            state = apply(state, { type: Command.endTurn, playerId: 1, now: 999999 });
             continue;
         }
         // Ninguem tem o que fazer: so pode ser a janela esperando o relogio,
@@ -744,6 +756,7 @@ for(const id of IDS){
         const comando = state.players
             .map(player => botCommand(state, player.id, relogio))
             .find(Boolean)
+            ?? passagem(state)
             ?? (state.phase === Phase.window ? { type: Command.tick } : null);
 
         if(!comando){

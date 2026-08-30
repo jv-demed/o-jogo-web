@@ -197,8 +197,10 @@ export function botCommand(state, playerId, now = 0){
             return { type: Command.answer, playerId, value: answerFor(state, request, playerId), now };
         }
 
-        case Phase.end:
-            return isTurn ? { type: Command.endTurn, playerId, now } : null;
+        // A fase `end` nao esta aqui: a vez passa sozinha para todo mundo,
+        // bot ou nao, e quem a passa e o `useMatchDriver`. Devolver o
+        // `endTurn` aqui tambem faria o bot ter um ritmo de passagem diferente
+        // do humano sentado na mesma mesa.
 
         default:
             return null;
