@@ -33,7 +33,7 @@ export const CARDS = [
         isShot: true,
         type: CardType.shot,
         text: `
-            A famosa tradição. Cante a musiquinha e escolha alguém para beber 1 shot.
+            A famosa tradição. Cante a musiquinha e escolha outra pessoa para beber 1 shot.
         `,
         level: 1
     },{

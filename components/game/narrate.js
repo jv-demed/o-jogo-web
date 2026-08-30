@@ -97,6 +97,9 @@ export function narrate(entry, nameOf){
                 : `${cardName(entry.idCard)} parou de valer.`;
         case 'ritual':
             return `Ritual: ${entry.text}`;
+        case 'ritual.done':
+            return `${who(entry.playerId)} cumpriu o ritual${
+                entry.idCard ? ` de ${cardName(entry.idCard)}` : ''}.`;
         case 'manual':
             return `A mesa resolve: ${entry.instruction}`;
         // Cirurgia de dev. Aparece no log como qualquer outro fato, e de

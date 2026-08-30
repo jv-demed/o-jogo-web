@@ -35,6 +35,9 @@ import {
  * acontecido. Nenhum outro comando passa enquanto a fila tiver alguem.
  * Confirmar marca a entrada (`confirmed`) em vez de tira-la: a fila so esvazia
  * quando o ultimo bebe, e ate la todo mundo ve quem ja deu o ok e quem falta.
+ * Na frente dela vem a fila dos rituais (`state.rituals`, comando `performed`):
+ * a musiquinha e cantada *antes* de o shot descer, entao enquanto houver ritual
+ * pendente nem o `drank` passa.
  *
  * Escolhas (alvo, opcao, "quer beber?") param a resolucao: viram `pending`, e o
  * comando `answer` retoma. A retomada refaz a resolucao desde o inicio a partir
@@ -46,6 +49,7 @@ import {
 export const Command = Object.freeze({
     draw:    'draw',
     drank:   'drank',
+    performed: 'performed',
     play:    'play',
     react:   'react',
     pass:    'pass',
@@ -519,12 +523,14 @@ export function apply(state, command){
     const draft = cloneState(state);
     const now = command.now ?? 0;
 
-    // `drank` passa mesmo com a partida encerrada: o ultimo shot da partida foi
-    // cobrado antes do fim e continua a beber. Recusar aqui deixaria a fila
-    // presa por cima da tela de resultado, sem ninguem para esvaziar.
+    // `drank` e `performed` passam mesmo com a partida encerrada: o ultimo shot
+    // da partida foi cobrado antes do fim e continua a beber, e o ritual dele
+    // tambem. Recusar aqui deixaria a fila presa por cima da tela de resultado,
+    // sem ninguem para esvaziar.
     if(draft.status === MatchStatus.finished
         && command.type !== Command.guess
-        && command.type !== Command.drank){
+        && command.type !== Command.drank
+        && command.type !== Command.performed){
         fail('partida encerrada');
     }
 
@@ -532,7 +538,18 @@ export function apply(state, command){
     // sem fazer nada: o relogio da janela e chamado de fora, a cada 200ms, e
     // recusar cada um deles encheria a tela de erro por uma espera que e
     // esperada. A janela e reaberta na ultima confirmacao, mais abaixo.
-    if(draft.drinks?.length && command.type !== Command.drank){
+    // Antes dos shots, o ritual: a carta pede a musiquinha e so depois o shot
+    // desce. Por isso esta trava vem primeiro e nem o `drank` escapa dela.
+    if(draft.rituals?.length && command.type !== Command.performed){
+        if(command.type === Command.tick) return draft;
+        fail('a mesa espera o ritual da carta');
+    }
+
+    // `performed` tambem passa: a carta que mandou beber pode ter pedido a
+    // musiquinha, e ai as duas filas estao abertas ao mesmo tempo. A ordem
+    // entre elas quem garante e a trava de cima.
+    if(draft.drinks?.length
+        && command.type !== Command.drank && command.type !== Command.performed){
         if(command.type === Command.tick) return draft;
         fail('a mesa espera quem tem shot para beber');
     }
@@ -598,6 +615,28 @@ export function apply(state, command){
         case Command.tick: {
             if(draft.phase === Phase.window && now >= draft.window.closesAt){
                 beginResolution(draft, now);
+            }
+            break;
+        }
+
+        // "Cantei." Irma do `drank`, e pelo mesmo motivo: o ritual acontece na
+        // mesa de verdade, entao quem diz que aconteceu e a pessoa, e o fato
+        // fica no log. Sai da fila em vez de ficar marcado — ritual e de um so,
+        // e nao ha lista de quem falta para os outros acompanharem.
+        case Command.performed: {
+            const index = (draft.rituals ?? []).findIndex(
+                entry => entry.playerId === command.playerId);
+            if(index === -1) fail('o ritual nao e seu');
+            const [entry] = draft.rituals.splice(index, 1);
+            draft.log.push({ turn: draft.turnCount, type: 'ritual.done',
+                playerId: entry.playerId, idCard: entry.idCard });
+
+            // Mesma devolucao de tempo do ultimo shot: a mesa parou por causa
+            // da musiquinha, e a janela nao pode pagar por isso. So quando nao
+            // ha shot atras — nesse caso quem devolve os 10s e o ultimo `drank`.
+            if(draft.rituals.length === 0 && !draft.drinks?.length
+                && draft.phase === Phase.window && draft.window){
+                draft.window.closesAt = now + REACTION_WINDOW_MS;
             }
             break;
         }
@@ -726,6 +765,11 @@ export function legalCommands(state, playerId){
     if(state.status !== MatchStatus.progress) return [];
     // Deve shot, so ha uma coisa a fazer — e quem nao deve nao faz nada ate a
     // mesa beber.
+    // Ritual na frente do shot: ate a musiquinha sair, nem quem deve bebe.
+    if(state.rituals?.length){
+        return state.rituals.some(entry => entry.playerId === playerId)
+            ? [Command.performed] : [];
+    }
     if(state.drinks?.length){
         return state.drinks.some(entry => entry.playerId === playerId && !entry.confirmed)
             ? [Command.drank] : [];

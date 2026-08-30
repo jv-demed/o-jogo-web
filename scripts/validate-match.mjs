@@ -180,6 +180,16 @@ const daVez = state => state.players.find(p => p.id === state.order[state.turnIn
 function beber(state, now = 0){
     let current = state;
     let guarda = 0;
+    // O ritual vem antes: a musiquinha e o que destrava o shot, e o motor
+    // recusa `drank` enquanto ela nao sair.
+    while(current.rituals?.length){
+        if(guarda++ > 200) throw new Error('fila de rituais sem fim');
+        current = apply(current, {
+            type: Command.performed,
+            playerId: current.rituals[0].playerId,
+            now,
+        });
+    }
     // A entrada confirmada continua na fila ate o ultimo beber — quem falta e
     // quem ainda nao tem `confirmed`.
     while(current.drinks?.length){
@@ -192,6 +202,9 @@ function beber(state, now = 0){
     }
     return current;
 }
+
+/** A mesa tem alguma pendencia humana (ritual ou shot) travando a partida? */
+const parada = state => Boolean(state.rituals?.length || state.drinks?.length);
 
 /** Joga uma carta e resolve tudo o que ela abrir, respondendo as escolhas. */
 function jogar(state, idCard){
@@ -214,7 +227,7 @@ function jogar(state, idCard){
     let guarda = 0;
     while(guarda++ < 40){
         now += 60000;
-        if(current.drinks?.length){
+        if(parada(current)){
             current = beber(current, now);
             continue;
         }
@@ -347,6 +360,57 @@ for(const id of IDS){
     check('o turno termina depois da jogada', state.phase === Phase.end);
 }
 
+// A carta 3 (Um Bom Companheiro) tem ritual: escolhe o alvo, canta, e so entao
+// o shot desce. A ordem e a carta inteira — cantar depois de beber nao e a
+// tradicao, e uma legenda.
+{
+    const base = novaMesa(13);
+    let state = apply(base, { type: Command.draw, playerId: 1, now: 0 });
+    state.players[0].hand = [3, ...state.players[0].hand];
+    state = apply(state, { type: Command.play, playerId: 1, idCard: 3, now: 0 });
+
+    check('a carta pergunta o alvo antes da janela', state.phase === Phase.pending);
+    // Cantar para si mesmo nao e a tradicao: quem jogou sai da lista, e o motor
+    // recusa mesmo se a escolha vier por fora da tela.
+    check('quem jogou nao e candidato de si mesmo',
+        !state.pending[0].candidates.includes(1)
+        && state.pending[0].candidates.length === state.players.length - 1);
+    let cantouSozinho = false;
+    try{ apply(state, { type: Command.answer, playerId: 1, value: [1], now: 100 }); }
+    catch{ cantouSozinho = true; }
+    check('escolher a si mesmo e recusado', cantouSozinho);
+
+    state = apply(state, { type: Command.answer, playerId: 1, value: [2], now: 100 });
+    state = apply(state, { type: Command.tick, now: 999999 });
+
+    check('o ritual entra na fila quando a carta resolve',
+        state.rituals.length === 1 && state.rituals[0].idCard === 3);
+    check('quem canta e quem jogou a carta', state.rituals[0].playerId === 1);
+    check('so quem canta tem o que fazer',
+        legalCommands(state, 1).join() === Command.performed
+        && legalCommands(state, 2).length === 0);
+    check('o shot ja esta cobrado, esperando a musiquinha',
+        state.drinks.length === 1 && state.drinks[0].playerId === 2);
+
+    let travou = false;
+    try{ apply(state, { type: Command.drank, playerId: 2, now: 999999 }); }
+    catch{ travou = true; }
+    check('nao da para beber antes do ritual', travou);
+
+    state = apply(state, { type: Command.performed, playerId: 1, now: 999999 });
+    check('cantou, a fila de rituais esvazia', state.rituals.length === 0);
+    check('o ritual cumprido fica no log',
+        state.log.some(entry => entry.type === 'ritual.done' && entry.playerId === 1));
+    check('depois da musiquinha o alvo pode beber',
+        legalCommands(state, 2).join() === Command.drank);
+
+    state = beber(state, 999999);
+    check('o alvo escolhido bebeu 1',
+        state.players.find(p => p.id === 2).shots === 1);
+    check('so ele bebeu',
+        state.players.filter(p => p.id !== 2).every(p => p.shots === 0));
+}
+
 // -------------------------------- 4. o palpite do Sjehnsens
 
 // A missao do Sjehnsens e o palpite: apurar sem deixar ele apontar seria dar
@@ -386,7 +450,7 @@ for(const id of IDS){
 
     let turnos = 0;
     while(state.status === MatchStatus.progress && turnos < 60){
-        if(state.drinks.length){ state = beber(state); continue; }
+        if(parada(state)){ state = beber(state); continue; }
         const player = daVez(state);
 
         if(state.phase === Phase.draw){
@@ -582,6 +646,10 @@ for(const id of IDS){
                 if(other.id !== 1) palpites[other.id] = other.mission;
             }
             state = apply(state, { type: Command.guess, playerId: 1, value: palpites, now: 0 });
+            continue;
+        }
+        if(acoes.includes(Command.performed)){
+            state = apply(state, { type: Command.performed, playerId: 1, now: 999999 });
             continue;
         }
         if(acoes.includes(Command.drank)){

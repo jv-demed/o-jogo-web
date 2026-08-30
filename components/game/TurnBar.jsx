@@ -34,6 +34,26 @@ export function TurnBar({
 
     // Shot pendente vem antes da fase: a mesa inteira esta parada esperando
     // alguem beber de verdade, e nao ha fase nenhuma acontecendo.
+    // O ritual vem antes do shot: a musiquinha e o que autoriza a beber, e ate
+    // ela sair nao ha nem o botao de "bebi" na mesa.
+    const rituals = state.rituals ?? [];
+    if(rituals.length){
+        const mine = rituals.find(entry => entry.playerId === you.id);
+        if(mine){
+            return (
+                <Bar>
+                    <ActionButton text='Feito'
+                        variant='gold'
+                        icon={ICONS.check}
+                        action={() => dispatch({ type: Command.performed, playerId: you.id })}
+                    />
+                </Bar>
+            );
+        }
+        const nome = state.players.find(p => p.id === rituals[0].playerId)?.name;
+        return <Waiting text={`Esperando ${nome ?? 'a mesa'}`} />;
+    }
+
     const owed = state.drinks ?? [];
     if(owed.length){
         // So quem ainda nao confirmou tem o que fazer. Quem ja bebeu volta a

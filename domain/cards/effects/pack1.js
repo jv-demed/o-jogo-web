@@ -13,7 +13,9 @@ import { permanent, turns, untilDrinks, untilMissionChange } from '../durations.
  * `text` ganha e esta entrada e que esta errada.
  *
  * `ritual` guarda a parte que o jogo nao resolve: cantar a musiquinha, dizer a
- * frase. Nao vira regra, mas some se ficar so na cabeca de quem jogou.
+ * frase. Nao vira regra, mas para a mesa como se fosse — vai para a fila de
+ * rituais (`state.rituals`) e a partida espera quem jogou cumprir, antes de
+ * qualquer shot descer.
  */
 export const PACK_1_EFFECTS = {
     // 1 — A Bebida Infinita
@@ -28,9 +30,14 @@ export const PACK_1_EFFECTS = {
     ]},
 
     // 3 — Um Bom Companheiro
+    //
+    // `except: 'self'` porque a carta e a musiquinha, e a musiquinha e cantada
+    // *para* alguem: cantar para si mesmo nao e a tradicao, e um karaoke. O
+    // texto da carta diz "outra pessoa" pelo mesmo motivo — quem le a carta na
+    // mesa tem que chegar na mesma regra que o motor.
     3: {
-        effects: [{ action: Action.drink, target: choose(1), amount: 1 }],
-        ritual: 'Cantar a musiquinha antes de escolher.',
+        effects: [{ action: Action.drink, target: choose(1, { except: 'self' }), amount: 1 }],
+        ritual: 'Cantar a musiquinha do bom companheiro.',
     },
 
     // 4 — Kitumbras

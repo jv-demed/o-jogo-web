@@ -145,6 +145,14 @@ export function botCommand(state, playerId, now = 0){
     // Fila de shots aberta: quem deve, bebe na hora — a confirmacao existe para
     // o shot de verdade, e do outro lado da mesa de teste nao ha ninguem para
     // beber. Quem nao deve nao faz nada, porque a mesa inteira esta parada.
+    // Ritual aberto: o bot canta na hora — nao ha ninguem do outro lado da
+    // mesa de teste para cantar, e a mesa inteira esta parada esperando.
+    if(state.rituals?.length){
+        return state.rituals.some(entry => entry.playerId === playerId)
+            ? { type: Command.performed, playerId, now }
+            : null;
+    }
+
     if(state.drinks?.length){
         return state.drinks.some(entry => entry.playerId === playerId && !entry.confirmed)
             ? { type: Command.drank, playerId, now }

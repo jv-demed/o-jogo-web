@@ -23,6 +23,7 @@ import { CardActionModal } from '@/components/game/CardActionModal';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
 import { DrinkPrompt } from '@/components/game/DrinkPrompt';
+import { RitualPrompt } from '@/components/game/RitualPrompt';
 import { OngoingModal } from '@/components/game/OngoingModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
@@ -90,6 +91,9 @@ export function MatchScreen({
     // Shot pendente na mesa. Enquanto tiver alguem devendo, a partida esta
     // parada — o motor recusa qualquer outro comando.
     const drinks = state?.drinks ?? [];
+    // O ritual da carta (cantar, dizer a frase) para a mesa antes do shot: o
+    // motor nem aceita `drank` enquanto ele estiver aberto.
+    const rituals = state?.rituals ?? [];
     // A carta que estava parada numa cadeira e acabou de cobrar. Sai da tela
     // sozinha, menos quando ela mandou beber: ai quem a tira e o "bebi".
     const turnEffect = useTurnEffect(state, drinks.length > 0);
@@ -380,9 +384,17 @@ export function MatchScreen({
                 onClose={() => setChoice(null)}
             />}
 
-            {/* Por cima de tudo, inclusive das gavetas: enquanto houver shot
-                para beber nao existe outra coisa a fazer na tela. */}
-            {drinks.length > 0 && <DrinkPrompt
+            {/* Por cima de tudo, inclusive das gavetas: enquanto houver ritual
+                ou shot nao existe outra coisa a fazer na tela. Um de cada vez,
+                e nesta ordem — a musiquinha e o que autoriza o shot. */}
+            {rituals.length > 0 && <RitualPrompt
+                entries={rituals}
+                players={state.players}
+                playerId={you.id}
+                dispatch={dispatch}
+            />}
+
+            {rituals.length === 0 && drinks.length > 0 && <DrinkPrompt
                 entries={drinks}
                 players={state.players}
                 playerId={you.id}

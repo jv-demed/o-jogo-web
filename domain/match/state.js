@@ -145,6 +145,12 @@ export function createMatch({ seed, players }){
         // nesta fila, a partida nao anda: [{ playerId, amount, idCard }].
         drinks: [],
 
+        // O ritual que a carta pede e o jogo nao resolve: cantar a musiquinha,
+        // dizer a frase. Fila igual a dos shots, e pelo mesmo motivo — acontece
+        // na mesa de verdade, e a partida espera: [{ playerId, text, idCard }].
+        // Vem antes dos shots na tela: cantar e o que autoriza a beber.
+        rituals: [],
+
         // Efeitos com duracao, que sobrevivem a jogada que os criou.
         ongoing: [],
         // Vinculos entre jogadores (link.shots, link.fate).

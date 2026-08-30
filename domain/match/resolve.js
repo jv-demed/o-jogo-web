@@ -746,6 +746,14 @@ export function runEffects(draft, entry, ctx){
         const result = applyEffect(draft, effects[i], { ...ctx, slot });
         if(result.needs) return { needs: result.needs, from: i };
     }
-    if(entry?.ritual) log(draft, { type: 'ritual', text: entry.ritual });
+    // O ritual entra na fila junto com o log. Ele e a parte da carta que o
+    // motor nao sabe fazer — cantar, dizer a frase —, e por isso mesmo tem que
+    // parar a mesa: uma instrucao que so aparece no log e uma instrucao que
+    // ninguem cumpre. Quem cumpre e quem jogou a carta.
+    if(entry?.ritual){
+        log(draft, { type: 'ritual', text: entry.ritual });
+        draft.rituals = [...(draft.rituals ?? []),
+            { playerId: ctx.sourceId, text: entry.ritual, idCard: ctx.idCard ?? null }];
+    }
     return {};
 }
