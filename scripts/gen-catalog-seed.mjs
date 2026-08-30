@@ -45,6 +45,10 @@ lines.push([
 ].join('\n'));
 lines.push('');
 
+// A pasta nao e versionada: as migrations sao rodadas a mao no SQL Editor e
+// apagadas depois. Recriar antes de escrever e o que faz este script funcionar
+// num clone limpo, onde ela simplesmente nao existe.
+fs.mkdirSync('supabase/migrations', { recursive: true });
 fs.writeFileSync('supabase/migrations/20260824000002_seed_catalog.sql', lines.join('\n'), 'utf8');
 
 // Sanidade

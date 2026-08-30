@@ -38,3 +38,7 @@ next-env.d.ts
 # supabase cli
 supabase/.temp/
 supabase/.branches/
+
+# migrations rodadas a mao e descartadas depois; o seed do catalogo e gerado
+# por scripts/gen-catalog-seed.mjs
+supabase/migrations/
