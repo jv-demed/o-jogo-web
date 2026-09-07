@@ -45,7 +45,7 @@ export function UserProvider({ children }){
         // bug de request quando na verdade e so ausencia de perfil.
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, id_auth, name, coins, is_dev, user_cards(id_card, quantity)')
+            .select('id, id_auth, name, coins, is_dev, avatar, user_cards(id_card, quantity)')
             .eq('id_auth', data.user.id)
             .maybeSingle();
         if(userError){

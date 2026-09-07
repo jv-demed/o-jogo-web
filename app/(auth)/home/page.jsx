@@ -5,6 +5,7 @@ import { createMatch } from '@/presenters/matchesPresenter';
 import { useUser } from '@/providers/UserProvider';
 import { CARDS } from '@/assets/cards';
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { Main } from '@/components/containers/Main';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { ActionButton } from '@/components/buttons/ActionButton';
@@ -65,17 +66,32 @@ export default function Home(){
 
     return (
         <Main>
-            <section className='w-full pt-5 animate-fade-rise'>
-                {/* Saudacao fixa de proposito: uma variante por horario
-                    dependeria do relogio e o texto do servidor sairia
-                    diferente do texto do cliente na hidratacao. */}
-                <p className='text-sm text-cream-dim'>
-                    Boa jogatina,
-                </p>
-                <h1 className='text-2xl font-bold truncate'>
-                    {user.name}
-                </h1>
-            </section>
+            {/* Saudacao fixa de proposito: uma variante por horario dependeria
+                do relogio e o texto do servidor sairia diferente do texto do
+                cliente na hidratacao. */}
+            <button type='button'
+                onClick={() => router.push('/perfil')}
+                className={`
+                    flex items-center gap-3 w-full pt-5 text-left
+                    animate-fade-rise
+                    transition-transform active:scale-[0.99]
+                    focus:outline-none focus-visible:ring-2
+                    focus-visible:ring-brand-light rounded-2xl
+                `}
+            >
+                <Avatar id={user.avatar} size={52} />
+                <span className='flex flex-col min-w-0'>
+                    <span className='text-sm text-cream-dim'>
+                        Boa jogatina,
+                    </span>
+                    <span className='text-2xl font-bold truncate'>
+                        {user.name}
+                    </span>
+                </span>
+                <span className='ml-auto shrink-0 text-cream-dim'>
+                    <ICONS.chevronForward />
+                </span>
+            </button>
 
             {/* Cartao de acao principal: e o unico caminho para uma partida,
                 entao ganha a area, o dourado e a estatistica ao lado. */}

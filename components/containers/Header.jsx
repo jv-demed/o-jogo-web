@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
 import { signOut } from '@/services/AuthService';
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 
@@ -13,7 +14,8 @@ const NAV = [
     { href: '/home', label: 'Início', icon: ICONS.play },
     { href: '/colecao', label: 'Coleção', icon: ICONS.collection },
     { href: '/missoes', label: 'Missões', icon: ICONS.investigation },
-    { href: '/loja', label: 'Loja', icon: ICONS.store }
+    { href: '/loja', label: 'Loja', icon: ICONS.store },
+    { href: '/perfil', label: 'Perfil', icon: ICONS.user }
 ];
 
 export function Header() {
@@ -96,9 +98,27 @@ export function Header() {
                     >
                         {isOpen ? <ICONS.close /> : <ICONS.menu />}
                     </button>
-                    <span className='truncate font-semibold'>
-                        {user.name}
-                    </span>
+                    {/* O nome e o avatar sao a porta do perfil: e onde a mao
+                        procura, e poupa o jogador de abrir o menu para chegar
+                        na propria tela. */}
+                    <button type='button'
+                        disabled={pathname === '/perfil'}
+                        onClick={() => router.push('/perfil')}
+                        className={`
+                            flex items-center gap-2 min-w-0
+                            h-11 pr-2 rounded-xl
+                            transition-transform
+                            enabled:active:scale-95
+                            disabled:cursor-default
+                            focus:outline-none focus-visible:ring-2
+                            focus-visible:ring-brand-light
+                        `}
+                    >
+                        <Avatar id={user.avatar} size={28} />
+                        <span className='truncate font-semibold'>
+                            {user.name}
+                        </span>
+                    </button>
                     {isOpen && <>
                         {/* O veu escurece a tela atras do menu e da o alvo de
                             toque para fechar em qualquer lugar. */}
