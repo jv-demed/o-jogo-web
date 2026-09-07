@@ -2,7 +2,7 @@
 import { ICONS } from '@/assets/icons';
 import { Command } from '@/domain/match/engine';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { cardName } from './narrate';
+import { cardName, nameList, shots } from './narrate';
 
 /**
  * O shot que voce tem que beber, e o botao que diz que voce bebeu.
@@ -66,10 +66,20 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
     }
     const missing = table.filter(seat => seat.pending);
 
+    // O que ainda falta descer, somado: e o numero que decide se a frase fala
+    // de "o shot" ou "os shots". Quem ja bebeu saiu da conta — a mesa espera o
+    // que falta, e nao o que a carta cobrou.
+    const left = missing.reduce((total, seat) => total + seat.amount, 0);
+    const lastShot = left === 1 ? 'o shot descer' : 'o último shot descer';
+
     return (
         <div role={watching ? 'status' : 'alertdialog'}
             aria-modal={watching ? undefined : 'true'}
-            aria-label={entry ? `Beba ${entry.amount} shot(s)` : 'Esperando a mesa beber'}
+            aria-label={entry
+                ? `Beba ${shots(entry.amount)}`
+                : missing.length === 1
+                    ? `Esperando ${missing[0].name} beber`
+                    : 'Esperando a mesa beber'}
             aria-live='polite'
             className={`
                 fixed inset-0 z-50
@@ -88,11 +98,15 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
 
             <div className='flex flex-col items-center gap-1 text-center'>
                 <h2 className='text-2xl font-bold text-cream'>
+                    {/* Uma pessoa so nao e "a mesa": com um nome na fila o
+                        titulo diz o nome, que e o que a mesa esta olhando. */}
                     {watching
-                        ? 'A mesa está bebendo'
+                        ? missing.length === 1
+                            ? `${missing[0].name} está bebendo`
+                            : 'A mesa está bebendo'
                         : !entry
                             ? 'Você já bebeu'
-                            : entry.amount === 1 ? 'Beba 1 shot' : `Beba ${entry.amount} shots`}
+                            : `Beba ${shots(entry.amount)}`}
                 </h2>
                 {from && <p className='text-xs text-cream-dim'>
                     {cardName(from)}
@@ -103,10 +117,12 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
                 <p className='pt-1 text-[0.7rem] text-cream-dim/80'>
                     {entry
                         ? <>A partida está parada esperando você.
-                            {queued > 1 && ` Ainda vêm mais ${queued - 1}.`}</>
+                            {queued > 1 && (queued === 2
+                                ? ' Ainda vem mais uma cobrança.'
+                                : ` Ainda vêm mais ${queued - 1} cobranças.`)}</>
                         : watching
-                            ? 'Você não bebe nesta. A partida segue quando o último shot descer.'
-                            : 'A partida segue quando o último shot descer.'}
+                            ? `Você não bebe nesta. A partida segue quando ${lastShot}.`
+                            : `A partida segue quando ${lastShot}.`}
                 </p>
             </div>
 
@@ -144,7 +160,7 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
                         action={() => dispatch({ type: Command.drank, playerId })}
                     />
                     : <ActionButton
-                        text={`Esperando ${missing.map(seat => seat.name).join(', ')}`}
+                        text={`Esperando ${nameList(missing.map(seat => seat.name))}`}
                         variant='secondary'
                         disabled
                     />}

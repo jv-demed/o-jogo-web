@@ -22,7 +22,25 @@ export const cardById = id => CARDS.find(card => card.id === id) ?? null;
 
 export const missionName = id => MISSIONS[id]?.name ?? id;
 
-const shots = amount => `${amount} shot${amount === 1 ? '' : 's'}`;
+/**
+ * A conta em shots, no singular quando e um so.
+ *
+ * Exportado porque a tela do shot conta a mesma coisa que o log: ter dois
+ * jeitos de escrever "1 shot" e o comeco de a tela dizer "1 shots".
+ */
+export const shots = amount => `${amount} shot${amount === 1 ? '' : 's'}`;
+
+/**
+ * Nomes numa frase, com "e" antes do ultimo.
+ *
+ * `A, B, C` e lista de sistema; `A, B e C` e o que uma pessoa fala quando
+ * espera a mesa beber. Um nome so sai sozinho, sem virgula nem "e".
+ */
+export const nameList = names => {
+    const all = (names ?? []).filter(Boolean);
+    if(all.length <= 1) return all[0] ?? '';
+    return `${all.slice(0, -1).join(', ')} e ${all[all.length - 1]}`;
+};
 
 export function narrate(entry, nameOf){
     const who = id => nameOf(id) ?? 'alguem';
@@ -34,7 +52,8 @@ export function narrate(entry, nameOf){
                 ? `${who(entry.playerId)} bebeu ${shots(entry.amount)}.`
                 : `${who(entry.playerId)} bebeu ${shots(entry.amount)}, mas não contou.`;
         case 'shots.transfer':
-            return `${shots(entry.amount)} de ${who(entry.from)} passaram para ${who(entry.to)}.`;
+            return `${shots(entry.amount)} de ${who(entry.from)} ${
+                entry.amount === 1 ? 'passou' : 'passaram'} para ${who(entry.to)}.`;
         case 'mission.swap':
             return `${list(entry.between)} trocaram de missão.`;
         case 'mission.swap.blocked':

@@ -3,7 +3,7 @@ import { Command } from '@/domain/match/engine';
 import { Phase } from '@/domain/match/state';
 import { ICONS } from '@/assets/icons';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { promptText } from './narrate';
+import { nameList, promptText } from './narrate';
 
 /**
  * O que fazer agora: a barra que diz de quem e a vez e oferece a acao da fase.
@@ -73,7 +73,7 @@ export function TurnBar({
             .map(entry => entry.playerId))]
             .map(id => state.players.find(p => p.id === id)?.name)
             .filter(Boolean);
-        return <Waiting text={`Esperando ${waiting.join(', ')} beber`} />;
+        return <Waiting text={`Esperando ${nameList(waiting)} beber`} />;
     }
 
     const request = state.phase === Phase.pending ? state.pending[0] : null;
