@@ -12,6 +12,7 @@ import { ErrorMessage } from '@/components/elements/ErrorMessage';
 const NAV = [
     { href: '/home', label: 'Início', icon: ICONS.play },
     { href: '/colecao', label: 'Coleção', icon: ICONS.collection },
+    { href: '/missoes', label: 'Missões', icon: ICONS.investigation },
     { href: '/loja', label: 'Loja', icon: ICONS.store }
 ];
 

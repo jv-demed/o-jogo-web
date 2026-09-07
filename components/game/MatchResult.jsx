@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react';
+import Image from 'next/image';
 import { ALL_MISSIONS, MISSIONS } from '@/domain/match/missions';
 import { Command } from '@/domain/match/engine';
+import { missionCard } from '@/assets/missions';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { ICONS } from '@/assets/icons';
 
@@ -47,6 +49,22 @@ export function MatchResult({ state, you, onRestart, onLeave }){
                             ${result.won ? 'border-gold/40' : 'border-line'}
                         `}
                     >
+                        {/* A cara da missao no lugar do nome dela sozinho: a
+                            apuracao e a primeira vez que a mesa ve com quem
+                            estava jogando, e o rosto e o que fica. */}
+                        {missionCard(result.mission) && (
+                            <Image
+                                src={missionCard(result.mission).art}
+                                alt=''
+                                width={32}
+                                height={32}
+                                sizes='32px'
+                                className={`
+                                    shrink-0 h-8 w-8 rounded-full object-cover
+                                    border border-line
+                                `}
+                            />
+                        )}
                         <span className='flex flex-col min-w-0 flex-1'>
                             <span className='text-sm font-semibold truncate'>
                                 {nameOf(result.id)}

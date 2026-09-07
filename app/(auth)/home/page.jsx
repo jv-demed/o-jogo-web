@@ -25,6 +25,11 @@ const MENU = [
         hint: 'Todas as cartas que você tem',
         icon: ICONS.collection
     },{
+        href: '/missoes',
+        label: 'Missões',
+        hint: 'As sete identidades da mesa',
+        icon: ICONS.investigation
+    },{
         href: '/loja',
         label: 'Loja',
         hint: 'Troque coins por pacotes',

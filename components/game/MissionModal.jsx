@@ -1,6 +1,8 @@
 'use client'
 import { ICONS } from '@/assets/icons';
+import { missionCard } from '@/assets/missions';
 import { Modal } from '@/components/containers/Modal';
+import { Card } from '@/components/cards/Card';
 
 /**
  * A sua missao, sob demanda.
@@ -8,31 +10,42 @@ import { Modal } from '@/components/containers/Modal';
  * Ela ocupava uma faixa fixa no topo da partida, e faixa fixa e altura que a
  * mesa nao tem: a missao e uma frase que voce le uma vez e confere de vez em
  * quando, nao uma informacao que muda a cada jogada. Aqui ela vira um botao do
- * tamanho de um icone ao lado da acao, e o texto inteiro abre quando voce pede.
+ * tamanho de um icone ao lado da acao, e a carta inteira abre quando voce pede.
+ *
+ * Carta e nao paragrafo porque a missao *e* uma carta: mesma moldura, mesma
+ * arte, mesmo lugar do texto. Quem vira a sua no comeco da partida ja sabe ler
+ * a dos outros quando uma for revelada.
  */
 export function MissionModal({ mission, onClose }){
+
+    const card = missionCard(mission.id);
+
     return (
         <Modal onClose={onClose} label={`Missão: ${mission.name}`}>
-            <div className={`
-                flex flex-col items-center gap-2.5
-                w-full px-4 py-5 panel text-center
-            `}>
-                <span className={`
-                    flex items-center justify-center
-                    h-12 w-12 rounded-2xl text-xl
-                    border border-brand-light/40 bg-brand/15 text-brand-light
+            <span className='text-[0.65rem] uppercase tracking-wide text-cream-dim'>
+                Sua missão
+            </span>
+            {/* Missao sem carta no catalogo ainda tem regra: cai no texto, que
+                e o que a apuracao usa. Some a arte, nao a informacao. */}
+            {card
+                ? <Card card={card} />
+                : <div className={`
+                    flex flex-col items-center gap-2.5
+                    w-full px-4 py-5 panel text-center
                 `}>
-                    <ICONS.investigation />
-                </span>
-                <span className='text-[0.65rem] uppercase tracking-wide text-cream-dim'>
-                    Sua missão
-                </span>
-                <h2 className='text-lg font-bold'>{mission.name}</h2>
-                <p className='text-sm text-cream-dim'>{mission.text}</p>
-                <p className='text-[0.65rem] text-cream-dim/70'>
-                    Só você vê isto — até a apuração.
-                </p>
-            </div>
+                    <span className={`
+                        flex items-center justify-center
+                        h-12 w-12 rounded-2xl text-xl
+                        border border-brand-light/40 bg-brand/15 text-brand-light
+                    `}>
+                        <ICONS.investigation />
+                    </span>
+                    <h2 className='text-lg font-bold'>{mission.name}</h2>
+                    <p className='text-sm text-cream-dim'>{mission.text}</p>
+                </div>}
+            <p className='text-[0.65rem] text-cream-dim/70'>
+                Só você vê isto — até a apuração.
+            </p>
         </Modal>
     );
 }
