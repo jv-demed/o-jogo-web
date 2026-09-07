@@ -230,7 +230,7 @@ function canCancel(draft, what, target){
 }
 
 function runResolution(draft, now){
-    const { item, choices } = draft.resolution;
+    const { item, choices, snapshot } = draft.resolution;
     const entry = getCardEffects(item.idCard);
 
     // seedRef: draft — o sorteio de alvo avanca a semente da partida.
@@ -239,13 +239,75 @@ function runResolution(draft, now){
     if(result.needs){
         draft.phase = Phase.pending;
         draft.pending = [{ ...result.needs, idCard: item.idCard, uid: item.uid }];
+        // A passagem que para numa escolha e um ensaio: a resposta seguinte
+        // refaz a resolucao inteira desde o snapshot, e tudo o que ela fez vai
+        // acontecer de novo. Shot cobrado aqui seria shot cobrado duas vezes —
+        // e o shot e a unica parte do estado que ja desceu goela abaixo antes
+        // de o snapshot poder desfazer. Na carta 4, o Sauzburg bebia um por
+        // cada "quer beber?" respondido na mesa. A fila so abre na passagem que
+        // termina; ate la, ela volta a ser a de antes da carta.
+        draft.drinks = snapshot?.drinks ?? [];
         return;
     }
+
+    seatOrderDrinks(draft, snapshot);
 
     draft.resolution = null;
     draft.pending = [];
     discardPlayed(draft, item);
     finishTurnStep(draft, now);
+}
+
+/**
+ * Poe a conta desta carta na ordem da mesa, e nao na ordem em que os efeitos
+ * dela rodaram.
+ *
+ * A ordem dos efeitos e mecanica, e mecanica e informacao. A carta 4 manda o
+ * Sauzburg beber no efeito 0 e abre a rodada de voluntarios no efeito 1: quem
+ * enfileira nessa ordem publica uma lista em que o primeiro nome e sempre o
+ * Sauzburg, e a carta — que existe para a mesa saber que ele bebeu sem saber
+ * qual deles e — se entrega na primeira vez que e jogada.
+ *
+ * O assento e a unica ordem que a mesa ja conhece antes da carta, e por isso e
+ * a unica que nao conta nada. Vale para a fila (`drinks`, que a mesa ve na
+ * hora) e para o log (que ela pode reler depois) — cobrir um e deixar o outro
+ * seria trocar o vazamento de lugar.
+ *
+ * Mexe so no que esta carta acrescentou: o que ja estava na fila e de uma
+ * cobranca anterior e continua na frente.
+ */
+function seatOrderDrinks(draft, snapshot){
+    const seat = id => {
+        const index = draft.order.indexOf(id);
+        return index === -1 ? draft.order.length : index;
+    };
+
+    const drinksMark = (snapshot?.drinks ?? []).length;
+    if((draft.drinks?.length ?? 0) > drinksMark + 1){
+        draft.drinks = [
+            ...draft.drinks.slice(0, drinksMark),
+            ...draft.drinks.slice(drinksMark)
+                .map((entry, i) => ({ entry, i }))
+                .sort((a, b) => seat(a.entry.playerId) - seat(b.entry.playerId) || a.i - b.i)
+                .map(({ entry }) => entry),
+        ];
+    }
+
+    // No log as entradas de shot vem intercaladas com o resto (revelacao,
+    // ongoing, ritual): reordenar a lista inteira mudaria a historia. O que se
+    // reordena sao as entradas `drink` entre si, cada uma de volta numa das
+    // posicoes que elas ja ocupavam.
+    const logMark = snapshot?.log?.length ?? 0;
+    const slots = [];
+    for(let i = logMark; i < draft.log.length; i++){
+        if(draft.log[i].type === 'drink') slots.push(i);
+    }
+    if(slots.length > 1){
+        const sorted = slots
+            .map((index, i) => ({ entry: draft.log[index], i }))
+            .sort((a, b) => seat(a.entry.playerId) - seat(b.entry.playerId) || a.i - b.i);
+        slots.forEach((index, i) => { draft.log[index] = sorted[i].entry; });
+    }
 }
 
 function discardPlayed(draft, item){
