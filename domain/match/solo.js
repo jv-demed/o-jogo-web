@@ -1,4 +1,4 @@
-import { BOT_AVATAR, BOT_NAMES } from './bot.js';
+import { BOTS } from './bot.js';
 import { DECK_SIZE, createSeatedMatch } from './setup.js';
 
 /**
@@ -24,10 +24,13 @@ export function createSoloMatch({ seed, you, botCount, pool, deckSize = DECK_SIZ
     // Ids negativos para os bots (ver `isBot`, em bot.js).
     const bots = [];
     for(let i = 0; i < botCount; i++){
+        // Nome e cara saem juntos da lista: pegar o nome de um e o avatar de
+        // outro seria a mesa inteira de bots parecendo trocada.
+        const bot = BOTS[i % BOTS.length];
         bots.push({
             id: -(i + 1),
-            name: BOT_NAMES[i % BOT_NAMES.length],
-            avatar: BOT_AVATAR
+            name: bot.name,
+            avatar: bot.avatar
         });
     }
 

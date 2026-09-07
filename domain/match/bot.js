@@ -27,21 +27,45 @@ import { MatchStatus, Phase, currentPlayer, playerById } from './state.js';
  */
 
 /**
- * Nomes de bot. Vivem aqui, e nao no solo, porque bot nao e coisa do modo
- * solo: o lobby tambem completa a mesa com eles quando faltam humanos para
- * testar. O modo e so quantos assentos sao de gente.
+ * Os bots da casa: nome e cara, juntos.
+ *
+ * Vivem aqui, e nao no solo, porque bot nao e coisa do modo solo: o lobby
+ * tambem completa a mesa com eles quando faltam humanos para testar. O modo e
+ * so quantos assentos sao de gente.
+ *
+ * Cada um tem *o seu* avatar, fixo, e nao um sorteado na hora: a cadeira e a
+ * unica coisa que a mesa lembra de um bot entre uma partida e outra, e o
+ * Silverio ser sempre a lamina e o que faz "o Silverio de novo" ser uma frase.
+ * Sorteio faria a mesma mesa parecer outra a cada partida.
+ *
+ * Os `avatar` sao ids de assets/avatars.js — os mesmos que um humano escolhe,
+ * de proposito: bot com catalogo proprio viraria uma segunda lista para manter
+ * viva quando as artes chegarem. Nenhum id se repete enquanto a lista couber
+ * no catalogo; repetir so acontece em mesa maior que a lista de nomes, e ai o
+ * nome ja repetiu antes.
  */
-export const BOT_NAMES = Object.freeze([
-    'Chutador', 'Tchori Tchori', 'Silvério', 'Dentinho', 'Cauê', 'Eron',
+export const BOTS = Object.freeze([
+    { name: 'Chutador',      avatar: 'moeda'   },
+    { name: 'Tchori Tchori', avatar: 'baralho' },
+    { name: 'Silvério',      avatar: 'lamina'  },
+    { name: 'Dentinho',      avatar: 'estrela' },
+    { name: 'Cauê',          avatar: 'chama'   },
+    { name: 'Eron',          avatar: 'escudo'  },
 ]);
 
+/** So os nomes: e o que o lobby sorteia para preencher um assento. */
+export const BOT_NAMES = Object.freeze(BOTS.map(bot => bot.name));
+
 /**
- * O avatar de quem nao tem perfil. Bot nao escolhe foto, e deixar o campo vazio
- * daria a ele o primeiro do catalogo — a mesa inteira com o mesmo copo. O
- * anonimo do catalogo e justamente a pessoinha que a cadeira mostrava antes de
- * existirem avatares, entao o bot continua parecendo o que e.
+ * O avatar de quem nao esta na lista. O lobby numera (`Bot 7`) quando os nomes
+ * acabam, e esse bot sem cara fica com o anonimo do catalogo — a pessoinha que
+ * a cadeira mostrava antes de existirem avatares.
  */
 export const BOT_AVATAR = 'rosto';
+
+/** A cara do bot pelo nome, que e a unica coisa que o assento carrega. */
+export const botAvatar = name =>
+    BOTS.find(bot => bot.name === name)?.avatar ?? BOT_AVATAR;
 
 /**
  * Ids de bot sao negativos: o id de um humano vem de o_jogo.users e nunca

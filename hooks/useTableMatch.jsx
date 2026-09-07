@@ -16,7 +16,7 @@ import {
 import { Command, apply } from '@/domain/match/engine';
 import { applyDev, isDevCommand } from '@/domain/match/dev';
 import { isBot } from '@/domain/match/bot';
-import { BOT_AVATAR } from '@/domain/match/bot';
+import { botAvatar } from '@/domain/match/bot';
 import { createSeatedMatch } from '@/domain/match/setup';
 import { MatchStatus, currentPlayer } from '@/domain/match/state';
 import { useMatchDriver } from '@/hooks/useMatchDriver';
@@ -229,7 +229,7 @@ export function useTableMatch(idMatch, pool){
                 seats: seats.map(seat => ({
                     id: seat.isBot ? -seat.id : seat.idUser,
                     name: seat.name,
-                    avatar: seat.isBot ? BOT_AVATAR : seat.avatar
+                    avatar: seat.isBot ? botAvatar(seat.name) : seat.avatar
                 })),
                 pool
             });
