@@ -1,5 +1,6 @@
 'use client'
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { ongoingFor } from '@/domain/match/state';
 import { missionName } from './narrate';
 
@@ -36,19 +37,14 @@ export function TurnIntro({ player, state, you }){
                 pointer-events-none animate-fade-in
             `}
         >
-            {/* A foto do jogador. Enquanto ninguem tem foto no perfil, e a
-                inicial do nome dentro do circulo — o lugar dela ja fica de pe,
-                e trocar por uma imagem depois e trocar o que vai aqui dentro. */}
-            <span className={`
-                flex items-center justify-center
-                h-24 w-24 rounded-full
-                border-2 ${isYou ? 'border-gold/70 bg-gold/15' : 'border-brand-light/60 bg-brand/20'}
-                text-3xl font-bold uppercase
-                ${isYou ? 'text-gold' : 'text-brand-light'}
-                animate-fade-rise
-            `}>
-                {player.name?.trim()?.[0] ?? <ICONS.user />}
-            </span>
+            {/* A foto do perfil, no tamanho em que a sala ve de longe: e o
+                unico momento em que o jogador ocupa a tela sozinho. */}
+            <Avatar id={player.avatar} size={96}
+                className={`
+                    ring-2 animate-fade-rise
+                    ${isYou ? 'ring-gold/70' : 'ring-brand-light/60'}
+                `}
+            />
 
             <div className='flex flex-col items-center gap-0.5'>
                 <p className='text-2xl font-bold text-cream'>

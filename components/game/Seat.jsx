@@ -1,4 +1,5 @@
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { missionName } from './narrate';
 
 /**
@@ -52,18 +53,24 @@ export function Seat({
                 ${player.out ? 'opacity-40' : ''}
             `}
         >
-            {/* A vez e a informacao mais volatil da mesa: ganha o marcador no
-                lugar fixo, em vez de mudar a cor do nome. */}
+            {/* O avatar do perfil e o rosto da cadeira: com seis lugares em
+                volta do feltro, a cor do circulo acha o jogador antes do nome.
+                A vez continua sendo a informacao mais volatil da mesa, mas ela
+                vira um marcador colado no avatar em vez de cobri-lo — trocar a
+                foto pelo simbolo de jogar apagava justo quem esta jogando. */}
             <span className='relative'>
-                <span className={`
+                <Avatar id={player.avatar} size={32}
+                    className={isCurrent ? 'ring-2 ring-brand-light/70' : ''}
+                />
+
+                {isCurrent && <span className={`
+                    absolute -left-1 -top-0.5
                     flex items-center justify-center
-                    h-8 w-8 rounded-full text-xs
-                    border ${isCurrent
-                        ? 'border-brand-light/60 bg-brand/30 text-brand-light'
-                        : 'border-line bg-elevated text-cream-dim'}
+                    h-4 w-4 rounded-full text-[0.5rem]
+                    border border-brand-light/60 bg-brand text-cream
                 `}>
-                    {isCurrent ? <ICONS.play /> : <ICONS.user />}
-                </span>
+                    <ICONS.play />
+                </span>}
 
                 {/* Carta de efeito prolongado nao vai para o descarte: fica
                     valendo sobre este jogador. Aqui e so o aviso de que existe,

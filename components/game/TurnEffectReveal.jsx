@@ -1,6 +1,6 @@
 'use client'
 import { useRef } from 'react';
-import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { Card } from '@/components/cards/Card';
 import { useRevealScale } from './PlayReveal';
 import { cardById, ongoingDuration, ongoingEffectText } from './narrate';
@@ -49,13 +49,9 @@ export function TurnEffectReveal({ trigger, players, you }){
             `}
         >
             <div className='flex items-center gap-2'>
-                <span className={`
-                    flex items-center justify-center
-                    h-8 w-8 rounded-full text-sm
-                    border border-gold/60 bg-gold/20 text-gold
-                `}>
-                    <ICONS.user />
-                </span>
+                <Avatar id={player?.avatar} size={32}
+                    className='ring-2 ring-gold/60'
+                />
                 <span className='text-base font-bold text-cream'>{name}</span>
             </div>
 

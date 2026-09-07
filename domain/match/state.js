@@ -41,10 +41,14 @@ export const MatchStatus = Object.freeze({
     finished: 'finished',
 });
 
-function createPlayer({ id, name, deck, mission }){
+function createPlayer({ id, name, avatar, deck, mission }){
     return {
         id,
         name,
+        // Id do avatar do catalogo (assets/avatars.js). Viaja no estado como
+        // string opaca: o motor nunca olha para ela, mas a mesa e um objeto so
+        // e a foto precisa chegar ate a cadeira junto do nome.
+        avatar: avatar ?? null,
         mission,                 // identidade secreta; so o dono ve
         goal: MISSIONS[mission].goal,  // pode ser trocada por carta (mission.setGoal)
         missionRevealed: false,  // aberta para a mesa por mission.reveal
@@ -83,7 +87,7 @@ function createPlayer({ id, name, deck, mission }){
  * acha alvo (`target: mission` devolve lista vazia, e nao erro).
  *
  * @param {number} params.seed
- * @param {{id: number, name: string, deck: number[]}[]} params.players
+ * @param {{id: number, name: string, avatar?: string, deck: number[]}[]} params.players
  *        em ordem de turno; `deck` e a lista plana de ids de carta.
  */
 export function createMatch({ seed, players }){
@@ -103,6 +107,7 @@ export function createMatch({ seed, players }){
         const player = createPlayer({
             id: entry.id,
             name: entry.name,
+            avatar: entry.avatar,
             deck: shuffled.items,
             mission: drawn.items[i],
         });

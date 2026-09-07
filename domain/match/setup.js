@@ -30,7 +30,7 @@ export function randomDeck(seed, pool, size = DECK_SIZE){
 
 /**
  * @param {number} params.seed
- * @param {{id: number, name: string, deck?: number[]}[]} params.seats
+ * @param {{id: number, name: string, avatar?: string, deck?: number[]}[]} params.seats
  *        em ordem de turno. Sem `deck`, o assento recebe um sorteado.
  * @param {number[]} params.pool  ids de carta disponiveis (o catalogo).
  * @returns {object} estado pronto para o `apply`
@@ -45,7 +45,12 @@ export function createSeatedMatch({ seed, seats, pool, deckSize = DECK_SIZE }){
             ? shuffle(rng, seat.deck)
             : randomDeck(rng, pool, deckSize);
         rng = drawn.seed;
-        return { id: seat.id, name: seat.name, deck: drawn.items };
+        return {
+            id: seat.id,
+            name: seat.name,
+            avatar: seat.avatar,
+            deck: drawn.items
+        };
     });
 
     return createMatch({ seed: rng, players });

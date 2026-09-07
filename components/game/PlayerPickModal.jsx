@@ -1,5 +1,6 @@
 'use client'
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { Modal } from '@/components/containers/Modal';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { promptText, cardName } from './narrate';
@@ -63,14 +64,22 @@ export function PlayerPickModal({
                                             : 'border-line bg-elevated'}
                                     `}
                                 >
-                                    <span className={`
-                                        flex items-center justify-center shrink-0
-                                        h-8 w-8 rounded-full text-xs border
-                                        ${isOn
-                                            ? 'border-gold/60 bg-gold/20 text-gold'
-                                            : 'border-line bg-surface text-cream-dim'}
-                                    `}>
-                                        {isOn ? <ICONS.check /> : <ICONS.user />}
+                                    {/* A foto do perfil, e o visto por cima
+                                        dela: quem escolhe procura a pessoa, e
+                                        trocar a foto pelo visto tirava da lista
+                                        justamente quem ja esta marcado. */}
+                                    <span className='relative shrink-0'>
+                                        <Avatar id={player.avatar} size={32}
+                                            className={isOn ? 'ring-2 ring-gold/70' : ''}
+                                        />
+                                        {isOn && <span className={`
+                                            absolute -right-1 -bottom-0.5
+                                            flex items-center justify-center
+                                            h-4 w-4 rounded-full text-[0.5rem]
+                                            border border-gold/60 bg-gold text-base
+                                        `}>
+                                            <ICONS.check />
+                                        </span>}
                                     </span>
 
                                     <span className='flex-1 min-w-0 text-sm font-semibold text-cream truncate'>

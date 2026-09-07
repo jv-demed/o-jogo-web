@@ -53,12 +53,12 @@ export async function getMatch(idMatch){
  * os dois, e e por ela que a reordenacao anda (migration 0009).
  *
  * @returns {Promise<{id: number, idUser: number|null, name: string,
- *                    isBot: boolean, position: number}[]>}
+ *                    avatar: string|null, isBot: boolean, position: number}[]>}
  */
 export async function getMatchPlayers(idMatch){
     const { data, error } = await supabase
         .from('match_players')
-        .select('id, id_user, bot_name, position, users(name)')
+        .select('id, id_user, bot_name, position, users(name, avatar)')
         .eq('id_match', idMatch)
         .order('position', { ascending: true });
     if(error) throw error;
@@ -66,6 +66,7 @@ export async function getMatchPlayers(idMatch){
         id: row.id,
         idUser: row.id_user,
         name: row.bot_name ?? row.users?.name ?? '???',
+        avatar: row.users?.avatar ?? null,
         isBot: row.id_user === null,
         position: row.position
     }));

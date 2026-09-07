@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react';
-import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { Card } from '@/components/cards/Card';
 import { REACTION_WINDOW_MS } from '@/domain/match/state';
 import { cardById, declaredEffectText } from './narrate';
@@ -36,7 +36,13 @@ export function PlayReveal({ play, players, you, closesAt }){
 
     const nameOf = id => (id === you?.id ? 'Você' : players.find(p => p.id === id)?.name);
     const byName = nameOf(play.byId);
-    const targets = (play.targets ?? []).map(id => ({ id, name: nameOf(id) })).filter(t => t.name);
+    const targets = (play.targets ?? [])
+        .map(id => ({
+            id,
+            name: nameOf(id),
+            avatar: players.find(p => p.id === id)?.avatar
+        }))
+        .filter(t => t.name);
     // A frase e a mesma para todos os apontados: ela descreve o efeito, e o
     // efeito e um so.
     const phrase = targets.length > 0 ? declaredEffectText(play.idCard) : null;
@@ -76,13 +82,9 @@ export function PlayReveal({ play, players, you, closesAt }){
                 <div className='flex flex-wrap items-center justify-center gap-2'>
                     {targets.map(target => (
                         <div key={target.id} className='flex items-center gap-2'>
-                            <span className={`
-                                flex items-center justify-center
-                                h-9 w-9 rounded-full text-base
-                                border border-gold/60 bg-gold/20 text-gold
-                            `}>
-                                <ICONS.user />
-                            </span>
+                            <Avatar id={target.avatar} size={36}
+                                className='ring-2 ring-gold/60'
+                            />
                             <span className='text-lg font-bold text-cream'>
                                 {target.name}
                             </span>

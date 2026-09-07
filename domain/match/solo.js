@@ -1,4 +1,4 @@
-import { BOT_NAMES } from './bot.js';
+import { BOT_AVATAR, BOT_NAMES } from './bot.js';
 import { DECK_SIZE, createSeatedMatch } from './setup.js';
 
 /**
@@ -14,7 +14,7 @@ import { DECK_SIZE, createSeatedMatch } from './setup.js';
 
 /**
  * @param {number} params.seed
- * @param {{id: number, name: string, deck?: number[]}} params.you
+ * @param {{id: number, name: string, avatar?: string, deck?: number[]}} params.you
  *        seu baralho; sem ele, sorteia um do mesmo jeito que o dos bots.
  * @param {number} params.botCount
  * @param {number[]} params.pool  ids de carta disponiveis (o catalogo).
@@ -24,7 +24,11 @@ export function createSoloMatch({ seed, you, botCount, pool, deckSize = DECK_SIZ
     // Ids negativos para os bots (ver `isBot`, em bot.js).
     const bots = [];
     for(let i = 0; i < botCount; i++){
-        bots.push({ id: -(i + 1), name: BOT_NAMES[i % BOT_NAMES.length] });
+        bots.push({
+            id: -(i + 1),
+            name: BOT_NAMES[i % BOT_NAMES.length],
+            avatar: BOT_AVATAR
+        });
     }
 
     return {

@@ -36,6 +36,14 @@ export const BOT_NAMES = Object.freeze([
 ]);
 
 /**
+ * O avatar de quem nao tem perfil. Bot nao escolhe foto, e deixar o campo vazio
+ * daria a ele o primeiro do catalogo — a mesa inteira com o mesmo copo. O
+ * anonimo do catalogo e justamente a pessoinha que a cadeira mostrava antes de
+ * existirem avatares, entao o bot continua parecendo o que e.
+ */
+export const BOT_AVATAR = 'rosto';
+
+/**
  * Ids de bot sao negativos: o id de um humano vem de o_jogo.users e nunca
  * colide com esses, entao qualquer log deixa obvio que a linha e de um
  * jogador que nao existe no banco.

@@ -48,6 +48,7 @@ export default function Solo(){
             you: {
                 id: user.id,
                 name: user.name,
+                avatar: user.avatar,
                 deck: useCollection && canUseCollection ? collectionIds : undefined,
             },
             botCount,
