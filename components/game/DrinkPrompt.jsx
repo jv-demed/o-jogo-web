@@ -1,5 +1,6 @@
 'use client'
 import { ICONS } from '@/assets/icons';
+import { Avatar } from '@/components/elements/Avatar';
 import { Command } from '@/domain/match/engine';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { cardName, nameList, shots } from './narrate';
@@ -56,11 +57,13 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
             row.amount += item.amount;
             row.pending = row.pending || !item.confirmed;
         }else{
+            const player = players?.find(seat => seat.id === item.playerId);
             table.push({
                 playerId: item.playerId,
                 amount: item.amount,
                 pending: !item.confirmed,
-                name: players?.find(player => player.id === item.playerId)?.name ?? 'alguem',
+                name: player?.name ?? 'alguem',
+                avatar: player?.avatar,
             });
         }
     }
@@ -140,8 +143,17 @@ export function DrinkPrompt({ entries, players, dispatch, playerId }){
                                 : 'border-gold/40 bg-gold/10 text-cream'}
                         `}
                     >
-                        <span className='truncate'>
-                            {seat.name}{seat.playerId === playerId && ' (você)'}
+                        {/* A mesma cara da cadeira, para a lista ser lida de
+                            relance: quem esta olhando procura a pessoa, e nao
+                            o nome dela escrito. Sem cor quando ja bebeu — o
+                            olho tem que cair em quem falta. */}
+                        <span className='flex min-w-0 items-center gap-2'>
+                            <Avatar id={seat.avatar} size={20}
+                                className={seat.pending ? '' : 'opacity-50'}
+                            />
+                            <span className='truncate'>
+                                {seat.name}{seat.playerId === playerId && ' (você)'}
+                            </span>
                         </span>
                         <span className='flex shrink-0 items-center gap-1 text-xs'>
                             {seat.pending

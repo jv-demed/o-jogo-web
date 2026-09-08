@@ -15,11 +15,12 @@ import {
     setMatchCheats,
     startMatch
 } from '@/presenters/matchesPresenter';
-import { BOT_NAMES } from '@/domain/match/bot';
+import { BOT_NAMES, botAvatar } from '@/domain/match/bot';
 import { ICONS } from '@/assets/icons';
 import { Box } from '@/components/containers/Box';
 import { Main } from '@/components/containers/Main';
 import { Actions } from '@/components/containers/Actions';
+import { Avatar } from '@/components/elements/Avatar';
 import { PageHeader } from '@/components/elements/PageHeader';
 import { SpinLoader } from '@/components/elements/SpinLoader';
 import { DotsLoader } from '@/components/elements/DotsLoader';
@@ -363,6 +364,20 @@ export default function Lobby({ params }){
                                                     `}>
                                                         {i + 1}
                                                     </span>
+                                                    {/* A cara vem depois do
+                                                        numero, e nao no lugar
+                                                        dele: o numero e o que
+                                                        o host esta arrastando,
+                                                        e o avatar e como a
+                                                        pessoa se reconhece na
+                                                        fila. Bot nao tem linha
+                                                        em users — a cara dele
+                                                        sai do nome. */}
+                                                    <Avatar size={32}
+                                                        id={player.isBot
+                                                            ? botAvatar(player.name)
+                                                            : player.avatar}
+                                                    />
                                                     <span className='truncate'>
                                                         {player.name}
                                                     </span>
