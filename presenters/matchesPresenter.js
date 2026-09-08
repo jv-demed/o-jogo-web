@@ -292,3 +292,32 @@ export async function setMatchCheats(idMatch, on){
     });
     if(error) throw error;
 }
+
+/**
+ * A sala aberta que a tela inicial oferece, ou `null`.
+ *
+ * E RPC pelo mesmo motivo de sempre: `matches_read_participant` so mostra
+ * partida de que o jogador ja participa, entao nao ha `select` capaz de achar
+ * a sala de outra pessoa. A funcao devolve so o que o convite precisa — id,
+ * host e quantos ja estao sentados.
+ *
+ * Havendo duas ou mais salas abertas ao mesmo tempo, vem vazio de proposito:
+ * o menu nao escolhe por ninguem, e quem tem duas salas no ar desempata pelo
+ * link (`InviteBox`). Vem vazio tambem quando a mesa esta cheia ou a sala e
+ * velha demais — o banco e que decide, aqui so se le.
+ *
+ * @returns {Promise<{id: number, hostName: string, hostAvatar: string|null,
+ *                    seats: number}|null>}
+ */
+export async function getOpenLobby(){
+    const { data, error } = await supabase.rpc('open_lobby');
+    if(error) throw error;
+    const row = data?.[0];
+    if(!row) return null;
+    return {
+        id: row.id_match,
+        hostName: row.host_name,
+        hostAvatar: row.host_avatar,
+        seats: row.seat_count
+    };
+}
