@@ -2,7 +2,7 @@ import { Action, Negatable, Timing } from '../cards/vocabulary.js';
 import { getCardEffects } from '../cards/effects/index.js';
 import { ALL_MISSIONS } from './missions.js';
 import { Command, isReaction } from './engine.js';
-import { MatchStatus, Phase, currentPlayer, playerById } from './state.js';
+import { MatchStatus, Phase, currentPlayer, optInRound, playerById } from './state.js';
 
 /**
  * O jogador automatico.
@@ -225,7 +225,19 @@ export function botCommand(state, playerId, now = 0){
 
         case Phase.pending: {
             const request = state.pending[0];
-            if(!request || request.chooserId !== playerId) return null;
+            if(!request) return null;
+
+            // Rodada de voluntarios: a pergunta e da mesa inteira ao mesmo
+            // tempo, e nao de um `chooserId`. O bot responde a propria vaga
+            // enquanto ela estiver aberta — e "sim" quando ele e um dos
+            // obrigados, que la nao ha o que escolher.
+            if(request.kind === 'optIn'){
+                if(!optInRound(request).waiting.includes(playerId)) return null;
+                return { type: Command.answer, playerId,
+                    value: (request.forced ?? []).includes(playerId), now };
+            }
+
+            if(request.chooserId !== playerId) return null;
             return { type: Command.answer, playerId, value: answerFor(state, request, playerId), now };
         }
 
@@ -241,8 +253,9 @@ export function botCommand(state, playerId, now = 0){
 
 function answerFor(state, request, playerId){
     switch(request.kind){
-        // "Pode beber, se quiser": o bot nunca quer.
-        case 'optIn':  return false;
+        // `optIn` nao passa por aqui: a rodada de voluntarios e respondida
+        // acima, porque quem decide se o bot esta nela e a lista, e nao o
+        // `chooserId`. (O bot nunca quer beber de gracas, de qualquer forma.)
         case 'option': return 0;
         case 'cards':  return [];
         default:       return preferredTargets(state, request, playerId);

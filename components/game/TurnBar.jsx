@@ -185,33 +185,23 @@ function Waiting({ text }){
 }
 
 /**
- * A pergunta que travou a resolucao. Sao tres formatos, e nao um generico:
- * aceitar ou nao um efeito opcional, escolher entre opcoes da carta, e escolher
- * jogador — este ultimo mora num modal (a lista da mesa nao cabe na barra), e
- * aqui a pergunta e o proprio texto da porta.
+ * A pergunta que travou a resolucao. Sao dois formatos aqui: escolher entre as
+ * opcoes da carta, e escolher jogador — este ultimo mora num modal (a lista da
+ * mesa nao cabe na barra), e aqui a pergunta e o proprio texto da porta.
+ *
+ * A rodada de voluntarios (`optIn`) saiu da barra: ela deixou de ser a pergunta
+ * de um jogador para ser a da mesa inteira ao mesmo tempo, e uma pergunta que
+ * todo mundo responde junto precisa da lista de quem ja apertou. Isso e tela
+ * cheia, e mora no `OptInPrompt`.
  *
  * A pergunta e a unica coisa que ainda aparece acima do botao, e so quando a
- * resposta e sim/nao ou uma lista de opcoes: `Sim` e `Opcao 2` nao dizem a que
- * vieram, e sem a pergunta o jogador responderia no escuro. Nao e dica de
- * fase — e o que esta sendo perguntado.
+ * resposta e uma lista de opcoes: `Opcao 2` nao diz a que veio, e sem a
+ * pergunta o jogador responderia no escuro. Nao e dica de fase — e o que esta
+ * sendo perguntado.
  */
 function Prompt({ request, you, onOpenPicker, dispatch }){
 
     const answer = value => dispatch({ type: Command.answer, playerId: you.id, value });
-
-    if(request.kind === 'optIn'){
-        return (
-            <Bar>
-                <Question text={promptText(request)} />
-                <div className='flex gap-2'>
-                    <ActionButton text='Não' variant='secondary' width='50%'
-                        action={() => answer(false)} />
-                    <ActionButton text='Sim' variant='gold' width='50%'
-                        action={() => answer(true)} />
-                </div>
-            </Bar>
-        );
-    }
 
     if(request.kind === 'option'){
         return (

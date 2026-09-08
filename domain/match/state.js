@@ -233,6 +233,24 @@ export function fromDiscard(state, player, idCard){
     if(onTable !== -1) state.discardPile.splice(onTable, 1);
 }
 
+/**
+ * A roda de uma pergunta `optIn`, e quem dela ainda nao respondeu.
+ *
+ * A rodada de voluntarios nao tem um `chooserId`: ela pergunta a varias pessoas
+ * ao mesmo tempo, e quem responde e cada uma por si. `round` e todo mundo que
+ * esta nela — os que podem escolher (`candidates`) e os que a carta ja obrigou
+ * (`forced`, que apertam sim porque nao ha outra coisa a apertar) — e `waiting`
+ * e o que falta para a resolucao seguir.
+ *
+ * Mora aqui porque tres camadas leem a mesma conta: o motor (para recusar
+ * resposta de quem nao esta na rodada), o bot e a tela.
+ */
+export function optInRound(request){
+    const round = [...(request?.candidates ?? []), ...(request?.forced ?? [])];
+    const answered = request?.answered ?? [];
+    return { round, waiting: round.filter(id => !answered.includes(id)) };
+}
+
 /** Os shots que este jogador ainda deve beber. */
 export const drinksOf = (state, playerId) =>
     (state.drinks ?? []).filter(entry => entry.playerId === playerId);

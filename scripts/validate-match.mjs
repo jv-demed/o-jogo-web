@@ -25,7 +25,7 @@ import { isBot } from '../domain/match/bot.js';
 import { replayMatch } from '../domain/match/replay.js';
 import { CARD_EFFECTS } from '../domain/cards/effects/index.js';
 import { MISSIONS, evaluateMissions } from '../domain/match/missions.js';
-import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
+import { MatchStatus, Phase, createMatch, optInRound } from '../domain/match/state.js';
 
 let problemas = 0;
 const erro = message => { console.error('ERRO ' + message); problemas++; };
@@ -149,6 +149,20 @@ function novaMesa(seed = 1){
     });
 }
 
+/**
+ * Quem responde o pedido pendente.
+ *
+ * A rodada de voluntarios (`optIn`) nao tem `chooserId`: ela pergunta a mesa
+ * inteira de uma vez, e fecha quando o ultimo responder. A mesa de mentira
+ * responde um por vez, na ordem da lista.
+ */
+function quemResponde(state){
+    const request = state.pending[0];
+    return request.kind === 'optIn'
+        ? optInRound(request).waiting[0]
+        : request.chooserId;
+}
+
 /** Responde qualquer pedido de escolha do jeito mais simples que passa. */
 function responder(state){
     const request = state.pending[0];
@@ -248,10 +262,9 @@ function jogar(state, idCard){
             continue;
         }
         if(current.phase === Phase.pending && current.resolution){
-            const request = current.pending[0];
             current = apply(current, {
                 type: Command.answer,
-                playerId: request.chooserId,
+                playerId: quemResponde(current),
                 value: responder(current),
                 now,
             });

@@ -4,7 +4,7 @@ import { evaluateMissions } from './missions.js';
 import { runEffects } from './resolve.js';
 import {
     MatchStatus, Phase, PLAYS_PER_TURN, REACTION_WINDOW_MS,
-    cloneState, currentPlayer, playerById, releaseOngoingCard, toDiscard,
+    cloneState, currentPlayer, optInRound, playerById, releaseOngoingCard, toDiscard,
 } from './state.js';
 
 /**
@@ -101,7 +101,7 @@ function openWindow(draft, now){
  */
 const DECLARABLE = new Set(['choose', 'manual']);
 
-const effectContext = (item, choices, seedRef) => ({
+const effectContext = (item, choices, seedRef, drinksMark = 0) => ({
     sourceId: item.byId,
     playedById: item.respondsToPlayerId ?? null,
     idCard: item.idCard,
@@ -111,6 +111,10 @@ const effectContext = (item, choices, seedRef) => ({
     slot: '',
     seedRef,
     copyOf: item.copyOf ?? null,
+    // Onde a fila de shots estava quando esta carta comecou. E por essa marca
+    // que a rodada de voluntarios sabe quem a *propria* carta ja obrigou a
+    // beber — shot de cobranca anterior nao entra na rodada dela.
+    drinksMark,
 });
 
 /**
@@ -137,7 +141,7 @@ function runDeclaration(draft, now){
     const { item, choices } = draft.resolution;
     const scratch = cloneState({ ...draft, resolution: null });
     const result = runEffects(scratch, getCardEffects(item.idCard),
-        effectContext(item, choices, scratch));
+        effectContext(item, choices, scratch, (scratch.drinks ?? []).length));
 
     if(result.needs && DECLARABLE.has(result.needs.kind)){
         draft.phase = Phase.pending;
@@ -234,7 +238,8 @@ function runResolution(draft, now){
     const entry = getCardEffects(item.idCard);
 
     // seedRef: draft — o sorteio de alvo avanca a semente da partida.
-    const result = runEffects(draft, entry, effectContext(item, choices, draft));
+    const result = runEffects(draft, entry,
+        effectContext(item, choices, draft, (snapshot?.drinks ?? []).length));
 
     if(result.needs){
         draft.phase = Phase.pending;
@@ -736,7 +741,15 @@ export function apply(state, command){
         case Command.answer: {
             if(draft.phase !== Phase.pending || !draft.resolution) fail('nada esperando resposta');
             const request = draft.pending[0];
-            if(request.chooserId !== undefined && request.chooserId !== command.playerId){
+            if(request.kind === 'optIn'){
+                // A rodada de voluntarios nao tem dono: quem responde e cada
+                // um da lista, na hora que quiser. Quem ja respondeu nao volta
+                // atras — a resposta e publica no instante em que chega, e
+                // desfaze-la seria mudar de ideia depois de ver a mesa.
+                if(!optInRound(request).waiting.includes(command.playerId)){
+                    fail('a escolha nao e sua');
+                }
+            }else if(request.chooserId !== undefined && request.chooserId !== command.playerId){
                 fail('a escolha nao e sua');
             }
             const choices = keyFor(draft.resolution.choices, request, command.playerId, command.value);
@@ -842,7 +855,13 @@ export function legalCommands(state, playerId){
         case Phase.play:   return isTurn ? [Command.play] : [];
         case Phase.window: return pendingResponders(state).includes(playerId)
             ? [Command.react, Command.pass] : [];
-        case Phase.pending: return state.pending[0]?.chooserId === playerId ? [Command.answer] : [];
+        case Phase.pending: {
+            const request = state.pending[0];
+            if(request?.kind === 'optIn'){
+                return optInRound(request).waiting.includes(playerId) ? [Command.answer] : [];
+            }
+            return request?.chooserId === playerId ? [Command.answer] : [];
+        }
         case Phase.end:    return isTurn ? [Command.endTurn] : [];
         default:           return [];
     }

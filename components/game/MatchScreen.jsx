@@ -25,6 +25,7 @@ import { CardActionModal } from '@/components/game/CardActionModal';
 import { MatchMenu, MatchMenuButton } from '@/components/game/MatchMenu';
 import { DiscardModal } from '@/components/game/DiscardModal';
 import { DrinkPrompt } from '@/components/game/DrinkPrompt';
+import { OptInPrompt } from '@/components/game/OptInPrompt';
 import { RitualPrompt } from '@/components/game/RitualPrompt';
 import { OngoingModal } from '@/components/game/OngoingModal';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
@@ -420,6 +421,19 @@ export function MatchScreen({
                 dispatch={dispatch}
             />}
 
+            {/* A rodada de voluntarios sobe junto com as outras duas, e pelo
+                mesmo motivo: enquanto ela corre a mesa inteira esta parada
+                nela. A pergunta e de todos ao mesmo tempo — na barra ela
+                cabia enquanto era de um so. */}
+            {rituals.length === 0 && drinks.length === 0
+                && request?.kind === 'optIn' && <OptInPrompt
+                request={request}
+                players={state.players}
+                order={state.order}
+                playerId={you.id}
+                dispatch={dispatch}
+            />}
+
             {preview && <CardPreview card={preview}
                 onClose={() => setPreview(null)}
             />}
@@ -428,9 +442,9 @@ export function MatchScreen({
 }
 
 /**
- * Pergunta de alvo e a que aponta jogador: `choose` e `manual` no motor. As
- * outras duas (`optIn`, `option`) sao botao de sim/nao e escolha de opcao, e
- * cabem na propria barra de acao.
+ * Pergunta de alvo e a que aponta jogador: `choose` e `manual` no motor. A
+ * escolha de opcao (`option`) cabe na propria barra de acao, e a rodada de
+ * voluntarios (`optIn`) tem tela propria — ela nao e de um jogador, e da mesa.
  */
 function isPlayerPick(request){
     return Boolean(request)

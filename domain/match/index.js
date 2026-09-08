@@ -20,7 +20,7 @@ export { MISSIONS, MissionGoal, ALL_MISSIONS, evaluateMissions } from './mission
 export { DECK_SIZE, createSeatedMatch, randomDeck } from './setup.js';
 export {
     HAND_SIZE, MatchStatus, PLAYS_PER_TURN, Phase, REACTION_WINDOW_MS,
-    createMatch, currentPlayer, ongoingFor, playerById, playersAfter,
+    createMatch, currentPlayer, ongoingFor, optInRound, playerById, playersAfter,
 } from './state.js';
 export { replayMatch } from './replay.js';
 export { INFINITE_SHOTS } from './resolve.js';

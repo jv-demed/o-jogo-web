@@ -635,6 +635,24 @@ function dropOngoingFromEquipment(draft, playerId, idCard){
 const NOW = new Set([Timing.immediate, Timing.reaction, undefined]);
 
 /**
+ * Quem esta carta ja mandou beber antes de a rodada de voluntarios abrir.
+ *
+ * A conta e a fila de shots que *esta* resolucao acrescentou — `ctx.drinksMark`
+ * e o tamanho dela antes de a carta comecar — menos quem tem escolha. Ler a
+ * fila em vez de a carta e o que mantem isto generico: o resolvedor nao sabe o
+ * que e um Sauzburg, sabe que alguem ja bebeu por obrigacao e que essa pessoa
+ * tem que aparecer na rodada junto com os voluntarios.
+ */
+function forcedDrinkers(draft, ctx, ids){
+    const out = [];
+    for(const entry of (draft.drinks ?? []).slice(ctx.drinksMark ?? 0)){
+        if(ids.includes(entry.playerId) || out.includes(entry.playerId)) continue;
+        out.push(entry.playerId);
+    }
+    return out;
+}
+
+/**
  * Resolve um efeito: alvo, condicao, sorte, acao e o `then` encadeado.
  *
  * @returns {{ needs?: object }} `needs` preenchido quer dizer que falta uma
@@ -664,14 +682,31 @@ export function applyEffect(draft, effect, ctx){
     }
 
     // `optional` e "pode, se quiser": so atinge quem aceitou. A pergunta e de
-    // cada candidato, um por vez — "todos podem beber" e cinco decisoes, nao
-    // uma. Quem jogou a carta nao responde pelos outros.
+    // cada candidato — "todos podem beber" e cinco decisoes, nao uma, e quem
+    // jogou a carta nao responde pelos outros.
+    //
+    // Todos respondem *juntos*, e nao um por vez. Um por vez transformava a
+    // rodada em turno: o segundo da fila decidia sabendo o que o primeiro fez,
+    // e a demora de cada um acontecia na frente da mesa parada. A rodada e uma
+    // so, todo mundo com o botao na mao ao mesmo tempo, e a resolucao segue
+    // quando o ultimo responder — o que a mesa acompanha e a lista de quem ja
+    // apertou, do mesmo jeito que acompanha quem ja bebeu.
     let finalIds = ids;
     if(effect.optional === true){
         const accepted = ctx.choices?.[ctx.slot + ':optIn'] ?? {};
-        const faltando = ids.find(id => accepted[id] === undefined);
-        if(faltando !== undefined){
-            return { needs: { kind: 'optIn', slot: ctx.slot, chooserId: faltando, candidates: ids } };
+        // Quem a carta ja obrigou a beber antes de abrir a rodada entra nela
+        // sem ter o que escolher. Nao e formalidade: na carta 4 o obrigado e o
+        // Sauzburg, e uma rodada em que a mesa inteira aperta menos ele o
+        // aponta com o dedo — a carta existe justamente para ele beber sem que
+        // se saiba qual deles e. Ele aperta como os outros (a tela dele so nao
+        // oferece o "nao") e a rodada espera por ele; a resposta dele nao muda
+        // nada, porque quem entra no efeito sai de `ids`.
+        const forced = forcedDrinkers(draft, ctx, ids);
+        const round = [...ids, ...forced];
+        const answered = round.filter(id => accepted[id] !== undefined);
+        if(answered.length < round.length){
+            return { needs: { kind: 'optIn', slot: ctx.slot,
+                candidates: ids, forced, answered } };
         }
         finalIds = ids.filter(id => accepted[id] === true);
     }
