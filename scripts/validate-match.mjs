@@ -23,47 +23,20 @@ import { createSoloMatch } from '../domain/match/solo.js';
 import { createSeatedMatch } from '../domain/match/setup.js';
 import { isBot } from '../domain/match/bot.js';
 import { replayMatch } from '../domain/match/replay.js';
-import { CARD_EFFECTS } from '../domain/cards/effects/index.js';
 import { MISSIONS, evaluateMissions } from '../domain/match/missions.js';
-import { MatchStatus, Phase, createMatch, optInRound } from '../domain/match/state.js';
+import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
+// A mesa de mentira mora em scripts/lib/mesa.mjs desde que o validate-cards
+// passou a jogar carta do mesmo jeito.
+import {
+    IDS, beber, daVez, descarteBate, jogar, mesa, novaMesa, parada, passagem, responder,
+} from './lib/mesa.mjs';
 
 let problemas = 0;
 const erro = message => { console.error('ERRO ' + message); problemas++; };
 
 const check = (label, condition) => { if(!condition) erro(label); };
 
-/**
- * O descarte da mesa (`state.discardPile`, em ordem) e os montes de cada
- * jogador (`player.discard`) sao a mesma carta contada duas vezes: um sabe
- * quando ela caiu, o outro de quem ela e. Escrever num e esquecer o outro faz
- * a pilha do centro mostrar carta errada — e e um bug silencioso, porque cada
- * lado sozinho continua coerente. Por isso os dois batem em toda simulacao.
- */
-function descarteBate(state){
-    const daMesa = new Map();
-    for(const { idCard, playerId } of state.discardPile){
-        const chave = `${playerId}:${idCard}`;
-        daMesa.set(chave, (daMesa.get(chave) ?? 0) + 1);
-    }
-    for(const player of state.players){
-        for(const idCard of player.discard){
-            const chave = `${player.id}:${idCard}`;
-            const resta = daMesa.get(chave) ?? 0;
-            if(resta === 0) return false;
-            daMesa.set(chave, resta - 1);
-        }
-    }
-    return [...daMesa.values()].every(resta => resta === 0);
-}
-
 // ------------------------------------------------------- 1. apuracao
-
-function mesa(players){
-    return { players: players.map((p, i) => ({
-        id: i + 1, shots: 0, shotsGiven: 0, guesses: {}, ...p,
-        goal: p.goal ?? MISSIONS[p.mission].goal,
-    })) };
-}
 
 {
     const state = mesa([
@@ -133,148 +106,6 @@ function mesa(players){
 }
 
 // ------------------------------------------------- 2. as 116 cartas
-
-const IDS = Object.keys(CARD_EFFECTS).map(Number).sort((a, b) => a - b);
-
-function novaMesa(seed = 1){
-    return createMatch({
-        seed,
-        players: [1, 2, 3, 4, 5].map(id => ({
-            id,
-            name: 'p' + id,
-            // Baralho generico: nao importa o que tem, a carta testada e
-            // colocada na mao a mao. Precisa so ser fundo para as compras.
-            deck: IDS.slice(0, 30),
-        })),
-    });
-}
-
-/**
- * Quem responde o pedido pendente.
- *
- * A rodada de voluntarios (`optIn`) nao tem `chooserId`: ela pergunta a mesa
- * inteira de uma vez, e fecha quando o ultimo responder. A mesa de mentira
- * responde um por vez, na ordem da lista.
- */
-function quemResponde(state){
-    const request = state.pending[0];
-    return request.kind === 'optIn'
-        ? optInRound(request).waiting[0]
-        : request.chooserId;
-}
-
-/** Responde qualquer pedido de escolha do jeito mais simples que passa. */
-function responder(state){
-    const request = state.pending[0];
-    const outros = state.players.map(p => p.id).filter(id => id !== request.chooserId);
-    const todos = state.players.map(p => p.id);
-
-    switch(request.kind){
-        case 'optIn':  return true;
-        case 'option': return 0;
-        case 'cards':  return [];
-        default: {
-            const pool = request.candidates ?? todos;
-            const count = request.upTo ? Math.min(1, request.count) : request.count;
-            const preferidos = pool.filter(id => outros.includes(id));
-            return (preferidos.length >= count ? preferidos : pool).slice(0, count);
-        }
-    }
-}
-
-const daVez = state => state.players.find(p => p.id === state.order[state.turnIndex]);
-
-/**
- * Bebe o que a mesa deve.
- *
- * Todo shot para a partida ate quem bebeu confirmar, entao nenhuma simulacao
- * anda sem passar por aqui — que e exatamente o ponto da regra. Numa mesa de
- * mentira todo mundo bebe na hora.
- */
-function beber(state, now = 0){
-    let current = state;
-    let guarda = 0;
-    // O ritual vem antes: a musiquinha e o que destrava o shot, e o motor
-    // recusa `drank` enquanto ela nao sair.
-    while(current.rituals?.length){
-        if(guarda++ > 200) throw new Error('fila de rituais sem fim');
-        current = apply(current, {
-            type: Command.performed,
-            playerId: current.rituals[0].playerId,
-            now,
-        });
-    }
-    // A entrada confirmada continua na fila ate o ultimo beber — quem falta e
-    // quem ainda nao tem `confirmed`.
-    while(current.drinks?.length){
-        if(guarda++ > 200) throw new Error('fila de shots sem fim');
-        current = apply(current, {
-            type: Command.drank,
-            playerId: current.drinks.find(entry => !entry.confirmed).playerId,
-            now,
-        });
-    }
-    return current;
-}
-
-/** A mesa tem alguma pendencia humana (ritual ou shot) travando a partida? */
-const parada = state => Boolean(state.rituals?.length || state.drinks?.length);
-
-/**
- * A passagem de vez automatica, como o `useMatchDriver` faz na tela: com o
- * turno resolvido nao sobra decisao nenhuma, e a mesa passa sozinha em vez de
- * esperar um toque. Aqui ela precisa existir porque o bot deixou de devolver
- * `endTurn` — sem isto a simulacao trava na fase `end`.
- */
-const passagem = state => (state.status === MatchStatus.progress
-    && state.phase === Phase.end
-    && !parada(state))
-    ? { type: Command.endTurn, playerId: daVez(state)?.id, now: 999999 }
-    : null;
-
-/** Joga uma carta e resolve tudo o que ela abrir, respondendo as escolhas. */
-function jogar(state, idCard){
-    let current = state;
-    // A carta so pode ser jogada depois da compra obrigatoria do turno.
-    if(current.phase === Phase.draw){
-        current = apply(current, { type: Command.draw, playerId: daVez(current).id, now: 0 });
-    }
-    const player = daVez(current);
-    player.hand = [idCard, ...player.hand];
-
-    current = apply(current, { type: Command.play, playerId: player.id, idCard, now: 0 });
-
-    // Duas paradas ate a carta resolver, e nesta ordem: a declaracao dos alvos
-    // (que acontece *antes* da janela) e a resolucao em si. As duas param em
-    // `pending`, e entre elas corre a janela de interferencia — daí o tick.
-    // O relogio anda: a janela abre a partir do instante do comando, entao um
-    // `now` fixo abriria uma janela que nunca vence.
-    let now = 1000;
-    let guarda = 0;
-    while(guarda++ < 40){
-        now += 60000;
-        if(parada(current)){
-            current = beber(current, now);
-            continue;
-        }
-        if(current.phase === Phase.window){
-            current = apply(current, { type: Command.tick, now });
-            continue;
-        }
-        if(current.phase === Phase.pending && current.resolution){
-            current = apply(current, {
-                type: Command.answer,
-                playerId: quemResponde(current),
-                value: responder(current),
-                now,
-            });
-            continue;
-        }
-        break;
-    }
-    if(guarda >= 40) throw new Error('escolha em loop');
-    return current;
-}
 
 for(const id of IDS){
     const antes = novaMesa(id);

@@ -1,3 +1,4 @@
+import { MISSIONS } from './missions.js';
 import { Phase, cloneState, playerById } from './state.js';
 
 /**
@@ -66,6 +67,53 @@ export function giveCard(state, playerId, idCard){
 
     player.hand.push(idCard);
     log(draft, { type: 'dev.giveCard', playerId, idCard });
+    return draft;
+}
+
+/**
+ * Monta a mesa na mao: missao, shots e mao de cada assento, e de quem e a vez.
+ *
+ * E o que o laboratorio de carta (app/(auth)/dev/carta) e os cenarios de
+ * scripts/scenarios/ precisam para comecar no caso que interessa — "a carta 10
+ * contra um Swarley com 3 shots" — em vez de jogar turnos ate a mesa chegar la
+ * sozinha. Os dois usam esta mesma funcao, e por isso o caso que o teste roda e
+ * o mesmo que a tela mostra.
+ *
+ * A meta volta para a padrao da missao, igual ao que `mission.swap` faz: meta
+ * trocada por carta e consequencia de jogada, e uma mesa recem-montada ainda
+ * nao teve jogada nenhuma. Missao repetida e aceita — a mesa de verdade nao
+ * tem, mas o teste de uma carta que olha para "o Swarley" as vezes quer dois.
+ *
+ * Fica fora do motor pelo mesmo motivo do resto do arquivo, e nao vira
+ * `DevCommand`: so roda antes da primeira jogada, numa mesa que nao sai da aba.
+ *
+ * @param {object} state
+ * @param {{mission?: string, shots?: number, hand?: number[]}[]} seats
+ *        na ordem de `state.order`; campo ausente fica como a mesa sorteou.
+ * @param {{turnOf?: number}} [options] id de quem joga primeiro. A fase volta
+ *        para a compra: quem testa a carta compra como em qualquer vez.
+ */
+export function arrangeTable(state, seats, { turnOf } = {}){
+    const draft = cloneState(state);
+    seats.forEach((seat, index) => {
+        const player = playerById(draft, draft.order[index]);
+        if(!player || !seat) return;
+        if(seat.mission){
+            if(!MISSIONS[seat.mission]) throw new Error(`missao desconhecida: ${seat.mission}`);
+            player.mission = seat.mission;
+            player.goal = MISSIONS[seat.mission].goal;
+        }
+        if(typeof seat.shots === 'number') player.shots = seat.shots;
+        if(Array.isArray(seat.hand)) player.hand = [...seat.hand];
+    });
+    if(turnOf !== undefined){
+        const index = draft.order.indexOf(turnOf);
+        if(index === -1) throw new Error(`assento ${turnOf} nao esta na mesa`);
+        draft.turnIndex = index;
+        draft.phase = Phase.draw;
+    }
+
+    log(draft, { type: 'dev.arrange', turnOf: turnOf ?? null });
     return draft;
 }
 

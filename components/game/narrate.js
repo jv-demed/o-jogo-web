@@ -130,6 +130,8 @@ export function narrate(entry, nameOf){
                 : `[dev] ${cardName(entry.idCard)} entrou no topo do baralho de ${who(entry.playerId)}.`;
         case 'dev.giveCard':
             return `[dev] ${cardName(entry.idCard)} foi para a mão de ${who(entry.playerId)}.`;
+        case 'dev.arrange':
+            return '[dev] A mesa foi montada à mão.';
         case 'dev.window.close':
             return '[dev] A janela de interferência foi fechada na marra.';
         case 'match.end':
