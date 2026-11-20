@@ -41,7 +41,7 @@ const MENU = [
 export default function Home(){
 
     const router = useRouter();
-    const { user } = useUser();
+    const { user, isDev } = useUser();
 
     const [error, setError] = useState(null);
     const [isCreating, setIsCreating] = useState(false);
@@ -201,6 +201,13 @@ export default function Home(){
                     icon={ICONS.blocks}
                     action={() => router.push('/solo')}
                 />
+                {/* So aparece para quem tem is_dev: e a unica porta para a
+                    rota, e a rota manda de volta para ca quem nao tem. */}
+                {isDev && <ActionButton text='Laboratório de carta'
+                    variant='ghost'
+                    icon={ICONS.effect}
+                    action={() => router.push('/dev/carta')}
+                />}
                 {isCreating && <SpinLoader color='text-gold' />}
                 {error && <ErrorMessage error={error} />}
             </section>

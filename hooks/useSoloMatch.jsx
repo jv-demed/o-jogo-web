@@ -75,6 +75,18 @@ export function useSoloMatch(){
         setMatch(createSoloMatch({ seed: Date.now(), ...options }));
     }, []);
 
+    /**
+     * Comeca de uma partida ja montada (`{ state, botIds }`), em vez de
+     * sortear uma. E a porta do laboratorio de carta: ele monta a mesa com
+     * `createLabMatch` e entrega aqui, e dai em diante e um solo como os
+     * outros. Carregar o mesmo objeto de novo e o "repetir" — o estado e
+     * imutavel (o `apply` clona), entao o montado continua intacto.
+     */
+    const load = useCallback(prepared => {
+        setError(null);
+        setMatch(prepared);
+    }, []);
+
     const leave = useCallback(() => {
         setMatch(null);
         setError(null);
@@ -100,6 +112,7 @@ export function useSoloMatch(){
         isYourTurn: Boolean(state && you && currentPlayer(state)?.id === you.id),
         isOver: state?.status === MatchStatus.finished,
         start,
+        load,
         leave,
         dispatch,
         devDispatch,

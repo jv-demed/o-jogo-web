@@ -18,9 +18,12 @@ import { DECK_SIZE, createSeatedMatch } from './setup.js';
  *        seu baralho; sem ele, sorteia um do mesmo jeito que o dos bots.
  * @param {number} params.botCount
  * @param {number[]} params.pool  ids de carta disponiveis (o catalogo).
+ * @param {number} [params.yourSeat] em que lugar da roda voce senta. O solo
+ *        normal senta voce primeiro; o laboratorio de carta escolhe, porque
+ *        carta que olha para vizinho depende de onde se esta.
  * @returns {{ state: object, botIds: number[] }}
  */
-export function createSoloMatch({ seed, you, botCount, pool, deckSize = DECK_SIZE }){
+export function createSoloMatch({ seed, you, botCount, pool, deckSize = DECK_SIZE, yourSeat = 0 }){
     // Ids negativos para os bots (ver `isBot`, em bot.js).
     const bots = [];
     for(let i = 0; i < botCount; i++){
@@ -34,8 +37,11 @@ export function createSoloMatch({ seed, you, botCount, pool, deckSize = DECK_SIZ
         });
     }
 
+    const seats = [...bots];
+    seats.splice(Math.max(0, Math.min(yourSeat, bots.length)), 0, you);
+
     return {
-        state: createSeatedMatch({ seed, seats: [you, ...bots], pool, deckSize }),
+        state: createSeatedMatch({ seed, seats, pool, deckSize }),
         botIds: bots.map(bot => bot.id),
     };
 }
