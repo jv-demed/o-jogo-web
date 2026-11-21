@@ -16,7 +16,11 @@
 //
 //   {
 //     carta: 5,
-//     nome: 'o que a carta faz, em uma linha',
+//     nome: 'Carta: O que acontece',// aparece no laboratorio, com acento e
+//                                   // maiuscula depois dos dois pontos. Fala de
+//                                   // "voce" e "alguem", e nao da missao do
+//                                   // alvo: na mesa ninguem sabe quem e quem.
+//                                   // Missao so quando a carta fala dela.
 //     mesa: [{ mission: 'sauzburg', shots: 1, mao?: [ids] }, ...],  // ids 1..N
 //     joga: 2 | 'swarley',          // assento (id) ou missao de quem joga
 //     voce: 'stanley',              // so do laboratorio: quem e voce, quando a

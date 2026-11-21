@@ -26,7 +26,7 @@ const noDescarte = (s, idCard) => s.discardPile.some(e => e.idCard === idCard);
 export default [
     {
         carta: 1,
-        nome: 'A Bebida Infinita: você joga no Swarley, e ele bebe 1 na vez dele, três vezes',
+        nome: 'A Bebida Infinita: Você joga em alguém, e a pessoa bebe 1 na vez dela, três vezes',
         mesa: MESA_DE_5,
         joga: 'stanley',
         escolhas: { 0: ['swarley'] },
@@ -65,7 +65,7 @@ export default [
         // O mesmo efeito, visto por quem sofre: no laboratorio, a carta chega
         // na mesa jogada por um bot, e e na sua vez que o shot e cobrado.
         carta: 1,
-        nome: 'A Bebida Infinita: o Stanley joga em você, e você bebe 1 na sua vez, três vezes',
+        nome: 'A Bebida Infinita: Alguém joga em você, e você bebe 1 na sua vez, três vezes',
         mesa: MESA_DE_5,
         joga: 'stanley',
         voce: 'swarley',
@@ -84,7 +84,7 @@ export default [
 
     {
         carta: 2,
-        nome: 'Festinha de Sexta: você joga, e todos os outros bebem 1',
+        nome: 'Festinha de Sexta: Você joga, e todos os outros bebem 1',
         mesa: MESA_DE_5,
         joga: 'sauzburg',
         espera: (s, p) => [
@@ -99,7 +99,7 @@ export default [
 
     {
         carta: 2,
-        nome: 'Festinha de Sexta: o Sauzburg joga, e você bebe 1 com o resto da mesa',
+        nome: 'Festinha de Sexta: Alguém joga, e você bebe 1 com o resto da mesa',
         mesa: MESA_DE_5,
         joga: 'sauzburg',
         voce: 'stanley',
@@ -113,7 +113,7 @@ export default [
 
     {
         carta: 3,
-        nome: 'Um Bom Companheiro: você canta e escolhe outra pessoa para beber 1',
+        nome: 'Um Bom Companheiro: Você canta para alguém, e a pessoa bebe 1',
         mesa: MESA_DE_5,
         joga: 'stanley',
         escolhas: { 0: ['sjamals'] },
@@ -136,7 +136,7 @@ export default [
 
     {
         carta: 3,
-        nome: 'Um Bom Companheiro: o Stanley canta para você, e você bebe 1',
+        nome: 'Um Bom Companheiro: Alguém canta para você, e você bebe 1',
         mesa: MESA_DE_5,
         joga: 'stanley',
         voce: 'sjamals',
@@ -157,7 +157,7 @@ export default [
 
     {
         carta: 4,
-        nome: 'Kitumbras: você não é o Sauzburg, e escolhe se entra na bebida',
+        nome: 'Kitumbras: Você não é o Sauzburg, e escolhe se entra na bebida',
         mesa: MESA_DE_5,
         joga: 'stanley',
         voce: 'swarley',
@@ -183,7 +183,7 @@ export default [
 
     {
         carta: 4,
-        nome: 'Kitumbras: você é o Sauzburg, e bebe 1 sem ter escolha',
+        nome: 'Kitumbras: Você é o Sauzburg, e bebe 1 sem ter escolha',
         mesa: MESA_DE_5,
         joga: 'stanley',
         voce: 'sauzburg',
@@ -204,7 +204,7 @@ export default [
 
     {
         carta: 4,
-        nome: 'Kitumbras: você joga sendo o Sauzburg, e bebe 1 também',
+        nome: 'Kitumbras: Você joga sendo o Sauzburg, e bebe 1 também',
         mesa: MESA_DE_5,
         joga: 'sauzburg',
         escolhas: { 1: [] },
@@ -221,7 +221,7 @@ export default [
 
     {
         carta: 4,
-        nome: 'Kitumbras sem Sauzburg na mesa: ninguém é obrigado',
+        nome: 'Kitumbras: Sem Sauzburg na mesa, ninguém é obrigado',
         mesa: [
             { mission: 'stanley', shots: 0 },
             { mission: 'swarley', shots: 0 },
@@ -238,7 +238,7 @@ export default [
 
     {
         carta: 5,
-        nome: 'Cabeça Rachada: o Sauzburg quer menos shots até a missão dele trocar',
+        nome: 'Cabeça Rachada: O Sauzburg quer menos shots até a missão dele trocar',
         // Quem joga e o assento 2 (o swarley do comeco). As trocas mudam quem
         // e o que, entao a carta e conferida pelo id de quem jogou.
         mesa: [
@@ -299,7 +299,7 @@ export default [
     // missao. Quem joga no cenario e o gatilho; a 6 e do swarley.
     {
         carta: 6,
-        nome: 'É, Deve Ser: anula a troca de missão entre outros jogadores',
+        nome: 'É, Deve Ser: Anula a troca de missão entre outros jogadores',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'sjamals'] } },
@@ -316,7 +316,7 @@ export default [
     },
     {
         carta: 6,
-        nome: 'É, Deve Ser: anula a troca de missão que pega você',
+        nome: 'É, Deve Ser: Anula a troca de missão que pega você',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['swarley', 'sauzburg'] } },
@@ -329,7 +329,7 @@ export default [
     {
         // A 64 copia a missao de alguem, ninguem perde a sua: nao e troca.
         carta: 6,
-        nome: 'É, Deve Ser: o Bitrix copia a missão, não troca, e a defesa é recusada',
+        nome: 'É, Deve Ser: O Bitrix copia a missão, não troca, e a defesa é recusada',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 64, joga: 'stanley', escolhas: { 1: ['sauzburg'] } },
@@ -341,7 +341,7 @@ export default [
     },
     {
         carta: 6,
-        nome: 'É, Deve Ser: contra carta que não troca missão, a defesa é recusada',
+        nome: 'É, Deve Ser: Contra carta que não troca missão, a defesa é recusada',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 2, joga: 'stanley' },
@@ -356,7 +356,7 @@ export default [
 
     {
         carta: 10,
-        nome: 'César: no Swarley, ele passa a querer mais shots até a missão dele trocar',
+        nome: 'César: No Swarley, ele passa a querer mais shots até a missão dele trocar',
         mesa: [
             { mission: 'sauzburg', shots: 5 },
             { mission: 'swarley',  shots: 6 },
@@ -388,7 +388,7 @@ export default [
 
     {
         carta: 10,
-        nome: 'César: em quem não é o Swarley, troca de missão e a carta vai embora',
+        nome: 'César: Em quem não é o Swarley, troca de missão e a carta vai embora',
         mesa: [
             { mission: 'sauzburg', shots: 0 },
             { mission: 'swarley',  shots: 0 },
