@@ -26,7 +26,7 @@ const noDescarte = (s, idCard) => s.discardPile.some(e => e.idCard === idCard);
 export default [
     {
         carta: 1,
-        nome: 'A Bebida Infinita: o escolhido bebe 1 na vez dele, tres vezes',
+        nome: 'A Bebida Infinita: você joga no Swarley, e ele bebe 1 na vez dele, três vezes',
         mesa: MESA_DE_5,
         joga: 'stanley',
         escolhas: { 0: ['swarley'] },
@@ -62,8 +62,29 @@ export default [
     },
 
     {
+        // O mesmo efeito, visto por quem sofre: no laboratorio, a carta chega
+        // na mesa jogada por um bot, e e na sua vez que o shot e cobrado.
+        carta: 1,
+        nome: 'A Bebida Infinita: o Stanley joga em você, e você bebe 1 na sua vez, três vezes',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [
+            ['o efeito fica sobre você',
+                s.ongoing.length === 1 && s.ongoing[0].targets.join() === String(p('swarley').id)],
+            ['você ainda não bebeu', p('swarley').shots === 0],
+        ],
+        depois: [{ turnos: 15 }],
+        esperaDepois: (s, p) => [
+            ['você bebeu uma vez por vez sua, três vezes', p('swarley').shots === 3],
+            ['só você bebeu', s.players.filter(x => x.mission !== 'swarley').every(x => x.shots === 0)],
+        ],
+    },
+
+    {
         carta: 2,
-        nome: 'Festinha de Sexta: todos bebem 1, menos quem jogou',
+        nome: 'Festinha de Sexta: você joga, e todos os outros bebem 1',
         mesa: MESA_DE_5,
         joga: 'sauzburg',
         espera: (s, p) => [
@@ -77,8 +98,22 @@ export default [
     },
 
     {
+        carta: 2,
+        nome: 'Festinha de Sexta: o Sauzburg joga, e você bebe 1 com o resto da mesa',
+        mesa: MESA_DE_5,
+        joga: 'sauzburg',
+        voce: 'stanley',
+        espera: (s, p) => [
+            ['você bebe 1', p('stanley').shots === 1],
+            ['os outros que não jogaram também bebem 1',
+                ['swarley', 'sjamals', 'smichaels'].every(m => p(m).shots === 1)],
+            ['quem jogou não bebe', p('sauzburg').shots === 0],
+        ],
+    },
+
+    {
         carta: 3,
-        nome: 'Um Bom Companheiro: canta e escolhe outra pessoa para beber 1',
+        nome: 'Um Bom Companheiro: você canta e escolhe outra pessoa para beber 1',
         mesa: MESA_DE_5,
         joga: 'stanley',
         escolhas: { 0: ['sjamals'] },
@@ -100,10 +135,32 @@ export default [
     },
 
     {
-        carta: 4,
-        nome: 'Kitumbras: Sauzburg bebe 1 obrigado, os outros se quiserem',
+        carta: 3,
+        nome: 'Um Bom Companheiro: o Stanley canta para você, e você bebe 1',
         mesa: MESA_DE_5,
         joga: 'stanley',
+        voce: 'sjamals',
+        escolhas: { 0: ['sjamals'] },
+        espera: (s, p, { log }) => {
+            const cantou = log.findIndex(e => e.type === 'ritual.done');
+            const bebeu = log.findIndex(e => e.type === 'drink.confirmed');
+            return [
+                ['quem canta é quem jogou, e não você',
+                    log.some(e => e.type === 'ritual.done' && e.playerId === p('stanley').id)
+                    && !log.some(e => e.type === 'ritual.done' && e.playerId === p('sjamals').id)],
+                ['a música vem antes do seu shot', cantou !== -1 && bebeu !== -1 && cantou < bebeu],
+                ['você bebe 1', p('sjamals').shots === 1],
+                ['só você bebe', s.players.filter(x => x.mission !== 'sjamals').every(x => x.shots === 0)],
+            ];
+        },
+    },
+
+    {
+        carta: 4,
+        nome: 'Kitumbras: você não é o Sauzburg, e escolhe se entra na bebida',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'swarley',
         // So o swarley aceita entrar na bebida.
         escolhas: { 1: ['swarley'] },
         espera: (s, p, { passos }) => {
@@ -126,7 +183,45 @@ export default [
 
     {
         carta: 4,
-        nome: 'Kitumbras sem Sauzburg na mesa: ninguem e obrigado',
+        nome: 'Kitumbras: você é o Sauzburg, e bebe 1 sem ter escolha',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'sauzburg',
+        // Ninguem mais aceita: so o Sauzburg bebe.
+        escolhas: { 1: [] },
+        espera: (s, p, { passos }) => {
+            const rodada = passos.find(e => e.pending?.[0]?.kind === 'optIn')?.pending[0];
+            return [
+                ['você bebe 1', p('sauzburg').shots === 1],
+                ['quem recusou não bebe', s.players.filter(x => x.mission !== 'sauzburg').every(x => x.shots === 0)],
+                // Na tela, o obrigado ve so o "beber", e nao o "quer beber?".
+                ['você entra na rodada como obrigado, sem pergunta',
+                    rodada && rodada.forced.includes(p('sauzburg').id)
+                    && !rodada.candidates.includes(p('sauzburg').id)],
+            ];
+        },
+    },
+
+    {
+        carta: 4,
+        nome: 'Kitumbras: você joga sendo o Sauzburg, e bebe 1 também',
+        mesa: MESA_DE_5,
+        joga: 'sauzburg',
+        escolhas: { 1: [] },
+        espera: (s, p, { passos }) => {
+            const rodada = passos.find(e => e.pending?.[0]?.kind === 'optIn')?.pending[0];
+            return [
+                ['você bebe 1, mesmo tendo jogado', p('sauzburg').shots === 1],
+                ['quem recusou não bebe', s.players.filter(x => x.mission !== 'sauzburg').every(x => x.shots === 0)],
+                ['você é obrigado na rodada, como qualquer Sauzburg',
+                    rodada && rodada.forced.includes(p('sauzburg').id)],
+            ];
+        },
+    },
+
+    {
+        carta: 4,
+        nome: 'Kitumbras sem Sauzburg na mesa: ninguém é obrigado',
         mesa: [
             { mission: 'stanley', shots: 0 },
             { mission: 'swarley', shots: 0 },
@@ -143,7 +238,7 @@ export default [
 
     {
         carta: 5,
-        nome: 'Cabeca Rachada: o Sauzburg quer menos shots ate a missao dele trocar',
+        nome: 'Cabeça Rachada: o Sauzburg quer menos shots até a missão dele trocar',
         // Quem joga e o assento 2 (o swarley do comeco). As trocas mudam quem
         // e o que, entao a carta e conferida pelo id de quem jogou.
         mesa: [
@@ -204,7 +299,7 @@ export default [
     // missao. Quem joga no cenario e o gatilho; a 6 e do swarley.
     {
         carta: 6,
-        nome: 'E, Deve Ser: anula a troca de missao entre terceiros',
+        nome: 'É, Deve Ser: anula a troca de missão entre outros jogadores',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'sjamals'] } },
@@ -221,7 +316,7 @@ export default [
     },
     {
         carta: 6,
-        nome: 'E, Deve Ser: anula a troca de missao que pega quem joga a 6',
+        nome: 'É, Deve Ser: anula a troca de missão que pega você',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['swarley', 'sauzburg'] } },
@@ -234,7 +329,7 @@ export default [
     {
         // A 64 copia a missao de alguem, ninguem perde a sua: nao e troca.
         carta: 6,
-        nome: 'E, Deve Ser: o Bitrix copia missao, nao troca, e a defesa e recusada',
+        nome: 'É, Deve Ser: o Bitrix copia a missão, não troca, e a defesa é recusada',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 64, joga: 'stanley', escolhas: { 1: ['sauzburg'] } },
@@ -246,7 +341,7 @@ export default [
     },
     {
         carta: 6,
-        nome: 'E, Deve Ser: contra carta que nao troca missao, a defesa e recusada',
+        nome: 'É, Deve Ser: contra carta que não troca missão, a defesa é recusada',
         mesa: MESA_DE_5,
         joga: 'swarley',
         gatilho: { carta: 2, joga: 'stanley' },
@@ -261,7 +356,7 @@ export default [
 
     {
         carta: 10,
-        nome: 'Cesar: no Swarley, ele passa a querer mais shots ate a missao dele trocar',
+        nome: 'César: no Swarley, ele passa a querer mais shots até a missão dele trocar',
         mesa: [
             { mission: 'sauzburg', shots: 5 },
             { mission: 'swarley',  shots: 6 },
@@ -293,7 +388,7 @@ export default [
 
     {
         carta: 10,
-        nome: 'Cesar: em quem nao e o Swarley, troca de missao e a carta vai embora',
+        nome: 'César: em quem não é o Swarley, troca de missão e a carta vai embora',
         mesa: [
             { mission: 'sauzburg', shots: 0 },
             { mission: 'swarley',  shots: 0 },

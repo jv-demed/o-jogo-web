@@ -30,6 +30,10 @@ import { createSoloMatch } from './solo.js';
  *        mao. `choices` sao os alvos dele por slot, em ids de assento (indice
  *        em `seats`); sem, ele escolhe como qualquer bot. Carta de defesa
  *        sem gatilho ganha um sorteado (ver `autoTrigger`).
+ * @param {{seat: number, choices?: object}} [params.playedBy] quem joga a
+ *        carta testada, quando nao e voce: o bot desse assento a compra e joga
+ *        na vez dele, e voce ve a carta chegando na mesa — "alguem joga em
+ *        voce". `choices` como em `trigger`.
  * @param {number} [params.now] o relogio da mesa. A janela do gatilho abre a
  *        partir dele, entao tem que ser o `Date.now()` de quando a mesa monta.
  * @returns {{ state: object, botIds: number[] }}
@@ -63,7 +67,15 @@ function autoTrigger(idCard, { seed, seats, yourSeat, pool }){
     };
 }
 
-export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, now = 0 }){
+export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, playedBy, now = 0 }){
+    // Carta jogada por um bot e o mesmo caminho do gatilho, so que a carta que
+    // ele joga e a testada — e ela nao vai para a sua mao.
+    let yours = true;
+    if(!trigger && playedBy && playedBy.seat !== yourSeat && !isReaction(idCard)){
+        trigger = { seat: playedBy.seat, idCard, choices: playedBy.choices };
+        yours = false;
+    }
+
     // Defesa nao se joga na propria vez: sem gatilho, a mesa nao teria como
     // chegar no caso que se quer testar.
     if(!trigger && isReaction(idCard)){
@@ -89,7 +101,7 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
     if(trigger.seat === yourSeat) throw new Error('o gatilho tem que ser de um bot');
     const botId = base.order[trigger.seat];
     let state = arrangeTable(base, seats, { turnOf: botId });
-    state = giveCard(state, you.id, idCard);
+    if(yours) state = giveCard(state, you.id, idCard);
     for(const id of extra) state = giveCard(state, you.id, id);
     state = stackDeck(state, botId, trigger.idCard);
     state = apply(state, { type: Command.draw, playerId: botId, now });

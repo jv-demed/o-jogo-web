@@ -53,6 +53,8 @@ const INITIAL_FORM = {
     extra: [],
     // Carta de defesa: { seat, idCard, choices? } — o bot que joga primeiro.
     trigger: null,
+    // Carta comum jogada por um bot em vez de voce: { seat, choices? }.
+    playedBy: null,
 };
 
 /** Assento (indice) de quem tem a missao, ou de numero (1..N), como no cenario. */
@@ -70,17 +72,24 @@ function formFromScenario(scenario){
         shots: seat.shots ?? 0,
         ...(seat.mao ? { hand: seat.mao } : {}),
     }));
-    const yourSeat = seatOf(scenario.mesa, scenario.joga);
+    // `voce` e so do laboratorio: o assento que e voce, quando a carta e
+    // jogada por outro. Sem ele, voce e quem joga.
+    const yourSeat = seatOf(scenario.mesa, scenario.voce ?? scenario.joga);
     const { gatilho } = scenario;
-    // Os alvos do gatilho vem em missao ou numero, e o laboratorio fala em
-    // assento: a mesa ainda nao existe quando o formulario e preenchido.
+    // Os alvos vem em missao ou numero, e o laboratorio fala em assento: a
+    // mesa ainda nao existe quando o formulario e preenchido.
+    const toSeats = choices => Object.fromEntries(Object.entries(choices ?? {}).map(([slot, value]) =>
+        [slot, Array.isArray(value) ? value.map(who => seatOf(scenario.mesa, who)) : value]));
     const trigger = gatilho ? {
         seat: seatOf(scenario.mesa, gatilho.joga),
         idCard: gatilho.carta,
-        choices: Object.fromEntries(Object.entries(gatilho.escolhas ?? {}).map(([slot, value]) =>
-            [slot, Array.isArray(value) ? value.map(who => seatOf(scenario.mesa, who)) : value])),
+        choices: toSeats(gatilho.escolhas),
     } : null;
-    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger };
+    const playerSeat = seatOf(scenario.mesa, scenario.joga);
+    const playedBy = !gatilho && playerSeat !== yourSeat
+        ? { seat: playerSeat, choices: toSeats(scenario.escolhas) }
+        : null;
+    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger, playedBy };
 }
 
 export default function CardLab(){
@@ -117,6 +126,7 @@ export default function CardLab(){
             extra: form.extra,
             pool: CATALOG_IDS,
             trigger: form.trigger,
+            playedBy: form.playedBy,
         };
         setPrepared(params);
         build(params);
@@ -191,7 +201,14 @@ function LabForm({ form, setForm, onBuild }){
     }
 
     function handlePick(card){
-        if(picking === 'card') update({ idCard: card.id });
+        // Gatilho e de carta de defesa, e "quem joga" e de carta comum: trocar
+        // de um tipo para o outro descarta o que nao vale mais, em vez de
+        // deixar escondido valendo.
+        if(picking === 'card') update({
+            idCard: card.id,
+            trigger: isReaction(card.id) ? form.trigger : null,
+            playedBy: isReaction(card.id) ? null : form.playedBy,
+        });
         else if(picking === 'trigger') setTrigger({ idCard: card.id });
         else update({ extra: [...form.extra, card.id] });
         setPicking(null);
@@ -222,8 +239,15 @@ function LabForm({ form, setForm, onBuild }){
             trigger: prev.trigger?.seat === index
                 ? { ...prev.trigger, seat: firstBot(index), choices: undefined }
                 : prev.trigger,
+            playedBy: prev.playedBy?.seat === index ? null : prev.playedBy,
         }));
     }
+
+    // Escolher quem joga a mao descarta os alvos do cenario, pelo mesmo motivo
+    // do gatilho.
+    const setPlayedBy = seat => update({
+        playedBy: seat === form.yourSeat ? null : { seat },
+    });
 
     const triggerValid = !form.trigger
         || (form.trigger.seat !== form.yourSeat && form.trigger.seat < form.seats.length);
@@ -321,7 +345,37 @@ function LabForm({ form, setForm, onBuild }){
                         </ul>
                     </section>
 
-                    <section className='flex flex-col gap-2'>
+                    {!isReaction(form.idCard) && <section className='flex flex-col gap-2'>
+                        <span className='text-sm font-semibold'>Quem joga a carta</span>
+                        <div className='flex flex-wrap gap-1.5'>
+                            {form.seats.map((seat, index) => {
+                                const active = (form.playedBy?.seat ?? form.yourSeat) === index;
+                                return (
+                                    <button key={index}
+                                        type='button'
+                                        onClick={() => setPlayedBy(index)}
+                                        aria-pressed={active}
+                                        className={`
+                                            h-9 px-3 rounded-xl text-xs font-semibold
+                                            border transition-transform active:scale-95
+                                            ${active
+                                                ? 'border-gold bg-gold/15 text-gold'
+                                                : 'border-line bg-elevated text-cream-dim'}
+                                        `}
+                                    >
+                                        {index === form.yourSeat ? 'Você' : `Bot ${index + 1}`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {form.playedBy && <span className='text-[0.65rem] text-cream-dim'>
+                            {form.playedBy.choices && Object.keys(form.playedBy.choices).length
+                                ? 'O bot joga na vez dele, nos alvos do cenário.'
+                                : 'O bot joga na vez dele e escolhe os alvos sozinho.'}
+                        </span>}
+                    </section>}
+
+                    {isReaction(form.idCard) && <section className='flex flex-col gap-2'>
                         <span className='text-sm font-semibold'>Gatilho (carta de defesa)</span>
                         <p className='text-[0.7rem] text-cream-dim'>
                             Um bot joga primeiro e a mesa começa na janela dessa jogada,
@@ -368,7 +422,7 @@ function LabForm({ form, setForm, onBuild }){
                                 action={() => setTrigger({})}
                             />
                             </>}
-                    </section>
+                    </section>}
 
                     <section className='flex flex-col gap-2'>
                         <span className='text-sm font-semibold'>Cartas extras na sua mão</span>

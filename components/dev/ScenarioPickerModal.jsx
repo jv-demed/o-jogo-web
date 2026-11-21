@@ -126,6 +126,7 @@ function ScenarioRow({ scenario, onPick }){
             <span className='text-xs text-cream leading-snug'>{shortName(scenario.nome)}</span>
             <span className='flex flex-wrap gap-1'>
                 <Chip>{scenario.mesa.length} lugares</Chip>
+                {scenario.voce && <Chip tone='gold'>jogada em você</Chip>}
                 {gatilho && <Chip tone='gold'>depois de #{gatilho.carta} {cardName(gatilho.carta)}</Chip>}
                 {scenario.recusada && <Chip tone='dim'>defesa recusada</Chip>}
                 {scenario.depois?.length > 0 && <Chip>+{scenario.depois.length} {scenario.depois.length === 1 ? 'passo' : 'passos'}</Chip>}
