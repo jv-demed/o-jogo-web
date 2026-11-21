@@ -29,6 +29,12 @@ const SHOW_MS = 3600;
 export function useTurnEffect(state, hold = false){
 
     const [shown, setShown] = useState(null);
+    // A ultima cobranca que ja saiu da tela. O `hold` liga e desliga a cada
+    // virada de vez (o anuncio da vez segura o aviso), e cada vez que ele
+    // soltava o efeito abaixo mostrava de novo a ultima entrada do log — a
+    // carta 1 voltava em toda vez de todo mundo, ate a proxima cobranca. Saiu
+    // uma vez, nao volta.
+    const doneRef = useRef(-1);
 
     const logRef = useRef([]);
     logRef.current = state?.log ?? [];
@@ -44,15 +50,23 @@ export function useTurnEffect(state, hold = false){
     useEffect(() => {
         // Partida nova (ou nenhum disparo ainda) limpa o que estava na tela.
         if(index < 0){
+            doneRef.current = -1;
             setShown(null);
             return;
         }
+        // Log mais curto que a ultima marca: partida nova, ou o REPETIR do
+        // laboratorio. A marca velha nao vale para ela.
+        if(index < doneRef.current) doneRef.current = -1;
+        if(index === doneRef.current) return;
         // Dois efeitos cobrando na mesma vez mostram o ultimo: sao dois avisos
         // de 3,6s empilhados numa vez so, e o segundo cobriria o primeiro de
         // qualquer jeito.
         setShown({ index, ...logRef.current[index] });
         if(hold) return;
-        const timer = setTimeout(() => setShown(null), SHOW_MS);
+        const timer = setTimeout(() => {
+            doneRef.current = index;
+            setShown(null);
+        }, SHOW_MS);
         return () => clearTimeout(timer);
     }, [index, hold]);
 
