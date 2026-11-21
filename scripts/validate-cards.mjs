@@ -26,6 +26,11 @@
 //       { turnos: 3 },              // passa a vez 3 vezes sem jogar
 //     ],
 //     esperaDepois: (s, p, ctx) => [...],
+//     gatilho: { carta: 32, joga: 'stanley', escolhas?: {...} },
+//                                   // carta de defesa: quem joga e o gatilho, e
+//                                   // a carta testada entra na janela dele,
+//                                   // jogada por `joga`
+//     recusada: true,               // com gatilho: o motor tem que recusar a defesa
 //     pendente: 'motivo',           // bug conhecido do motor: roda, mostra, nao derruba
 //   }
 //
@@ -115,12 +120,17 @@ function passo(state, etapa, passos){
 
 function rodar(cenario){
     const passos = [];
-    let state = montarMesa(cenario.mesa, { joga: cenario.joga, seed: cenario.carta });
+    const { gatilho } = cenario;
+    let state = montarMesa(cenario.mesa, { joga: gatilho?.joga ?? cenario.joga, seed: cenario.carta });
     passos.push(state);
     const quebras = [];
 
     try{
-        state = jogar(state, cenario.carta, { escolhas: cenario.escolhas, passos });
+        state = gatilho
+            ? jogar(state, gatilho.carta, { escolhas: gatilho.escolhas, passos, reacoes: [
+                { joga: cenario.joga, carta: cenario.carta, recusada: cenario.recusada },
+            ]})
+            : jogar(state, cenario.carta, { escolhas: cenario.escolhas, passos });
         state = beber(state, 0, passos);
         quebras.push(...conferir(cenario.espera, state, passos, 'espera'));
 

@@ -17,7 +17,7 @@
 //   5. a mesa mista do lobby - gente e bot no mesmo tabuleiro;
 //   6. o replay: estado inicial + comandos reproduz a partida inteira.
 
-import { Command, apply, legalCommands } from '../domain/match/engine.js';
+import { Command, apply, canPlay, isReaction, legalCommands } from '../domain/match/engine.js';
 import { botCommand } from '../domain/match/bot.js';
 import { createSoloMatch } from '../domain/match/solo.js';
 import { createSeatedMatch } from '../domain/match/setup.js';
@@ -28,7 +28,7 @@ import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
 // A mesa de mentira mora em scripts/lib/mesa.mjs desde que o validate-cards
 // passou a jogar carta do mesmo jeito.
 import {
-    IDS, beber, daVez, descarteBate, jogar, mesa, novaMesa, parada, passagem, responder,
+    IDS, beber, daVez, descarteBate, jogar, mesa, montarMesa, novaMesa, parada, passagem, responder,
 } from './lib/mesa.mjs';
 
 let problemas = 0;
@@ -107,10 +107,27 @@ const check = (label, condition) => { if(!condition) erro(label); };
 
 // ------------------------------------------------- 2. as 116 cartas
 
+/**
+ * Carta de defesa nao se joga na propria vez: ela entra na janela de outra
+ * jogada, e so contra o que ela combate. O gatilho e a primeira carta comum que
+ * o motor aceita como alvo dela.
+ */
+function jogarDefesa(antes, id){
+    for(const gatilho of IDS){
+        if(isReaction(gatilho)) continue;
+        try{
+            return jogar(antes, gatilho, { reacoes: [{ joga: 2, carta: id }] });
+        }catch(err){
+            if(!/nao combate/.test(err.message)) throw err;
+        }
+    }
+    throw new Error('nenhuma carta da colecao serve de gatilho para esta defesa');
+}
+
 for(const id of IDS){
     const antes = novaMesa(id);
     try{
-        const depois = jogar(antes, id);
+        const depois = isReaction(id) ? jogarDefesa(antes, id) : jogar(antes, id);
         const semHandler = depois.log.filter(e => e.type === 'unhandled');
         for(const entrada of semHandler) erro(`carta #${id}: acao sem handler "${entrada.action}"`);
 
@@ -324,7 +341,7 @@ for(const id of IDS){
         if(state.phase === Phase.play){
             const mao = daVez(state).hand;
             if(mao.length === 0){ state = apply(state, { type: Command.endTurn, now: 0 }); continue; }
-            state = jogar(state, mao[0]);
+            state = jogar(state, mao.find(idCard => canPlay(state, player.id, idCard)));
             continue;
         }
         if(state.phase === Phase.end){
@@ -522,7 +539,7 @@ for(const id of IDS){
         }
         if(acoes.includes(Command.play)){
             if(eu.hand.length === 0){ state = apply(state, { type: Command.tick, now: 999999 }); continue; }
-            state = apply(state, { type: Command.play, playerId: 1, idCard: eu.hand[0], now: 999999 });
+            state = apply(state, { type: Command.play, playerId: 1, idCard: eu.hand.find(idCard => canPlay(state, 1, idCard)), now: 999999 });
             jogadasDoHumano++;
             continue;
         }
@@ -652,6 +669,65 @@ for(const id of IDS){
     console.log(`mesa mista: ${passos} comando(s), ${state.turnCount} turnos, `
         + `vencedores ${state.winners?.join(', ') || 'ninguem'}`);
     console.log(`replay: ${log.length} comando(s) no log reproduzem a partida inteira`);
+}
+
+// ----------------------------------- 10. carta de defesa fora da janela
+
+{
+    // Na propria vez a defesa nao entra: nao ha jogada para ela responder.
+    let state = montarMesa([
+        { mission: 'stanley', mao: [6, 2] },
+        { mission: 'swarley' },
+    ], { joga: 1 });
+    state = apply(state, { type: Command.draw, playerId: 1, now: 0 });
+    let recusou = false;
+    try{ apply(state, { type: Command.play, playerId: 1, idCard: 6, now: 0 }); }
+    catch{ recusou = true; }
+    check('a 6 na propria vez e recusada', recusou);
+    check('a 6 nao acende na propria vez', !canPlay(state, 1, 6));
+
+    // Mao so de defesa: uma delas e queimada para a vez andar.
+    let travada = montarMesa([
+        { mission: 'stanley', mao: [6, 11] },
+        { mission: 'swarley' },
+    ], { joga: 1 });
+    travada = { ...travada, phase: Phase.play, playsLeft: 1 };
+    check('mao so de defesa deixa jogar a 6', canPlay(travada, 1, 6));
+    const queimada = apply(travada, { type: Command.play, playerId: 1, idCard: 6, now: 0 });
+    check('a 6 queimada sai da mao', !queimada.players[0].hand.includes(6));
+    check('a 6 queimada vai para o descarte',
+        queimada.discardPile.some(e => e.idCard === 6 && e.playerId === 1));
+    check('queimar nao abre janela nem cobra ritual',
+        queimada.phase === Phase.end && !queimada.rituals?.length);
+    check('queimar fica no log', queimada.log.some(e => e.type === 'burned' && e.idCard === 6));
+
+    // O bot com a 6 anula a troca que o pega, e deixa passar a que nao pega.
+    const comTroca = alvos => {
+        let s = montarMesa([
+            { mission: 'stanley', mao: [32] },
+            { mission: 'swarley', mao: [6] },
+            { mission: 'sauzburg' },
+        ], { joga: 1 });
+        s = apply(s, { type: Command.draw, playerId: 1, now: 0 });
+        s = apply(s, { type: Command.play, playerId: 1, idCard: 32, now: 0 });
+        s = apply(s, { type: Command.answer, playerId: 1, value: alvos, now: 0 });
+        return s;
+    };
+    const pega = comTroca([2, 3]);
+    check('a troca abre a janela', pega.phase === Phase.window);
+    check('o bot com a 6 anula a troca que o pega',
+        botCommand(pega, 2)?.type === Command.react && botCommand(pega, 2)?.idCard === 6);
+    const naoPega = comTroca([1, 3]);
+    check('o bot guarda a 6 quando a troca nao o pega', botCommand(naoPega, 2)?.type === Command.pass);
+
+    // Contra "todo mundo bebe" a 6 nao serve, e o bot nao tenta.
+    let festa = montarMesa([
+        { mission: 'stanley', mao: [2] },
+        { mission: 'swarley', mao: [6] },
+    ], { joga: 1 });
+    festa = apply(festa, { type: Command.draw, playerId: 1, now: 0 });
+    festa = apply(festa, { type: Command.play, playerId: 1, idCard: 2, now: 0 });
+    check('o bot nao gasta a 6 contra carta de beber', botCommand(festa, 2)?.type === Command.pass);
 }
 
 // ------------------------------------------------------------- panorama

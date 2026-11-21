@@ -235,8 +235,13 @@ export function passarVez(state, now = 0, passos){
  * @param {object[]} [opcoes.passos] recebe cada estado intermediario, para o
  *        cenario conferir o que aconteceu *no meio* — a pergunta que a carta
  *        fez, a janela que abriu — e nao so onde a mesa parou.
+ * @param {{joga: number|string, carta: number, recusada?: boolean}[]} [opcoes.reacoes]
+ *        quem entra na janela, em ordem: cada uma responde ao topo da pilha
+ *        de quando entra. A carta vai para a mao de quem reage, igual a
+ *        jogada. `recusada: true` diz que o motor tem que recusar a reacao —
+ *        e se ele aceitar, a partida estoura.
  */
-export function jogar(state, idCard, { escolhas, passos } = {}){
+export function jogar(state, idCard, { escolhas, passos, reacoes = [] } = {}){
     let current = state;
     // A carta so pode ser jogada depois da compra obrigatoria do turno.
     if(current.phase === Phase.draw){
@@ -256,10 +261,16 @@ export function jogar(state, idCard, { escolhas, passos } = {}){
     // `now` fixo abriria uma janela que nunca vence.
     let now = 1000;
     let guarda = 0;
+    const fila = [...reacoes];
     while(guarda++ < 40){
         now += 60000;
         if(parada(current)){
             current = beber(current, now, passos);
+            continue;
+        }
+        if(current.phase === Phase.window && fila.length){
+            current = reagir(current, fila.shift(), now);
+            passos?.push(current);
             continue;
         }
         if(current.phase === Phase.window){
@@ -282,4 +293,21 @@ export function jogar(state, idCard, { escolhas, passos } = {}){
     }
     if(guarda >= 40) throw new Error('escolha em loop');
     return current;
+}
+
+/** Uma reacao na janela aberta, do jeito que a tela mandaria. */
+function reagir(state, { joga, carta, recusada = false }, now){
+    const [quem] = paraIds(state, joga);
+    const draft = { ...state, players: state.players.map(p =>
+        p.id === quem ? { ...p, hand: [carta, ...p.hand] } : p) };
+    let depois;
+    try{
+        depois = apply(draft, { type: Command.react, playerId: quem, idCard: carta, now });
+    }catch(err){
+        // Recusada como o cenario esperava: a mesa segue com a carta na mao.
+        if(recusada) return draft;
+        throw err;
+    }
+    if(recusada) throw new Error(`a reacao com a carta ${carta} devia ser recusada`);
+    return depois;
 }

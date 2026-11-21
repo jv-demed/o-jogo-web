@@ -200,6 +200,63 @@ export default [
                 && e.idCard === 5 && e.onTable && e.returned)],
         ],
     },
+    // A 6 e defesa: entra na janela de outra jogada, e so contra troca de
+    // missao. Quem joga no cenario e o gatilho; a 6 e do swarley.
+    {
+        carta: 6,
+        nome: 'E, Deve Ser: anula a troca de missao entre terceiros',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'sjamals'] } },
+        espera: (s, p, { log }) => [
+            ['a troca foi cancelada', log.some(e => e.type === 'cancelled' && e.idCard === 32)],
+            ['o sauzburg continua sauzburg', p('sauzburg').id === 3],
+            ['o sjamals continua sjamals', p('sjamals').id === 4],
+            ['ninguem trocou de missao', !log.some(e => e.type === 'mission.swap')],
+            ['o swarley disse "e, deve ser"', log.some(e => e.type === 'ritual.done' && e.idCard === 6)],
+            ['a 6 saiu da mao do swarley', !p('swarley').hand.includes(6)],
+            ['a 6 e a 32 foram para o descarte', noDescarte(s, 6) && noDescarte(s, 32)],
+        ],
+    },
+    {
+        carta: 6,
+        nome: 'E, Deve Ser: anula a troca de missao que pega quem joga a 6',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        gatilho: { carta: 32, joga: 'stanley', escolhas: { 0: ['swarley', 'sauzburg'] } },
+        espera: (s, p, { log }) => [
+            ['a troca foi cancelada', log.some(e => e.type === 'cancelled' && e.idCard === 32)],
+            ['o swarley continua swarley', p('swarley').id === 2],
+            ['o sauzburg continua sauzburg', p('sauzburg').id === 3],
+        ],
+    },
+    {
+        // A 64 copia a missao de alguem, ninguem perde a sua: nao e troca.
+        carta: 6,
+        nome: 'E, Deve Ser: o Bitrix copia missao, nao troca, e a defesa e recusada',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        gatilho: { carta: 64, joga: 'stanley', escolhas: { 1: ['sauzburg'] } },
+        recusada: true,
+        espera: (s, p, { log }) => [
+            ['a 6 continua na mao do swarley', p('swarley').hand.includes(6)],
+            ['o bitrix nao foi cancelado', !log.some(e => e.type === 'cancelled')],
+        ],
+    },
+    {
+        carta: 6,
+        nome: 'E, Deve Ser: contra carta que nao troca missao, a defesa e recusada',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        gatilho: { carta: 2, joga: 'stanley' },
+        recusada: true,
+        espera: (s, p, { log }) => [
+            ['a 6 continua na mao do swarley', p('swarley').hand.includes(6)],
+            ['nada foi cancelado', !log.some(e => e.type === 'cancelled')],
+            ['nenhum ritual cobrado', !log.some(e => e.type === 'ritual' || e.type === 'ritual.done')],
+            ['a festinha resolveu: o swarley bebeu', log.some(e => e.type === 'drink' && e.playerId === 2)],
+        ],
+    },
 
     {
         carta: 10,

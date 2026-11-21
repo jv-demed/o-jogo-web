@@ -5,7 +5,7 @@ import { useImmersive } from '@/providers/ImmersiveProvider';
 import { useLastPlay } from '@/hooks/useLastPlay';
 import { useTurnEffect } from '@/hooks/useTurnEffect';
 import { useTurnIntro } from '@/hooks/useTurnIntro';
-import { Command, isReaction } from '@/domain/match/engine';
+import { Command, canAnswer, canPlay, isHandLocked } from '@/domain/match/engine';
 import { MatchStatus, Phase, ongoingFor } from '@/domain/match/state';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { GameTable } from '@/components/game/GameTable';
@@ -160,15 +160,15 @@ export function MatchScreen({
         dispatch({ type: Command.play, playerId: you.id, idCard });
     }
 
-    // O que da para jogar agora: na sua vez, a mao toda; na janela, so o que
-    // reage. Quem sabe a diferenca e o motor (`isReaction`), nao a tela.
+    // O que da para jogar agora: na sua vez, o que nao e de reacao (ou ela,
+    // queimada, se a mao so tem reacao); na janela, so a defesa que combate a
+    // jogada do topo. Quem sabe a diferenca e o motor, nao a tela.
     const playable = isYourTurn && state.phase === Phase.play
-        ? you.hand
+        ? you.hand.filter(idCard => canPlay(state, you.id, idCard))
         : state.phase === Phase.window
-            && state.stack[state.stack.length - 1]?.byId !== you.id
-            && !state.window.passed.includes(you.id)
-            ? you.hand.filter(isReaction)
+            ? you.hand.filter(idCard => canAnswer(state, you.id, idCard))
             : [];
+    const burning = isYourTurn && state.phase === Phase.play && isHandLocked(you);
 
     return (
         <>
@@ -398,6 +398,7 @@ export function MatchScreen({
             {choice && <CardActionModal card={choice}
                 isPlayable={playable.includes(choice.id)}
                 isReaction={state.phase === Phase.window}
+                isBurn={burning}
                 onPlay={() => handlePlay(choice.id)}
                 onInspect={() => { setPreview(choice); setChoice(null); }}
                 onClose={() => setChoice(null)}

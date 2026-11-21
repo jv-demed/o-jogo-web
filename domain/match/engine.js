@@ -72,6 +72,57 @@ export function isReaction(idCard){
 const firstAction = (entry, action) =>
     entry?.effects?.find(effect => effect.action === action) ?? null;
 
+/**
+ * O que a carta de defesa combate (`negate`/`redirect`), ou null quando ela
+ * reage sem cancelar nada.
+ */
+const cancelOf = idCard => {
+    const entry = getCardEffects(idCard);
+    return firstAction(entry, Action.negate) ?? firstAction(entry, Action.redirect);
+};
+
+/**
+ * Esta carta pode entrar na janela agora, contra o topo da pilha?
+ *
+ * Carta de defesa so entra contra o que ela combate: a 6 anula troca de
+ * missao, e jogada contra um "todo mundo bebe" ela nao teria o que anular — so
+ * sairia da mao, com o ritual cobrado por nada. O motor recusa, e a tela usa
+ * esta mesma conta para so acender a carta quando ela serve.
+ */
+export function canAnswer(state, playerId, idCard){
+    if(state.phase !== Phase.window) return false;
+    const player = playerById(state, playerId);
+    if(!player || player.out || !player.hand.includes(idCard)) return false;
+    if(!isReaction(idCard)) return false;
+    const top = state.stack[state.stack.length - 1];
+    if(!top || top.byId === playerId) return false;
+    if(state.window?.passed.includes(playerId)) return false;
+    const cancels = cancelOf(idCard);
+    return !cancels || canCancel(state, cancels.what, top);
+}
+
+/**
+ * A mao so tem carta de reacao. Jogar uma carta por vez e obrigatorio, e sem
+ * esta saida a partida travaria numa mao que nao tem o que jogar.
+ */
+export const isHandLocked = player =>
+    player.hand.length > 0 && player.hand.every(isReaction);
+
+/**
+ * Esta carta pode ser jogada na propria vez?
+ *
+ * Carta de reacao nao: ela existe para responder a jogada de alguem, e na sua
+ * vez nao ha jogada nenhuma para ela responder. A excecao e a mao travada —
+ * ai a carta e queimada (descartada sem efeito) so para liberar a vez.
+ */
+export function canPlay(state, playerId, idCard){
+    if(state.phase !== Phase.play) return false;
+    const player = currentPlayer(state);
+    if(player?.id !== playerId || !player.hand.includes(idCard)) return false;
+    if(state.playsLeft <= 0) return false;
+    return !isReaction(idCard) || isHandLocked(player);
+}
+
 // ------------------------------------------------------------------- janela
 
 /**
@@ -192,8 +243,7 @@ function beginResolution(draft, now){
 
     // Cancelamento e desvio consomem a jogada de baixo antes de qualquer coisa
     // — e para isso que existe a janela.
-    const entry = getCardEffects(item.idCard);
-    const cancels = firstAction(entry, Action.negate) ?? firstAction(entry, Action.redirect);
+    const cancels = cancelOf(item.idCard);
     if(cancels && item.respondsTo !== undefined){
         const below = draft.stack.findIndex(other => other.uid === item.respondsTo);
         if(below !== -1 && canCancel(draft, cancels.what, draft.stack[below])){
@@ -217,15 +267,30 @@ function beginResolution(draft, now){
  * o_jogo.cards, nao em domain/), da para conferir pelo efeito dela: quem manda
  * beber e `drink`, quem equipa e `equip`. `play` cancela qualquer coisa.
  */
-function canCancel(draft, what, target){
+function canCancel(state, what, target){
     if(what === Negatable.play || what === undefined) return true;
-    const entry = getCardEffects(target.idCard);
-    const has = action => Boolean(firstAction(entry, action));
+    // A acao pode estar dentro de uma escolha ou de um "se... entao": a 56
+    // so gira as missoes depois de quem joga escolher o lado, e continua sendo
+    // troca de missao.
+    const actions = new Set();
+    const walk = effects => {
+        for(const effect of [effects ?? []].flat()){
+            if(!effect) continue;
+            actions.add(effect.action);
+            walk(effect.options);
+            walk(effect.then);
+            walk(effect.otherwise);
+        }
+    };
+    walk(getCardEffects(target.idCard)?.effects);
+    const has = action => actions.has(action);
     switch(what){
         case Negatable.drink:       return has(Action.drink);
         case Negatable.equipment:   return has(Action.equip);
+        // `missionTake` (a 64, Bitrix) fica de fora: ela copia a missao de
+        // alguem, ninguem perde a sua. Nao e troca, e a 6 nao a anula.
         case Negatable.missionSwap: return has(Action.missionSwap) || has(Action.missionRotate)
-                                        || has(Action.missionTake) || has(Action.missionChain);
+                                        || has(Action.missionChain);
         case Negatable.nonShotPlay: return !has(Action.drink);
         // `divine` e `effectCard` sao tipo de carta, nao efeito: sem o catalogo
         // por perto, cancelam igual. Refinar exige o `type` de o_jogo.cards.
@@ -642,6 +707,20 @@ export function apply(state, command){
             if(!player.hand.includes(command.idCard)) fail('carta nao esta na mao');
             if(draft.playsLeft <= 0) fail('sem jogadas neste turno');
 
+            if(isReaction(command.idCard)){
+                if(!isHandLocked(player)) fail('carta de reacao so entra respondendo a uma jogada');
+                // Mao travada: a carta e queimada. Sai da mao para o descarte
+                // sem efeito, sem ritual e sem janela — nao ha jogada nenhuma
+                // para a mesa responder.
+                player.hand.splice(player.hand.indexOf(command.idCard), 1);
+                draft.playsLeft--;
+                toDiscard(draft, player, command.idCard);
+                draft.log.push({ turn: draft.turnCount, type: 'burned',
+                    playerId: player.id, idCard: command.idCard });
+                finishTurnStep(draft, now);
+                break;
+            }
+
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
             draft.playsLeft--;
             draft.stack.push(makeItem(draft, command));
@@ -662,6 +741,9 @@ export function apply(state, command){
 
             const top = draft.stack[draft.stack.length - 1];
             if(top?.byId === command.playerId) fail('nao se reage a propria jogada');
+            if(!canAnswer(draft, command.playerId, command.idCard)){
+                fail('esta carta nao combate a jogada que esta na mesa');
+            }
 
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
             draft.stack.push(makeItem(draft, command, top));

@@ -1,7 +1,7 @@
 import { Action, Negatable, Timing } from '../cards/vocabulary.js';
 import { getCardEffects } from '../cards/effects/index.js';
 import { ALL_MISSIONS } from './missions.js';
-import { Command, isReaction } from './engine.js';
+import { Command, canAnswer } from './engine.js';
 import { MatchStatus, Phase, currentPlayer, optInRound, playerById } from './state.js';
 
 /**
@@ -105,14 +105,52 @@ function threatensMe(state, item, playerId){
     });
 }
 
-/** Uma carta na mao que cancela ou desvia o que esta na pilha. */
-function findAnswer(player){
-    return player.hand.find(idCard => {
-        if(!isReaction(idCard)) return false;
-        return effectsOf(idCard).some(effect =>
-            (effect.action === Action.negate || effect.action === Action.redirect)
-            && (effect.what === Negatable.play || effect.what === Negatable.drink));
-    }) ?? null;
+const SWAPS = new Set([Action.missionSwap, Action.missionRotate, Action.missionChain]);
+
+/**
+ * A troca na pilha mexe na minha missao?
+ *
+ * Onde a jogada apontou alguem (`item.targets`), a troca e entre quem jogou e
+ * os apontados, ou so entre os apontados — o bot que nao esta na lista fica com
+ * a missao que tem. Troca por missao ou girando a mesa inteira nao aponta
+ * ninguem antes da janela, e na duvida conta como "me pega".
+ */
+function swapTouchesMe(item, playerId){
+    return effectsOf(item.idCard).some(effect => {
+        if(!SWAPS.has(effect.action)) return false;
+        const kind = (effect.between ?? effect.target)?.kind;
+        if((kind === 'choose' || kind === 'manual') && item.targets?.length){
+            return item.targets.includes(playerId);
+        }
+        return true;
+    });
+}
+
+/** Vale gastar esta defesa contra o topo da pilha? */
+function worthAnswering(state, idCard, top, playerId){
+    const cancels = effectsOf(idCard).find(effect =>
+        effect.action === Action.negate || effect.action === Action.redirect);
+    // Reacao que nao cancela (pular a vez, beber junto) tem condicao propria
+    // que o bot ainda nao sabe ler: fica na mao.
+    if(!cancels) return false;
+    if(cancels.what === Negatable.missionSwap) return swapTouchesMe(top, playerId);
+    if(threatensMe(state, top, playerId)) return true;
+    // O resto (equipamento, carta divina, carta de efeito) so quando a jogada
+    // aponta o bot.
+    return cancels.what !== Negatable.play && cancels.what !== Negatable.drink
+        && Boolean(top.targets?.includes(playerId));
+}
+
+/**
+ * Uma carta na mao que cancela ou desvia o que esta na pilha. Quem diz se ela
+ * *pode* entrar e o motor (`canAnswer`); aqui so se decide se vale a pena.
+ */
+function findAnswer(state, player){
+    const top = state.stack[state.stack.length - 1];
+    if(!top) return null;
+    return player.hand.find(idCard =>
+        canAnswer(state, player.id, idCard) && worthAnswering(state, idCard, top, player.id)
+    ) ?? null;
 }
 
 /**
@@ -121,6 +159,7 @@ function findAnswer(player){
  * para algum lugar em vez de virar troca de missao infinita.
  */
 function pickCard(player){
+    // So reacao na mao: o motor aceita uma delas queimada, e e a unica jogada.
     const playable = player.hand.filter(idCard => !isDefensive(idCard));
     const pool = playable.length ? playable : player.hand;
     return pool.find(idCard => hasAction(idCard, Action.drink)) ?? pool[0] ?? null;
@@ -215,11 +254,8 @@ export function botCommand(state, playerId, now = 0){
                 && state.stack[state.stack.length - 1]?.byId !== playerId;
             if(!canRespond) return null;
 
-            const top = state.stack[state.stack.length - 1];
-            if(threatensMe(state, top, playerId)){
-                const idCard = findAnswer(player);
-                if(idCard) return { type: Command.react, playerId, idCard, now };
-            }
+            const idCard = findAnswer(state, player);
+            if(idCard) return { type: Command.react, playerId, idCard, now };
             return { type: Command.pass, playerId, now };
         }
 

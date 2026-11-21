@@ -20,7 +20,7 @@ import { ActionButton } from '@/components/buttons/ActionButton';
  * Carta bloqueada tambem abre: saber o que voce *nao* pode jogar agora e
  * informacao de jogo, e aqui ela vem escrita, sem o botao de jogar.
  */
-export function CardActionModal({ card, isPlayable, isReaction, onPlay, onInspect, onClose }){
+export function CardActionModal({ card, isPlayable, isReaction, isBurn = false, onPlay, onInspect, onClose }){
 
     return (
         <Modal onClose={onClose} label={card.name}>
@@ -36,11 +36,14 @@ export function CardActionModal({ card, isPlayable, isReaction, onPlay, onInspec
                     {!isPlayable && <p className='text-xs text-cream-dim'>
                         Não dá para jogar esta carta agora.
                     </p>}
+                    {isPlayable && isBurn && <p className='text-xs text-cream-dim'>
+                        Sua mão só tem cartas de defesa: esta vai para o descarte sem efeito, só para liberar a vez.
+                    </p>}
                 </header>
 
                 <div className='flex flex-col gap-2 w-full'>
                     {isPlayable && <ActionButton
-                        text={isReaction ? 'Reagir com esta carta' : 'Jogar carta'}
+                        text={isReaction ? 'Reagir com esta carta' : isBurn ? 'Descartar para liberar' : 'Jogar carta'}
                         variant='gold'
                         icon={ICONS.play}
                         action={onPlay}

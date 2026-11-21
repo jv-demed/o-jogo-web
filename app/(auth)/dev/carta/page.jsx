@@ -6,6 +6,7 @@ import { ICONS } from '@/assets/icons';
 import { useUser } from '@/providers/UserProvider';
 import { useSoloMatch } from '@/hooks/useSoloMatch';
 import { createLabMatch } from '@/domain/match/lab';
+import { isReaction } from '@/domain/match/engine';
 import { ALL_MISSIONS, MISSIONS } from '@/domain/match/missions';
 import { SCENARIOS } from '@/scripts/scenarios/index.mjs';
 import { Main } from '@/components/containers/Main';
@@ -49,7 +50,14 @@ const INITIAL_FORM = {
     seats: defaultSeats(5),
     yourSeat: 0,
     extra: [],
+    // Carta de defesa: { seat, idCard, choices? } — o bot que joga primeiro.
+    trigger: null,
 };
+
+/** Assento (indice) de quem tem a missao, ou de numero (1..N), como no cenario. */
+const seatOf = (mesa, who) => typeof who === 'string'
+    ? Math.max(0, mesa.findIndex(seat => seat.mission === who))
+    : Math.max(0, (who ?? 1) - 1);
 
 /**
  * A mesa de um cenario, no formato do formulario. O assento que joga no
@@ -61,10 +69,17 @@ function formFromScenario(scenario){
         shots: seat.shots ?? 0,
         ...(seat.mao ? { hand: seat.mao } : {}),
     }));
-    const yourSeat = typeof scenario.joga === 'string'
-        ? Math.max(0, scenario.mesa.findIndex(seat => seat.mission === scenario.joga))
-        : Math.max(0, (scenario.joga ?? 1) - 1);
-    return { idCard: scenario.carta, seats, yourSeat, extra: [] };
+    const yourSeat = seatOf(scenario.mesa, scenario.joga);
+    const { gatilho } = scenario;
+    // Os alvos do gatilho vem em missao ou numero, e o laboratorio fala em
+    // assento: a mesa ainda nao existe quando o formulario e preenchido.
+    const trigger = gatilho ? {
+        seat: seatOf(scenario.mesa, gatilho.joga),
+        idCard: gatilho.carta,
+        choices: Object.fromEntries(Object.entries(gatilho.escolhas ?? {}).map(([slot, value]) =>
+            [slot, Array.isArray(value) ? value.map(who => seatOf(scenario.mesa, who)) : value])),
+    } : null;
+    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger };
 }
 
 export default function CardLab(){
@@ -78,8 +93,9 @@ export default function CardLab(){
     } = useSoloMatch();
 
     const [form, setForm] = useState(INITIAL_FORM);
-    // A mesa como ela saiu do "Montar". O "Repetir" carrega ela de novo: o
-    // estado e imutavel, entao o que foi jogado depois nao a alcanca.
+    // Como a mesa saiu do "Montar". O "Repetir" monta de novo com a mesma
+    // semente, e nao recarrega o estado guardado: com gatilho a mesa ja nasce
+    // na janela, e o relogio dela tem que comecar agora, nao no primeiro Montar.
     const [prepared, setPrepared] = useState(null);
 
     useEffect(() => {
@@ -88,8 +104,10 @@ export default function CardLab(){
 
     if(!isDev) return null;
 
+    const build = params => load(createLabMatch({ ...params, now: Date.now() }));
+
     function handleBuild(){
-        const match = createLabMatch({
+        const params = {
             seed: Date.now(),
             you: { id: user.id, name: user.name, avatar: user.avatar },
             idCard: form.idCard,
@@ -97,12 +115,13 @@ export default function CardLab(){
             yourSeat: form.yourSeat,
             extra: form.extra,
             pool: CATALOG_IDS,
-        });
-        setPrepared(match);
-        load(match);
+            trigger: form.trigger,
+        };
+        setPrepared(params);
+        build(params);
     }
 
-    const handleRepeat = () => prepared && load(prepared);
+    const handleRepeat = () => prepared && build(prepared);
 
     if(!state){
         return <LabForm form={form} setForm={setForm} onBuild={handleBuild} />;
@@ -172,9 +191,41 @@ function LabForm({ form, setForm, onBuild }){
 
     function handlePick(card){
         if(picking === 'card') update({ idCard: card.id });
+        else if(picking === 'trigger') setTrigger({ idCard: card.id });
         else update({ extra: [...form.extra, card.id] });
         setPicking(null);
     }
+
+    const firstBot = you => (you === 0 ? 1 : 0);
+
+    // Mexer no gatilho a mao descarta os alvos que vieram do cenario: eles
+    // apontam assentos de uma mesa que pode nao ser mais esta.
+    function setTrigger(patch){
+        setForm(prev => ({
+            ...prev,
+            trigger: {
+                seat: prev.trigger?.seat ?? firstBot(prev.yourSeat),
+                idCard: prev.trigger?.idCard ?? CARDS[0].id,
+                ...patch,
+                choices: undefined,
+            },
+        }));
+    }
+
+    // O gatilho e de um bot: sentar na cadeira dele empurra o gatilho para o
+    // primeiro bot, em vez de deixar a mesa impossivel de montar.
+    function setYourSeat(index){
+        setForm(prev => ({
+            ...prev,
+            yourSeat: index,
+            trigger: prev.trigger?.seat === index
+                ? { ...prev.trigger, seat: firstBot(index), choices: undefined }
+                : prev.trigger,
+        }));
+    }
+
+    const triggerValid = !form.trigger
+        || (form.trigger.seat !== form.yourSeat && form.trigger.seat < form.seats.length);
 
     function handleScenario(event){
         const scenario = SCENARIOS[Number(event.target.value)];
@@ -248,11 +299,60 @@ function LabForm({ form, setForm, onBuild }){
                                     index={index}
                                     seat={seat}
                                     isYou={form.yourSeat === index}
-                                    onYou={() => update({ yourSeat: index })}
+                                    onYou={() => setYourSeat(index)}
                                     onChange={patch => setSeat(index, patch)}
                                 />
                             ))}
                         </ul>
+                    </section>
+
+                    <section className='flex flex-col gap-2'>
+                        <span className='text-sm font-semibold'>Gatilho (carta de defesa)</span>
+                        <p className='text-[0.7rem] text-cream-dim'>
+                            Um bot joga primeiro e a mesa começa na janela dessa jogada,
+                            com a carta testada na sua mão.
+                        </p>
+                        {form.trigger
+                            ? <div className='flex flex-col gap-1.5'>
+                                <div className='flex items-center gap-2'>
+                                    <select value={form.trigger.seat}
+                                        onChange={event => setTrigger({ seat: Number(event.target.value) })}
+                                        aria-label='Bot que joga o gatilho'
+                                        className='h-9 px-1 rounded-lg border border-line bg-base text-xs text-cream'
+                                    >
+                                        {form.seats.map((seat, index) => index === form.yourSeat ? null : (
+                                            <option key={index} value={index}>Bot {index + 1}</option>
+                                        ))}
+                                    </select>
+                                    <button type='button'
+                                        onClick={() => setPicking('trigger')}
+                                        className='flex-1 min-w-0 h-9 px-2 rounded-lg border border-gold bg-gold/10 text-left text-xs font-semibold truncate'
+                                    >
+                                        joga #{form.trigger.idCard} {cardName(form.trigger.idCard)}
+                                    </button>
+                                    <button type='button'
+                                        onClick={() => update({ trigger: null })}
+                                        aria-label='Tirar o gatilho'
+                                        className='shrink-0 w-9 h-9 rounded-lg border border-line text-sm text-cream-dim'
+                                    >×</button>
+                                </div>
+                                <span className='text-[0.65rem] text-cream-dim'>
+                                    {form.trigger.choices && Object.keys(form.trigger.choices).length
+                                        ? 'Alvos do gatilho: os do cenário.'
+                                        : 'Alvos do gatilho: o bot escolhe.'}
+                                </span>
+                            </div>
+                            : <>
+                                {isReaction(form.idCard) && <span className='text-[0.65rem] text-gold'>
+                                    Sem gatilho escolhido: o bot antes de você joga uma carta
+                                    sorteada entre as que a #{form.idCard} combate.
+                                </span>}
+                                <ActionButton text='Um bot joga antes'
+                                variant='secondary'
+                                icon={ICONS.add}
+                                action={() => setTrigger({})}
+                            />
+                            </>}
                     </section>
 
                     <section className='flex flex-col gap-2'>
@@ -282,16 +382,20 @@ function LabForm({ form, setForm, onBuild }){
                             variant='gold'
                             icon={ICONS.play}
                             action={onBuild}
+                            disabled={!triggerValid}
                         />
                     </div>
                 </div>
             </Box>
 
             {picking && <CardPickerModal
-                title={picking === 'card' ? 'Carta a testar' : 'Carta extra'}
-                hint={picking === 'card'
-                    ? 'Vem para o topo do seu baralho e chega pela compra da sua vez.'
-                    : 'Entra na sua mão depois da compra.'}
+                title={{ card: 'Carta a testar', trigger: 'Carta do gatilho' }[picking] ?? 'Carta extra'}
+                hint={{
+                    card: form.trigger
+                        ? 'Com gatilho, entra direto na sua mão.'
+                        : 'Vem para o topo do seu baralho e chega pela compra da sua vez. Carta de defesa entra direto na sua mão.',
+                    trigger: 'O bot compra esta carta e joga ela na vez dele.',
+                }[picking] ?? 'Entra na sua mão.'}
                 sources={[{ key: 'catalog', label: 'Catálogo', ids: CATALOG_IDS }]}
                 onPick={handlePick}
                 onClose={() => setPicking(null)}

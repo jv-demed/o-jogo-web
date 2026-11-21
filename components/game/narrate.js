@@ -68,6 +68,8 @@ export function narrate(entry, nameOf){
             return `${missionName(entry.mission)} agora joga por outro objetivo.`;
         case 'cancelled':
             return `${who(entry.by)} cancelou ${cardName(entry.idCard)}.`;
+        case 'burned':
+            return `${who(entry.playerId)} descartou ${cardName(entry.idCard)} para liberar a mão.`;
         case 'negate':
             return `${who(entry.by)} tentou cancelar a jogada.`;
         case 'redirect':
