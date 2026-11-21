@@ -25,6 +25,11 @@ import { TURN_INTRO_MS } from '@/hooks/useTurnIntro';
 // que aconteceu, lento demais e a partida arrasta.
 const BOT_DELAY = 900;
 
+// O bot que passa a janela nao tem jogada para a mesa ler: e so "nao vou
+// entrar". Esperar o mesmo que uma jogada deixava a janela parada um segundo
+// por bot, com a carta ja lida.
+const BOT_PASS_DELAY = 300;
+
 // Quanto a mesa espera antes de passar a vez sozinha. O turno acabou e nao ha
 // mais nada a decidir: o tempo aqui e so para a ultima carta terminar de ser
 // lida antes de a tela trocar de dono.
@@ -70,17 +75,26 @@ export function useMatchDriver({ state, botIds, dispatch, active = true, botsPau
         const isTurnStart = state.phase === Phase.draw;
         const delay = command.type === Command.endTurn
             ? PASS_DELAY
-            : BOT_DELAY + (isTurnStart ? TURN_INTRO_MS : 0);
+            : command.type === Command.pass
+                ? BOT_PASS_DELAY
+                : BOT_DELAY + (isTurnStart ? TURN_INTRO_MS : 0);
 
         const timer = setTimeout(() => dispatch(command), delay);
         return () => clearTimeout(timer);
     }, [active, botsPaused, state, nextCommand, dispatch]);
 
+    // So bate quando a janela ja venceu. Bater antes era inofensivo para o
+    // motor, mas nao para a mesa: todo `apply` devolve estado novo, e estado
+    // novo remarca o temporizador do bot acima. Com o tick a cada 200ms e o bot
+    // pensando 900ms, nenhum bot chegava a passar — toda janela ia ate o fim.
+    const closesAt = state?.phase === Phase.window ? state.window?.closesAt : null;
     useEffect(() => {
-        if(!active || state?.phase !== Phase.window) return;
-        const timer = setInterval(() => dispatch({ type: Command.tick }), TICK_MS);
+        if(!active || !closesAt) return;
+        const timer = setInterval(() => {
+            if(Date.now() >= closesAt) dispatch({ type: Command.tick });
+        }, TICK_MS);
         return () => clearInterval(timer);
-    }, [active, state?.phase, dispatch]);
+    }, [active, closesAt, dispatch]);
 
     return {
         // Um passo da mesa, na mao. So faz sentido com os bots parados: solto,
