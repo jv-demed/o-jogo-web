@@ -2,8 +2,8 @@
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
 import { Modal } from '@/components/containers/Modal';
-import { ongoingFor } from '@/domain/match/state';
-import { cardById, ongoingDuration, ongoingTiming } from './narrate';
+import { ongoingFor, ongoingOnTable, tableCardWaiting } from '@/domain/match/state';
+import { cardById, ongoingDuration, ongoingTiming, tableCardDuration } from './narrate';
 
 /**
  * O que ainda esta pesando sobre um jogador.
@@ -20,23 +20,29 @@ import { cardById, ongoingDuration, ongoingTiming } from './narrate';
  */
 export function OngoingModal({ state, you, playerId, onClose, onInspect }){
 
-    const player = state.players.find(p => p.id === playerId);
-    if(!player) return null;
+    // Sem jogador, e a mesa: as cartas que valem para todos e nao estao sobre
+    // ninguem (`ongoingOnTable`). Mesma lista, mesmo modal — o que muda e de
+    // quem se fala e como se conta o prazo.
+    const onTable = playerId === null || playerId === undefined;
+    const player = onTable ? null : state.players.find(p => p.id === playerId);
+    if(!onTable && !player) return null;
 
-    const isYou = player.id === you.id;
-    const name = isYou ? 'você' : player.name;
-    const entries = ongoingFor(state, playerId);
+    const isYou = player?.id === you.id;
+    const name = onTable ? 'a mesa' : isYou ? 'você' : player.name;
+    const entries = onTable ? ongoingOnTable(state) : ongoingFor(state, playerId);
 
     return (
-        <Modal onClose={onClose} label={`Efeitos ativos em ${name}`}>
+        <Modal onClose={onClose} label={onTable ? 'Cartas ativas na mesa' : `Efeitos ativos em ${name}`}>
             <div className='flex flex-col gap-3 w-full px-4 py-4 panel'>
                 <header className='flex flex-col items-center gap-0.5 text-center'>
                     <h2 className='text-[1rem] font-bold text-cream'>
-                        Efeitos em {isYou ? 'você' : player.name}
+                        {onTable ? 'Cartas na mesa' : `Efeitos em ${name}`}
                     </h2>
                     <p className='text-xs text-cream-dim'>
                         {entries.length > 0
-                            ? `${entries.length} carta(s) ainda valendo na mesa.`
+                            ? onTable
+                                ? `${entries.length} carta(s) valendo para todos.`
+                                : `${entries.length} carta(s) ainda valendo na mesa.`
                             : 'Nada valendo por aqui.'}
                     </p>
                 </header>
@@ -73,7 +79,9 @@ export function OngoingModal({ state, you, playerId, onClose, onInspect }){
                                         {card.name}
                                     </span>
                                     <span className='truncate text-[0.7rem] text-cream-dim'>
-                                        {ongoingTiming(ongoing, isYou ? 'você' : player.name)}
+                                        {onTable
+                                            ? 'Na mesa, para todos'
+                                            : ongoingTiming(ongoing, isYou ? 'você' : player.name)}
                                         {source && ` · de ${source.id === you.id ? 'você' : source.name}`}
                                     </span>
                                     <span className={`
@@ -83,7 +91,9 @@ export function OngoingModal({ state, you, playerId, onClose, onInspect }){
                                         text-[0.65rem] font-semibold text-gold
                                     `}>
                                         <ICONS.history />
-                                        {ongoingDuration(ongoing)}
+                                        {onTable
+                                            ? tableCardDuration(tableCardWaiting(state, ongoing).length)
+                                            : ongoingDuration(ongoing)}
                                     </span>
                                 </div>
                             </li>

@@ -1,7 +1,7 @@
 import { Action, Chooser, Negatable, Pile, Rounding, Scope, Timing } from '../cards/vocabulary.js';
 import { MISSIONS } from './missions.js';
 import { nextRandom } from './rng.js';
-import { fromDiscard, playerById, releaseOngoingCard, toDiscard } from './state.js';
+import { fromDiscard, playerById, releaseOngoingCard, tableCardWaiting, toDiscard } from './state.js';
 import { meetsCondition, resolveTarget } from './targeting.js';
 
 /**
@@ -156,6 +156,7 @@ function swapMissions(draft, a, b){
     }
     [first.mission, second.mission] = [second.mission, first.mission];
     [first.goal, second.goal] = [second.goal, first.goal];
+    [first.goalChangedBy, second.goalChangedBy] = [second.goalChangedBy ?? null, first.goalChangedBy ?? null];
     // A missao que trocou de dono deixa de estar revelada: a mesa viu a
     // identidade, nao o assento.
     first.missionRevealed = false;
@@ -165,15 +166,92 @@ function swapMissions(draft, a, b){
     return true;
 }
 
-/** Encerra efeitos com duracao `untilMissionChange` ligados a estes jogadores. */
+/**
+ * A missao destes jogadores acabou de mudar de mao: vence o que dependia dela.
+ *
+ * Roda *depois* da troca, entao "a missao Sauzburg estava na troca" se le como
+ * "algum dos envolvidos tem a Sauzburg agora" — numa troca ou numa rotacao, a
+ * missao que entrou na roda continua dentro dela.
+ *
+ * As cartas da mesa (`onTable`) tem dois relogios, e e por isso que nao saem
+ * pelo mesmo filtro dos outros: o efeito acaba aqui, na primeira troca da
+ * missao, mas a carta so sai quando todo mundo ja trocou. Ver `plantOnTable`.
+ */
 function expireOnMissionChange(draft, ids){
+    const expired = [];
     draft.ongoing = draft.ongoing.filter(ongoing => {
+        if(ongoing.onTable) return true;
         if(ongoing.duration?.kind !== 'untilMissionChange') return true;
-        if(ongoing.duration.mission !== undefined){
-            return !ids.some(id => playerById(draft, id)?.mission === ongoing.duration.mission);
-        }
-        return !ongoing.targets.some(id => ids.includes(id));
+        const ends = ongoing.duration.mission !== undefined
+            ? ids.some(id => playerById(draft, id)?.mission === ongoing.duration.mission)
+            : ongoing.targets.some(id => ids.includes(id));
+        if(ends) expired.push(ongoing);
+        return !ends;
     });
+    // Antes isto so tirava da lista, e a carta que segurava o efeito sumia: nem
+    // na cadeira, nem no descarte. Vencer por troca e vencer como qualquer
+    // outra duracao.
+    for(const ongoing of expired){
+        const returned = releaseOngoingCard(draft, ongoing);
+        log(draft, { type: 'ongoing.end', idCard: ongoing.idCard, targets: ongoing.targets, returned });
+    }
+
+    for(const ongoing of draft.ongoing){
+        if(!ongoing.onTable) continue;
+        const mission = ongoing.duration?.mission;
+        if(ongoing.active && ids.some(id => playerById(draft, id)?.mission === mission)){
+            undoGoal(draft, ongoing);
+        }
+        ongoing.awaitingSwap = (ongoing.awaitingSwap ?? []).filter(id => !ids.includes(id));
+    }
+    settleTableCards(draft);
+}
+
+/**
+ * Desliga a meta que uma carta da mesa impos. So uma vez: o efeito nao volta,
+ * nem se a missao voltar para quem a tinha quando a carta foi jogada.
+ *
+ * Quem tem a missao agora recebe a meta padrao dela. A troca leva a meta junto
+ * (`swapMissions`), entao o novo dono chegou com a meta da carta — e ela, e nao
+ * a da missao, que o texto diz que acabou. So mexe se a meta ainda e a desta
+ * carta (`goalChangedBy`): uma rotacao ja devolveu a meta padrao, e outra carta
+ * que mudou a meta depois continua valendo.
+ *
+ * Nao entra no log de proposito. A mesa ve a troca e nao sabe quem e o
+ * Sauzburg; "a carta 5 parou de valer" logo depois de A trocar com B diria que
+ * ele e A ou B — que e exatamente o que a carta continuar na mesa esconde.
+ */
+function undoGoal(draft, ongoing){
+    ongoing.active = false;
+    for(const player of draft.players){
+        if(player.mission !== ongoing.duration?.mission) continue;
+        if(player.goalChangedBy !== ongoing.idCard) continue;
+        player.goal = MISSIONS[player.mission].goal;
+        player.goalChangedBy = null;
+    }
+}
+
+/**
+ * Tira da mesa a carta que todo mundo ja trocou de missao desde que ela entrou.
+ *
+ * Jogador `out` nao conta: ele nao joga mais, entao nenhuma troca o alcanca, e
+ * contar com ele deixaria a carta na mesa ate o fim. Quem sai da mesa sai da
+ * espera — por isso a conta e feita aqui, na hora de conferir, e nao na hora
+ * em que ele saiu. O motor tambem confere na virada do turno, para a saida de
+ * alguem bastar sem precisar de outra troca.
+ *
+ * Exportado para o engine.js chamar na virada.
+ */
+export function settleTableCards(draft){
+    const done = draft.ongoing.filter(ongoing =>
+        ongoing.onTable && tableCardWaiting(draft, ongoing).length === 0);
+    if(done.length === 0) return;
+    draft.ongoing = draft.ongoing.filter(ongoing => !done.includes(ongoing));
+    for(const ongoing of done){
+        if(ongoing.active) undoGoal(draft, ongoing);
+        const returned = releaseOngoingCard(draft, ongoing);
+        log(draft, { type: 'ongoing.end', idCard: ongoing.idCard, targets: [], returned, onTable: true });
+    }
 }
 
 // ------------------------------------------------------------- handlers
@@ -393,6 +471,7 @@ const HANDLERS = {
             const mission = missions[(i - 1 + ring.length) % ring.length];
             player.mission = mission;
             player.goal = MISSIONS[mission].goal;
+            player.goalChangedBy = null;
             player.missionRevealed = false;
         });
         expireOnMissionChange(draft, ring);
@@ -423,9 +502,11 @@ const HANDLERS = {
 
     // Muda a condicao de vitoria de quem carrega aquela missao — nao troca a
     // missao de dono. Por isso mexe em `goal`, e nao em `mission`.
-    [Action.missionSetGoal]: (draft, effect) => {
+    [Action.missionSetGoal]: (draft, effect, ids, ctx) => {
         for(const player of draft.players){
-            if(asList(effect.mission).includes(player.mission)) player.goal = effect.goal;
+            if(!asList(effect.mission).includes(player.mission)) continue;
+            player.goal = effect.goal;
+            player.goalChangedBy = ctx.idCard ?? null;
         }
         log(draft, { type: 'mission.setGoal', mission: effect.mission, goal: effect.goal });
     },
@@ -635,6 +716,61 @@ function dropOngoingFromEquipment(draft, playerId, idCard){
 const NOW = new Set([Timing.immediate, Timing.reaction, undefined]);
 
 /**
+ * Meta trocada ligada a uma missao: "a missao de Sauzburg passa a ser ... ate
+ * uma troca de missao de Sauzburg" (carta 5; a 10 no ramo do Swarley).
+ *
+ * E o unico passivo que o motor aplica por enquanto. Os outros (equipamento,
+ * shots infinitos, missao travada) continuam caindo em `ongoing` sem rodar —
+ * ver a tarefa `m-passivos` do painel.
+ */
+const isTableEffect = effect =>
+    effect.timing === Timing.passive
+    && effect.action === Action.missionSetGoal
+    && effect.duration?.kind === 'untilMissionChange'
+    && effect.duration.mission !== undefined;
+
+/**
+ * Poe na mesa uma carta que muda a meta de uma missao.
+ *
+ * Duas coisas separadas no estado, de proposito:
+ *
+ *   - o efeito (`active`): a meta muda *agora*, para quem tiver a missao, e
+ *     acaba na primeira troca que a missao fizer (`expireOnMissionChange`).
+ *     Acabou, nao volta — nem se a missao retornar;
+ *   - a carta (`awaitingSwap`): fica na mesa, para todos, ate que cada jogador
+ *     tenha tido a missao trocada ao menos uma vez depois dela. So entao vai
+ *     para o descarte de quem jogou.
+ *
+ * Por que a carta nao sai com o efeito: ninguem sabe quem e o Sauzburg, e a
+ * carta saindo logo depois de A trocar com B diria que ele e A ou B. Esperando
+ * todo mundo trocar, a saida nao aponta ninguem — todo mundo ja trocou.
+ *
+ * Fica fora de qualquer cadeira (`targets` vazio, `onTable`) pelo mesmo
+ * motivo: debaixo de um jogador ela seria um dedo apontado. Quem tem a missao
+ * descobre pela tela da propria missao (`goalChangedBy`).
+ */
+function plantOnTable(draft, effect, ids, ctx){
+    HANDLERS[effect.action](draft, effect, ids, ctx);
+    draft.ongoing.push({
+        id: draft.ongoing.length + 1,
+        effect,
+        targets: [],
+        sourceId: ctx.sourceId,
+        idCard: ctx.idCard,
+        uid: ctx.uid ?? null,
+        timing: effect.timing,
+        duration: effect.duration,
+        turnsLeft: null,
+        drinksLeft: null,
+        onTable: true,
+        active: true,
+        awaitingSwap: draft.order.filter(id => !playerById(draft, id)?.out),
+    });
+    log(draft, { type: 'ongoing', action: effect.action, timing: effect.timing,
+        idCard: ctx.idCard, targets: [], onTable: true, turns: null });
+}
+
+/**
  * Quem esta carta ja mandou beber antes de a rodada de voluntarios abrir.
  *
  * A conta e a fila de shots que *esta* resolucao acrescentou — `ctx.drinksMark`
@@ -727,6 +863,11 @@ export function applyEffect(draft, effect, ctx){
             options: (effect.options ?? []).length,
             byTable: effect.chooser === Chooser.table,
         } };
+    }
+
+    if(isTableEffect(effect)){
+        plantOnTable(draft, effect, finalIds, ctx);
+        return {};
     }
 
     // Efeito que nao resolve agora vira estado prolongado. A pilha continua:

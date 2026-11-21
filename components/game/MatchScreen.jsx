@@ -6,7 +6,6 @@ import { useLastPlay } from '@/hooks/useLastPlay';
 import { useTurnEffect } from '@/hooks/useTurnEffect';
 import { useTurnIntro } from '@/hooks/useTurnIntro';
 import { Command, isReaction } from '@/domain/match/engine';
-import { MISSIONS } from '@/domain/match/missions';
 import { MatchStatus, Phase, ongoingFor } from '@/domain/match/state';
 import { ErrorMessage } from '@/components/elements/ErrorMessage';
 import { GameTable } from '@/components/game/GameTable';
@@ -161,8 +160,6 @@ export function MatchScreen({
         dispatch({ type: Command.play, playerId: you.id, idCard });
     }
 
-    const mission = MISSIONS[you.mission];
-
     // O que da para jogar agora: na sua vez, a mao toda; na janela, so o que
     // reage. Quem sabe a diferenca e o motor (`isReaction`), nao a tela.
     const playable = isYourTurn && state.phase === Phase.play
@@ -300,7 +297,9 @@ export function MatchScreen({
                                 />
 
                                 <div className='flex items-end gap-2'>
-                                    <MissionButton onClick={() => setOpenPanel('mission')} />
+                                    <MissionButton onClick={() => setOpenPanel('mission')}
+                                        changed={you.goalChangedBy != null}
+                                    />
                                     <div className='flex-1 min-w-0'>
                                         <TurnBar state={state} you={you}
                                             isYourTurn={isYourTurn}
@@ -321,7 +320,7 @@ export function MatchScreen({
                         </>}
             </div>
 
-            {openPanel === 'mission' && <MissionModal mission={mission}
+            {openPanel === 'mission' && <MissionModal player={you}
                 onClose={closePanel}
             />}
 

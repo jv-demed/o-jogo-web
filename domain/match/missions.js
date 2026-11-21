@@ -73,6 +73,25 @@ export const MISSIONS = Object.freeze({
 
 export const ALL_MISSIONS = Object.freeze(Object.keys(MISSIONS));
 
+// O objetivo de uma meta que carta impoe (Goal), na mesma voz do `text` das
+// missoes. E o que a tela da missao mostra quando a meta foi trocada: a carta
+// da missao continua dizendo o objetivo de origem, e o dono precisa ler o que
+// vale agora.
+const GOAL_TEXT = Object.freeze({
+    [MissionGoal.mostShots]:   'Seja o jogador com mais shots no final.',
+    [MissionGoal.fewestShots]: 'Seja o jogador com menos shots no final.',
+    [MissionGoal.winAtEnd]:    'Ganhe no final.',
+    [MissionGoal.loseAtEnd]:   'Perca no final.',
+    [MissionGoal.alliesWin]:   'Ganhe se mais 2 jogadores ganharem.',
+});
+
+/** O objetivo que vale agora para este jogador, em uma frase. */
+export function goalText(player){
+    const mission = MISSIONS[player.mission];
+    if(!player.goal || player.goal === mission?.goal) return mission?.text ?? '';
+    return GOAL_TEXT[player.goal] ?? mission?.text ?? '';
+}
+
 /** Metas que so podem ser apuradas depois de saber quem mais ganhou. */
 const DEPENDENT = new Set([MissionGoal.soleWinner, MissionGoal.alliesWin]);
 

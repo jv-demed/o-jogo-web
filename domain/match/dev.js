@@ -102,6 +102,7 @@ export function arrangeTable(state, seats, { turnOf } = {}){
             if(!MISSIONS[seat.mission]) throw new Error(`missao desconhecida: ${seat.mission}`);
             player.mission = seat.mission;
             player.goal = MISSIONS[seat.mission].goal;
+            player.goalChangedBy = null;
         }
         if(typeof seat.shots === 'number') player.shots = seat.shots;
         if(Array.isArray(seat.hand)) player.hand = [...seat.hand];

@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { ICONS } from '@/assets/icons';
 import { Card } from '@/components/cards/Card';
-import { ongoingFor } from '@/domain/match/state';
+import { ongoingFor, ongoingOnTable } from '@/domain/match/state';
 import { Seat } from './Seat';
 import { cardById } from './narrate';
 
@@ -85,7 +85,17 @@ export function GameTable({
 
             <DirectionRing direction={state.direction} />
 
-            <DiscardPile state={state} onOpen={onOpenDiscard} />
+            {/* O centro: o descarte e, quando houver, as cartas que estao na
+                mesa e nao sobre alguem. Lado a lado, e nao uma em cima da
+                outra: no meio da roda, cada linha a mais encosta numa cadeira. */}
+            <div className={`
+                absolute left-1/2 top-1/2
+                -translate-x-1/2 -translate-y-1/2
+                flex items-center gap-3
+            `}>
+                <DiscardPile state={state} onOpen={onOpenDiscard} />
+                <TablePile state={state} onOpen={() => onOpenOngoing?.(null)} />
+            </div>
 
             {seats.map(({ player, style }) => (
                 <Seat key={player.id}
@@ -187,11 +197,7 @@ function DiscardPile({ state, onOpen }){
     const count = state.discardPile.length;
 
     return (
-        <div className={`
-            absolute left-1/2 top-1/2
-            -translate-x-1/2 -translate-y-1/2
-            flex flex-col items-center
-        `}>
+        <div className='relative flex flex-col items-center'>
             {card
                 ? <button type='button'
                     onClick={onOpen}
@@ -242,6 +248,60 @@ function DiscardPile({ state, onOpen }){
             `}>
                 {count}
             </span>}
+        </div>
+    );
+}
+
+/**
+ * As cartas ativas na mesa: as que valem para todos e nao estao sobre nenhuma
+ * cadeira (`ongoingOnTable`).
+ *
+ * Existe por causa da carta 5: ela muda a meta de quem for o Sauzburg, e por
+ * isso nao pode ficar na area de ninguem — seria apontar quem e. Fica aqui, ao
+ * lado do descarte, e o toque abre o mesmo modal das cartas de uma cadeira.
+ *
+ * Mesa sem carta ativa nao reserva lugar: o descarte volta a ser o centro.
+ */
+function TablePile({ state, onOpen }){
+
+    const entries = ongoingOnTable(state);
+    const top = entries[entries.length - 1] ?? null;
+    const card = top ? cardById(top.idCard) : null;
+    if(!card) return null;
+
+    return (
+        <div className='relative flex flex-col items-center animate-fade-in'>
+            <button type='button'
+                onClick={onOpen}
+                aria-label={`Ver as cartas ativas na mesa (${entries.length})`}
+                className={`
+                    relative rounded-lg
+                    ring-2 ring-gold/60
+                    shadow-[0_10px_24px_-12px_rgba(0,0,0,0.9)]
+                    transition-transform active:scale-95
+                    focus:outline-none focus-visible:ring-cream
+                `}
+            >
+                {entries.length > 1 && <span className={`
+                    absolute inset-0 rotate-6 rounded-lg
+                    border border-gold/40 bg-elevated
+                `} />}
+                <span key={top.uid ?? top.id}
+                    className='relative block overflow-hidden rounded-lg'
+                >
+                    <Card card={card} scale={0.2} />
+                </span>
+            </button>
+
+            <span className={`
+                absolute -bottom-2 left-1/2 -translate-x-1/2
+                flex items-center gap-1 whitespace-nowrap
+                px-1.5 py-0.5 rounded-full
+                border border-gold/40 bg-base
+                text-[0.6rem] font-semibold text-gold
+            `}>
+                na mesa{entries.length > 1 ? ` · ${entries.length}` : ''}
+            </span>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import { Action, Negatable, Timing } from '../cards/vocabulary.js';
 import { getCardEffects } from '../cards/effects/index.js';
 import { evaluateMissions } from './missions.js';
-import { runEffects } from './resolve.js';
+import { runEffects, settleTableCards } from './resolve.js';
 import {
     MatchStatus, Phase, PLAYS_PER_TURN, REACTION_WINDOW_MS,
     cloneState, currentPlayer, optInRound, playerById, releaseOngoingCard, toDiscard,
@@ -359,6 +359,9 @@ function finishTurnStep(draft, now){
  */
 function advanceTurn(draft, now){
     expireOngoing(draft);
+    // A carta da mesa sai quando todo mundo trocou de missao, e quem saiu da
+    // partida deixa de contar. A saida de alguem pode ser o que faltava.
+    settleTableCards(draft);
 
     const size = draft.order.length;
     for(let step = 1; step <= size * 2; step++){

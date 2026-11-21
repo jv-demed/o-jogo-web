@@ -51,6 +51,10 @@ function createPlayer({ id, name, avatar, deck, mission }){
         avatar: avatar ?? null,
         mission,                 // identidade secreta; so o dono ve
         goal: MISSIONS[mission].goal,  // pode ser trocada por carta (mission.setGoal)
+        // Qual carta trocou a meta, enquanto ela estiver trocada. Anda junto
+        // com a meta (troca de missao leva as duas) e e o que a tela da missao
+        // usa para dizer ao dono que o objetivo dele nao e mais o da carta.
+        goalChangedBy: null,
         missionRevealed: false,  // aberta para a mesa por mission.reveal
         missionLocked: false,    // mission.lock: nao pode ser trocada
         knownMissions: {},       // o que este jogador espiou: idJogador -> missao
@@ -271,7 +275,24 @@ export const drinksOf = (state, playerId) =>
 export function ongoingFor(state, playerId){
     return (state.ongoing ?? []).filter(ongoing =>
         ongoing.equippedTo === undefined
+        && !ongoing.onTable
         && (ongoing.targets ?? []).includes(playerId));
+}
+
+/**
+ * As cartas que estao na mesa, e nao sobre um jogador.
+ *
+ * Hoje sao as que mudam a meta de uma missao (carta 5, ramo do Swarley da 10):
+ * elas valem para quem tiver a missao, e por de baixo de uma cadeira seria
+ * dizer quem e. Ver `plantOnTable` em resolve.js.
+ */
+export function ongoingOnTable(state){
+    return (state.ongoing ?? []).filter(ongoing => ongoing.onTable === true);
+}
+
+/** Quem ainda segura uma carta da mesa: os que nao trocaram de missao desde ela. */
+export function tableCardWaiting(state, ongoing){
+    return (ongoing.awaitingSwap ?? []).filter(id => !playerById(state, id)?.out);
 }
 
 /**

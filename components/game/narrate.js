@@ -101,16 +101,26 @@ export function narrate(entry, nameOf){
         // Efeito prolongado e informacao de mesa desde que a carta passou a
         // ficar na area do alvo em vez de ir para o descarte: quem le o log
         // precisa saber quando ela entrou e quando ela saiu.
+        // A carta da mesa nao tem alvo, e nao e descuido: ela vale para quem
+        // tiver a missao, e dizer sobre quem seria dizer quem e. Ver
+        // `plantOnTable` em domain/match/resolve.js.
         case 'ongoing':
-            return entry.idCard
-                ? `${cardName(entry.idCard)} ficou valendo sobre ${list(entry.targets)}.`
-                : null;
+            if(!entry.idCard) return null;
+            return entry.onTable
+                ? `${cardName(entry.idCard)} ficou na mesa, valendo para todos.`
+                : `${cardName(entry.idCard)} ficou valendo sobre ${list(entry.targets)}.`;
         case 'ongoing.trigger':
             return entry.idCard
                 ? `${cardName(entry.idCard)} cobrou de ${who(entry.playerId)}.`
                 : null;
         case 'ongoing.end':
             if(!entry.idCard) return null;
+            // A saida nao diz quando o efeito acabou — isso ja foi antes, em
+            // silencio, na troca do dono da missao. Diz so o que a mesa ve.
+            if(entry.onTable){
+                return `${cardName(entry.idCard)} saiu da mesa: todos já trocaram de missão${
+                    entry.returned ? ', e ela foi para o descarte' : ''}.`;
+            }
             return entry.returned
                 ? `${cardName(entry.idCard)} parou de valer e foi para o descarte.`
                 : `${cardName(entry.idCard)} parou de valer.`;
@@ -313,6 +323,16 @@ export function ongoingDuration(ongoing){
         case 'permanent':          return 'até o fim da partida';
         default:                   return 'sem prazo';
     }
+}
+
+/**
+ * O prazo de uma carta da mesa. Conta quem falta trocar de missao, que e
+ * publico, e nunca se o efeito ainda vale: isso so o dono da missao sabe, e a
+ * mesa descobrir seria saber que ele estava na ultima troca.
+ */
+export function tableCardDuration(waiting){
+    if(waiting <= 0) return 'saindo da mesa';
+    return `até todos trocarem de missão · falta${waiting === 1 ? '' : 'm'} ${waiting}`;
 }
 
 /** O pedido pendente, em uma frase. */

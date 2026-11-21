@@ -20,6 +20,9 @@ const MESA_DE_5 = [
     { mission: 'smichaels', shots: 0 },
 ];
 
+const naMesa = (s, idCard) => s.ongoing.some(o => o.idCard === idCard && o.onTable === true);
+const noDescarte = (s, idCard) => s.discardPile.some(e => e.idCard === idCard);
+
 export default [
     {
         carta: 1,
@@ -140,29 +143,111 @@ export default [
 
     {
         carta: 5,
-        nome: 'Cabeca Rachada: o Sauzburg passa a querer menos shots',
-        pendente: 'efeito passive nunca roda: vai para draft.ongoing e applyTurnEffects ignora',
+        nome: 'Cabeca Rachada: o Sauzburg quer menos shots ate a missao dele trocar',
+        // Quem joga e o assento 2 (o swarley do comeco). As trocas mudam quem
+        // e o que, entao a carta e conferida pelo id de quem jogou.
         mesa: [
             { mission: 'sauzburg', shots: 1 },
             { mission: 'swarley',  shots: 4 },
             { mission: 'stanley',  shots: 6 },
+            { mission: 'sjamals',  shots: 3 },
         ],
         joga: 'swarley',
         espera: (s, p, { apurar }) => [
-            ['a meta do sauzburg virou fewestShots', p('sauzburg').goal === 'fewestShots'],
+            ['a meta do sauzburg virou fewestShots na hora', p('sauzburg').goal === 'fewestShots'],
+            ['a tela da missao sabe qual carta trocou a meta', p('sauzburg').goalChangedBy === 5],
             ['a missao continua sendo sauzburg', p('sauzburg').mission === 'sauzburg'],
-            ['a carta fica na mesa enquanto vale', s.ongoing.some(o => o.idCard === 5)],
             ['com menos shots, o sauzburg ganha', apurar()[p('sauzburg').id] === true],
+            ['a carta fica na mesa', naMesa(s, 5)],
+            // Debaixo de uma cadeira ela apontaria o Sauzburg.
+            ['a carta nao fica na area de nenhum jogador',
+                s.ongoing.filter(o => o.idCard === 5).every(o => o.targets.length === 0)],
+            ['a carta nao vai para o descarte', !noDescarte(s, 5)],
+            ['ninguem mais teve a meta trocada',
+                s.players.filter(x => x.mission !== 'sauzburg').every(x => x.goalChangedBy === null)],
         ],
-        // "A carta perde o efeito apos uma troca de missao de Sauzburg."
         depois: [
-            { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'swarley'] } },
+            // A troca que envolve o Sauzburg: o efeito acaba, a carta fica.
+            { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'swarley'] },
+              espera: (s, p, { log }) => [
+                ['quem ficou com o sauzburg quer mais shots de novo', p('sauzburg').goal === 'mostShots'],
+                ['a meta dele nao aparece mais como trocada', p('sauzburg').goalChangedBy === null],
+                ['o antigo sauzburg virou swarley com a meta do swarley', p('swarley').goal === 'fewestShots'],
+                ['a carta continua na mesa', naMesa(s, 5)],
+                ['a carta ainda nao foi para o descarte', !noDescarte(s, 5)],
+                // O log e publico: "parou de valer" logo depois da troca
+                // diria que o Sauzburg e um dos dois.
+                ['o log nao conta que o efeito acabou',
+                    !log.some(e => e.type === 'ongoing.end' && e.idCard === 5)],
+              ] },
+            // A missao volta para quem a tinha: o efeito nao volta junto.
+            { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'swarley'] },
+              espera: (s, p) => [
+                ['a missao voltou e a meta nao', p('sauzburg').id === 1 && p('sauzburg').goal === 'mostShots'],
+                ['ainda falta stanley e sjamals trocarem: a carta fica', naMesa(s, 5)],
+              ] },
+            // Os dois que faltavam trocam: agora todo mundo trocou.
+            { carta: 32, joga: 'swarley', escolhas: { 0: ['stanley', 'sjamals'] } },
         ],
-        esperaDepois: (s, p) => [
-            ['quem ficou com o sauzburg quer mais shots de novo', p('sauzburg').goal === 'mostShots'],
-            ['a carta 5 sai da mesa', !s.ongoing.some(o => o.idCard === 5)],
-            ['a carta 5 cai no descarte de quem jogou',
-                s.discardPile.some(e => e.idCard === 5)],
+        esperaDepois: (s, p, { log }) => [
+            ['com todos trocados, a carta sai da mesa', !naMesa(s, 5)],
+            ['ela cai no descarte de quem jogou (assento 2)',
+                s.players.find(x => x.id === 2).discard.includes(5)
+                && s.discardPile.some(e => e.idCard === 5 && e.playerId === 2)],
+            ['so cai uma vez', s.discardPile.filter(e => e.idCard === 5).length === 1],
+            ['o sauzburg segue com a meta padrao', p('sauzburg').goal === 'mostShots'],
+            ['a saida da mesa entra no log', log.some(e => e.type === 'ongoing.end'
+                && e.idCard === 5 && e.onTable && e.returned)],
+        ],
+    },
+
+    {
+        carta: 10,
+        nome: 'Cesar: no Swarley, ele passa a querer mais shots ate a missao dele trocar',
+        mesa: [
+            { mission: 'sauzburg', shots: 5 },
+            { mission: 'swarley',  shots: 6 },
+            { mission: 'stanley',  shots: 2 },
+        ],
+        joga: 'sauzburg',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p, { apurar }) => [
+            ['ninguem troca de missao', p('sauzburg').id === 1 && p('swarley').id === 2],
+            ['a meta do swarley virou mostShots', p('swarley').goal === 'mostShots'],
+            ['a tela da missao sabe qual carta trocou a meta', p('swarley').goalChangedBy === 10],
+            ['com mais shots, o swarley ganha', apurar()[p('swarley').id] === true],
+            ['a carta fica na mesa, fora das cadeiras', naMesa(s, 10)
+                && s.ongoing.filter(o => o.idCard === 10).every(o => o.targets.length === 0)],
+        ],
+        depois: [
+            { carta: 32, joga: 'stanley', escolhas: { 0: ['swarley', 'stanley'] },
+              espera: (s, p) => [
+                ['quem ficou com o swarley quer menos shots de novo', p('swarley').goal === 'fewestShots'],
+                ['o sauzburg ainda nao trocou: a carta fica', naMesa(s, 10)],
+              ] },
+            { carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'stanley'] } },
+        ],
+        esperaDepois: (s) => [
+            ['com todos trocados, a carta vai para o descarte de quem jogou',
+                !naMesa(s, 10) && s.players.find(x => x.id === 1).discard.includes(10)],
+        ],
+    },
+
+    {
+        carta: 10,
+        nome: 'Cesar: em quem nao e o Swarley, troca de missao e a carta vai embora',
+        mesa: [
+            { mission: 'sauzburg', shots: 0 },
+            { mission: 'swarley',  shots: 0 },
+            { mission: 'stanley',  shots: 0 },
+        ],
+        joga: 'sauzburg',
+        escolhas: { 0: ['stanley'] },
+        espera: (s, p) => [
+            ['quem jogou e o escolhido trocam', p('stanley').id === 1 && p('sauzburg').id === 3],
+            ['ninguem tem a meta trocada', s.players.every(x => x.goalChangedBy === null)],
+            ['a carta nao fica na mesa', !naMesa(s, 10)],
+            ['a carta vai para o descarte de quem jogou', s.players.find(x => x.id === 1).discard.includes(10)],
         ],
     },
 ];
