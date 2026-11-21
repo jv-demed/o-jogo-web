@@ -39,7 +39,12 @@ const PASS_DELAY = 700;
 // janela quando alguem manda um tick.
 const TICK_MS = 200;
 
-export function useMatchDriver({ state, botIds, dispatch, active = true, botsPaused = false }){
+/**
+ * @param {number} [params.botDelay] quanto o bot pensa antes de jogar ou
+ *        responder. O laboratorio pede mais: la a mesa esta sendo lida
+ *        escolha por escolha, e nao jogada.
+ */
+export function useMatchDriver({ state, botIds, dispatch, active = true, botsPaused = false, botDelay = BOT_DELAY }){
 
     // Um comando por vez, na ordem da mesa: quem responde primeiro e quem esta
     // com a vez, e o resto so entra na janela.
@@ -77,11 +82,15 @@ export function useMatchDriver({ state, botIds, dispatch, active = true, botsPau
             ? PASS_DELAY
             : command.type === Command.pass
                 ? BOT_PASS_DELAY
-                : BOT_DELAY + (isTurnStart ? TURN_INTRO_MS : 0);
+                // "Bebi" e "cantei" nao sao escolha: o ritmo lento do
+                // laboratorio so atrasaria a fila de shots, bot por bot.
+                : command.type === Command.drank || command.type === Command.performed
+                    ? BOT_DELAY
+                    : botDelay + (isTurnStart ? TURN_INTRO_MS : 0);
 
         const timer = setTimeout(() => dispatch(command), delay);
         return () => clearTimeout(timer);
-    }, [active, botsPaused, state, nextCommand, dispatch]);
+    }, [active, botsPaused, state, nextCommand, dispatch, botDelay]);
 
     // So bate quando a janela ja venceu. Bater antes era inofensivo para o
     // motor, mas nao para a mesa: todo `apply` devolve estado novo, e estado

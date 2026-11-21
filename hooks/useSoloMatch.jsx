@@ -23,7 +23,8 @@ import { useMatchDriver } from '@/hooks/useMatchDriver';
 // dos bots antes de ele disparar, e nenhum bot chegaria a jogar.
 const EMPTY = [];
 
-export function useSoloMatch(){
+/** @param {{botDelay?: number}} [options] ritmo dos bots (ver `useMatchDriver`). */
+export function useSoloMatch({ botDelay } = {}){
 
     const [match, setMatch] = useState(null);
     const [error, setError] = useState(null);
@@ -98,6 +99,7 @@ export function useSoloMatch(){
         botIds: match?.botIds ?? EMPTY,
         dispatch,
         botsPaused,
+        botDelay,
     });
 
     // Voce e o unico que nao e bot. Procurar assim, e nao pegar players[0],

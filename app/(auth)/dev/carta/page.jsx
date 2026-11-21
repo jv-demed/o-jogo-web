@@ -39,6 +39,12 @@ import { cardName } from '@/components/game/narrate';
  */
 
 const CATALOG_IDS = CARDS.map(card => card.id);
+
+// Quanto o bot pensa no laboratorio (3s), contra 0,9s na partida. Aqui a mesa e
+// lida escolha por escolha — em quem o bot apontou, se ele entrou na bebida,
+// se reagiu — e no ritmo do jogo a resposta dele chega antes de dar para ver
+// a pergunta. Passar a janela continua rapido: nao ha escolha para ler.
+const LAB_BOT_DELAY = 3000;
 const SEAT_COUNTS = [2, 3, 4, 5, 6, 7];
 
 const defaultSeats = count => Array.from({ length: count }, (_, i) => ({
@@ -100,7 +106,7 @@ export default function CardLab(){
         state, you, error, dismissError,
         isYourTurn, isOver, load, leave, dispatch,
         devDispatch, botsPaused, setBotsPaused, stepBots, hasBotCommand
-    } = useSoloMatch();
+    } = useSoloMatch({ botDelay: LAB_BOT_DELAY });
 
     const [form, setForm] = useState(INITIAL_FORM);
     // Como a mesa saiu do "Montar". O "Repetir" monta de novo com a mesma
