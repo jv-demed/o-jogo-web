@@ -213,7 +213,8 @@ export default [
             ['o sauzburg continua sauzburg', p('sauzburg').id === 3],
             ['o sjamals continua sjamals', p('sjamals').id === 4],
             ['ninguem trocou de missao', !log.some(e => e.type === 'mission.swap')],
-            ['o swarley disse "e, deve ser"', log.some(e => e.type === 'ritual.done' && e.idCard === 6)],
+            // O "e, deve ser" vai ser som, e nao ritual: a mesa nao para.
+            ['a 6 nao cobra ritual', !log.some(e => e.type === 'ritual' && e.idCard === 6)],
             ['a 6 saiu da mao do swarley', !p('swarley').hand.includes(6)],
             ['a 6 e a 32 foram para o descarte', noDescarte(s, 6) && noDescarte(s, 32)],
         ],

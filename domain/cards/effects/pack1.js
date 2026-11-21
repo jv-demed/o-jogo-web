@@ -54,11 +54,13 @@ export const PACK_1_EFFECTS = {
     ]},
 
     // 6 — E, Deve Ser
+    //
+    // Sem `ritual`: o "e, deve ser" vai ser um efeito sonoro quando a carta
+    // entrar, e nao uma frase que a mesa para esperando alguem dizer.
     6: {
         effects: [
             { action: Action.negate, what: Negatable.missionSwap, timing: Timing.reaction },
         ],
-        ritual: 'Dizer "e, deve ser".',
         note: 'Vale para troca com voce ou entre terceiros.',
     },
 
