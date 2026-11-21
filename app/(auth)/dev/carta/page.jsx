@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/elements/PageHeader';
 import { ActionButton } from '@/components/buttons/ActionButton';
 import { MatchScreen } from '@/components/game/MatchScreen';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
+import { ScenarioPickerModal } from '@/components/dev/ScenarioPickerModal';
 import { cardName } from '@/components/game/narrate';
 
 /**
@@ -227,10 +228,14 @@ function LabForm({ form, setForm, onBuild }){
     const triggerValid = !form.trigger
         || (form.trigger.seat !== form.yourSeat && form.trigger.seat < form.seats.length);
 
-    function handleScenario(event){
-        const scenario = SCENARIOS[Number(event.target.value)];
-        if(scenario) setForm(formFromScenario(scenario));
-        event.target.value = '';
+    // O cenario carregado, para o botao dizer qual e. Mexer no formulario
+    // depois nao o apaga: a mesa continua sendo "a do cenario, ajustada".
+    const [loaded, setLoaded] = useState(null);
+
+    function handleScenario(scenario){
+        setForm(formFromScenario(scenario));
+        setLoaded(scenario);
+        setPicking(null);
     }
 
     return (
@@ -245,17 +250,27 @@ function LabForm({ form, setForm, onBuild }){
 
                     {SCENARIOS.length > 0 && <section className='flex flex-col gap-2'>
                         <span className='text-sm font-semibold'>Carregar de um cenário</span>
-                        <select defaultValue=''
-                            onChange={handleScenario}
-                            className='h-10 px-2 rounded-xl border border-line bg-elevated text-sm text-cream'
+                        <button type='button'
+                            onClick={() => setPicking('scenario')}
+                            className={`
+                                flex items-center justify-between gap-2
+                                px-3 py-2.5 rounded-2xl border text-left
+                                transition-transform active:scale-[0.98]
+                                ${loaded ? 'border-gold bg-gold/10' : 'border-line bg-elevated'}
+                            `}
                         >
-                            <option value='' disabled>scripts/scenarios…</option>
-                            {SCENARIOS.map((scenario, index) => (
-                                <option key={index} value={index}>
-                                    #{scenario.carta} — {scenario.nome}
-                                </option>
-                            ))}
-                        </select>
+                            <span className='min-w-0 flex flex-col'>
+                                <span className={`text-sm font-semibold truncate ${loaded ? 'text-cream' : 'text-cream-dim'}`}>
+                                    {loaded ? `#${loaded.carta} ${cardName(loaded.carta)}` : 'Nenhum cenário'}
+                                </span>
+                                {loaded && <span className='text-[0.7rem] text-cream-dim truncate'>
+                                    {loaded.nome.includes(': ') ? loaded.nome.slice(loaded.nome.indexOf(': ') + 2) : loaded.nome}
+                                </span>}
+                            </span>
+                            <span className='shrink-0 text-[0.7rem] text-cream-dim'>
+                                {SCENARIOS.length} cenários
+                            </span>
+                        </button>
                     </section>}
 
                     <section className='flex flex-col gap-2'>
@@ -388,7 +403,13 @@ function LabForm({ form, setForm, onBuild }){
                 </div>
             </Box>
 
-            {picking && <CardPickerModal
+            {picking === 'scenario' && <ScenarioPickerModal
+                scenarios={SCENARIOS}
+                onPick={handleScenario}
+                onClose={() => setPicking(null)}
+            />}
+
+            {picking && picking !== 'scenario' && <CardPickerModal
                 title={{ card: 'Carta a testar', trigger: 'Carta do gatilho' }[picking] ?? 'Carta extra'}
                 hint={{
                     card: form.trigger
