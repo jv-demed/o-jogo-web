@@ -39,7 +39,9 @@ export function useSoloMatch({ botDelay } = {}){
             if(!prev) return prev;
             try{
                 const state = apply(prev.state, { ...command, now: Date.now() });
-                return { ...prev, state };
+                // A jogada do roteiro de abertura sai da fila quando entra.
+                const opening = command === prev.opening?.[0] ? prev.opening.slice(1) : prev.opening;
+                return { ...prev, state, opening };
             }catch(err){
                 // Jogada ilegal nao derruba a mesa: o motor recusou e o estado
                 // anterior continua valendo. Mostrar e seguir e o certo aqui,
@@ -82,6 +84,9 @@ export function useSoloMatch({ botDelay } = {}){
      * `createLabMatch` e entrega aqui, e dai em diante e um solo como os
      * outros. Carregar o mesmo objeto de novo e o "repetir" — o estado e
      * imutavel (o `apply` clona), entao o montado continua intacto.
+     *
+     * `opening` (opcional) sao jogadas de bot ja decididas, que o driver solta
+     * antes de qualquer outra e no mesmo ritmo — o gatilho do laboratorio.
      */
     const load = useCallback(prepared => {
         setError(null);
@@ -97,6 +102,7 @@ export function useSoloMatch({ botDelay } = {}){
     const { stepBots, hasBotCommand } = useMatchDriver({
         state,
         botIds: match?.botIds ?? EMPTY,
+        script: match?.opening ?? EMPTY,
         dispatch,
         botsPaused,
         botDelay,

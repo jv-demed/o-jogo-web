@@ -61,6 +61,9 @@ const INITIAL_FORM = {
     trigger: null,
     // Carta comum jogada por um bot em vez de voce: { seat, choices? }.
     playedBy: null,
+    // Se os bots ficam com as defesas do sorteio. Desligado, a carta testada
+    // resolve: com a mesa cheia quase sempre alguem tinha com o que bloquear.
+    botsDefend: false,
 };
 
 /** Assento (indice) de quem tem a missao, ou de numero (1..N), como no cenario. */
@@ -95,7 +98,7 @@ function formFromScenario(scenario){
     const playedBy = !gatilho && playerSeat !== yourSeat
         ? { seat: playerSeat, choices: toSeats(scenario.escolhas) }
         : null;
-    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger, playedBy };
+    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger, playedBy, botsDefend: false };
 }
 
 export default function CardLab(){
@@ -133,6 +136,7 @@ export default function CardLab(){
             pool: CATALOG_IDS,
             trigger: form.trigger,
             playedBy: form.playedBy,
+            botsDefend: form.botsDefend,
         };
         setPrepared(params);
         build(params);
@@ -429,6 +433,24 @@ function LabForm({ form, setForm, onBuild }){
                             />
                             </>}
                     </section>}
+
+                    <section className='flex flex-col gap-2'>
+                        <label className='flex items-center justify-between gap-3'>
+                            <span className='flex flex-col'>
+                                <span className='text-sm font-semibold'>Bots podem bloquear</span>
+                                <span className='text-[0.65rem] text-cream-dim'>
+                                    {form.botsDefend
+                                        ? 'Os bots ficam com as defesas que o sorteio deu.'
+                                        : 'As defesas saem da mão dos bots (menos a mão escrita no cenário).'}
+                                </span>
+                            </span>
+                            <input type='checkbox'
+                                checked={form.botsDefend}
+                                onChange={event => update({ botsDefend: event.target.checked })}
+                                className='shrink-0 w-5 h-5 accent-gold'
+                            />
+                        </label>
+                    </section>
 
                     <section className='flex flex-col gap-2'>
                         <span className='text-sm font-semibold'>Cartas extras na sua mão</span>

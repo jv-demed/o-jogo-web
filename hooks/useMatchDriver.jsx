@@ -39,12 +39,18 @@ const PASS_DELAY = 700;
 // janela quando alguem manda um tick.
 const TICK_MS = 200;
 
+const NO_SCRIPT = [];
+
 /**
  * @param {number} [params.botDelay] quanto o bot pensa antes de jogar ou
  *        responder. O laboratorio pede mais: la a mesa esta sendo lida
  *        escolha por escolha, e nao jogada.
+ * @param {object[]} [params.script] comandos de bot ja decididos, que saem
+ *        antes de qualquer outro, um por vez e no ritmo dos bots. Quem tira da
+ *        fila o que ja foi aplicado e quem guarda a lista. Precisa ser estavel
+ *        entre renders, como `botIds`.
  */
-export function useMatchDriver({ state, botIds, dispatch, active = true, botsPaused = false, botDelay = BOT_DELAY }){
+export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, active = true, botsPaused = false, botDelay = BOT_DELAY }){
 
     // Um comando por vez, na ordem da mesa: quem responde primeiro e quem esta
     // com a vez, e o resto so entra na janela.
@@ -57,6 +63,7 @@ export function useMatchDriver({ state, botIds, dispatch, active = true, botsPau
     // para sempre num turno que ja terminou.
     const nextCommand = useCallback(() => {
         if(!state) return null;
+        if(script.length) return script[0];
         const fromBot = botIds.map(id => botCommand(state, id, Date.now())).find(Boolean);
         if(fromBot) return fromBot;
 
@@ -66,7 +73,7 @@ export function useMatchDriver({ state, botIds, dispatch, active = true, botsPau
         if(state.rituals?.length || state.drinks?.length) return null;
         const player = currentPlayer(state);
         return player ? { type: Command.endTurn, playerId: player.id } : null;
-    }, [state, botIds]);
+    }, [state, botIds, script]);
 
     // O bot da vez espera o anuncio de quem vai jogar sair da tela: soltar a
     // jogada por baixo dele seria apresentar alguem que ja jogou. A fase de

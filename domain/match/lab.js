@@ -1,5 +1,6 @@
 import { Command, apply, canAnswer, isReaction } from './engine.js';
 import { arrangeTable, giveCard, stackDeck } from './dev.js';
+import { cloneState, playerById } from './state.js';
 import { createSoloMatch } from './solo.js';
 
 /**
@@ -25,18 +26,25 @@ import { createSoloMatch } from './solo.js';
  * @param {number[]} [params.extra] cartas a mais na sua mao, depois da compra.
  * @param {number[]} params.pool ids de carta para os baralhos sorteados.
  * @param {{seat: number, idCard: number, choices?: object}} [params.trigger]
- *        para carta de defesa: o bot do assento `seat` joga `idCard` primeiro,
- *        e a mesa ja comeca na janela dessa jogada, com a carta testada na sua
- *        mao. `choices` sao os alvos dele por slot, em ids de assento (indice
+ *        para carta de defesa: a mesa comeca na vez do bot do assento `seat`,
+ *        que compra e joga `idCard` (ver `opening`), com a carta testada ja na
+ *        sua mao. `choices` sao os alvos dele por slot, em ids de assento (indice
  *        em `seats`); sem, ele escolhe como qualquer bot. Carta de defesa
  *        sem gatilho ganha um sorteado (ver `autoTrigger`).
  * @param {{seat: number, choices?: object}} [params.playedBy] quem joga a
  *        carta testada, quando nao e voce: o bot desse assento a compra e joga
  *        na vez dele, e voce ve a carta chegando na mesa — "alguem joga em
  *        voce". `choices` como em `trigger`.
- * @param {number} [params.now] o relogio da mesa. A janela do gatilho abre a
- *        partir dele, entao tem que ser o `Date.now()` de quando a mesa monta.
- * @returns {{ state: object, botIds: number[] }}
+ * @param {boolean} [params.botsDefend] se os bots ficam com as cartas de
+ *        defesa que o sorteio deu a eles. Por padrao nao ficam: com cinco
+ *        maos sorteadas quase sempre alguem tem com o que bloquear, e a carta
+ *        testada nunca chegava a resolver. Mao escrita no assento (`hand`) e
+ *        respeitada de qualquer jeito — o cenario que quer o bloqueio diz qual.
+ * @param {number} [params.now] o relogio da mesa, para a compra da sua vez.
+ * @returns {{ state: object, botIds: number[], opening: object[] }} `opening`
+ *        sao as jogadas do bot que abrem a mesa (compra e jogada do gatilho),
+ *        ainda nao aplicadas: quem conduz a partida as solta no ritmo dos bots,
+ *        para a vez do bot ser vista em vez de a mesa ja nascer na janela.
  */
 /**
  * As cartas de `pool` contra as quais a defesa `idCard` pode entrar. A conta e
@@ -67,7 +75,28 @@ function autoTrigger(idCard, { seed, seats, yourSeat, pool }){
     };
 }
 
-export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, playedBy, now = 0 }){
+/**
+ * Troca as cartas de defesa da mao de cada bot por cartas comuns do baralho
+ * dele, menos nos assentos com mao escrita. Troca, e nao tira: a mao continua
+ * do tamanho que o motor espera, e a defesa so desce para o baralho.
+ */
+function disarmBots(state, seats, botIds){
+    const draft = cloneState(state);
+    draft.order.forEach((id, index) => {
+        if(!botIds.includes(id) || Array.isArray(seats[index]?.hand)) return;
+        const player = playerById(draft, id);
+        player.hand = player.hand.map(card => {
+            if(!isReaction(card)) return card;
+            const swap = player.deck.findIndex(other => !isReaction(other));
+            if(swap === -1) return card;
+            const [common] = player.deck.splice(swap, 1, card);
+            return common;
+        });
+    });
+    return draft;
+}
+
+export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, playedBy, botsDefend = false, now = 0 }){
     // Carta jogada por um bot e o mesmo caminho do gatilho, so que a carta que
     // ele joga e a testada — e ela nao vai para a sua mao.
     let yours = true;
@@ -88,10 +117,11 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
 
     if(!trigger){
         let state = arrangeTable(base, seats, { turnOf: you.id });
+        if(!botsDefend) state = disarmBots(state, seats, botIds);
         state = stackDeck(state, you.id, idCard);
         state = apply(state, { type: Command.draw, playerId: you.id, now });
         for(const id of extra) state = giveCard(state, you.id, id);
-        return { state, botIds };
+        return { state, botIds, opening: [] };
     }
 
     // A carta de defesa nao se joga na sua vez: ela espera a jogada que ela
@@ -101,15 +131,22 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
     if(trigger.seat === yourSeat) throw new Error('o gatilho tem que ser de um bot');
     const botId = base.order[trigger.seat];
     let state = arrangeTable(base, seats, { turnOf: botId });
+    if(!botsDefend) state = disarmBots(state, seats, botIds);
     if(yours) state = giveCard(state, you.id, idCard);
     for(const id of extra) state = giveCard(state, you.id, id);
     state = stackDeck(state, botId, trigger.idCard);
-    state = apply(state, { type: Command.draw, playerId: botId, now });
 
+    // A compra e a jogada do bot ficam de roteiro, e nao aplicadas aqui: a mesa
+    // nasce na vez dele, com o anuncio de quem joga, e as duas descem no ritmo
+    // de qualquer bot. Aplicadas na montagem, a carta ja estava na mesa antes
+    // de dar para ler de quem era a vez.
     const choices = Object.fromEntries(Object.entries(trigger.choices ?? {})
         .map(([slot, value]) => [slot, Array.isArray(value)
             ? value.map(index => state.order[index])
             : value]));
-    state = apply(state, { type: Command.play, playerId: botId, idCard: trigger.idCard, choices, now });
-    return { state, botIds };
+    const opening = [
+        { type: Command.draw, playerId: botId },
+        { type: Command.play, playerId: botId, idCard: trigger.idCard, choices },
+    ];
+    return { state, botIds, opening };
 }
