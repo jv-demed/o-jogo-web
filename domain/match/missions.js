@@ -1,4 +1,5 @@
 import { Goal, Mission } from '../cards/vocabulary.js';
+import { OngoingKind, effectiveShots, equipped, hasMark } from './marks.js';
 
 /**
  * As sete missoes, com a condicao de vitoria de cada uma.
@@ -83,10 +84,30 @@ const GOAL_TEXT = Object.freeze({
     [MissionGoal.winAtEnd]:    'Ganhe no final.',
     [MissionGoal.loseAtEnd]:   'Perca no final.',
     [MissionGoal.alliesWin]:   'Ganhe se mais 2 jogadores ganharem.',
+    [MissionGoal.soleWinner]:  'Ganhe se todos os outros perderem.',
 });
+
+/**
+ * A missao cujo objetivo o jogador persegue pela 64 (Bitrix), ou null. E uma
+ * camada por cima da missao: so o objetivo muda — a identidade, as cartas que
+ * miram por missao e o palpite do Sjehnsens continuam com a carta de missao.
+ */
+export function bitrixMission(player){
+    const item = equipped(player, 64).find(entry => entry.mission);
+    return item?.mission ?? null;
+}
+
+/** A meta que vale agora: a da Bitrix, se houver, senao a da missao (com a troca de carta). */
+export function goalOf(player){
+    const chosen = bitrixMission(player);
+    if(chosen && MISSIONS[chosen]) return MISSIONS[chosen].goal;
+    return player.goal ?? MISSIONS[player.mission]?.goal;
+}
 
 /** O objetivo que vale agora para este jogador, em uma frase. */
 export function goalText(player){
+    const chosen = bitrixMission(player);
+    if(chosen && MISSIONS[chosen]) return MISSIONS[chosen].text;
     const mission = MISSIONS[player.mission];
     if(!player.goal || player.goal === mission?.goal) return mission?.text ?? '';
     return GOAL_TEXT[player.goal] ?? mission?.text ?? '';
@@ -98,11 +119,11 @@ const DEPENDENT = new Set([MissionGoal.soleWinner, MissionGoal.alliesWin]);
 // Empate ganha junto: com dois jogadores em 7 shots, os dois sao "o jogador com
 // mais shots". A alternativa (ninguem ganha no empate) transformaria a carta de
 // dar shot num empate proposital, que e o oposto do que a mesa quer.
-function extremes(players, metric, order){
+function extremes(players, read, order){
     if(players.length === 0) return [];
-    const values = players.map(p => p[metric] ?? 0);
+    const values = players.map(read);
     const best = order === 'desc' ? Math.max(...values) : Math.min(...values);
-    return players.filter(p => (p[metric] ?? 0) === best).map(p => p.id);
+    return players.filter(p => read(p) === best).map(p => p.id);
 }
 
 /**
@@ -113,16 +134,18 @@ function extremes(players, metric, order){
  *                         segunda passada.
  */
 function evaluateBase(state, player){
-    const goal = player.goal ?? MISSIONS[player.mission].goal;
+    const goal = goalOf(player);
     const alive = state.players;
+    const shots = p => effectiveShots(state, p);
+    const given = p => p.shotsGiven ?? 0;
 
     switch(goal){
         case MissionGoal.mostShots:
-            return extremes(alive, 'shots', 'desc').includes(player.id);
+            return extremes(alive, shots, 'desc').includes(player.id);
         case MissionGoal.fewestShots:
-            return extremes(alive, 'shots', 'asc').includes(player.id);
+            return extremes(alive, shots, 'asc').includes(player.id);
         case MissionGoal.mostShotsGiven:
-            return extremes(alive, 'shotsGiven', 'desc').includes(player.id);
+            return extremes(alive, given, 'desc').includes(player.id);
         case MissionGoal.identifyAll:
             // Acertar *todos* os outros. Um palpite faltando conta como erro:
             // "acertar quem e quem" nao admite deixar alguem em branco.
@@ -162,7 +185,10 @@ export function evaluateMissions(state){
     const pending = [];
 
     for(const player of state.players){
-        if(player.forcedLose){ byPlayer[player.id] = false; continue; }
+        // Derrota forcada vem antes de vitoria forcada, e as duas antes da
+        // missao. A derrota de carta (57, 97) e um efeito que esta valendo, e
+        // `forcedLose` e a marca das partidas gravadas antes dele.
+        if(player.forcedLose || hasMark(state, OngoingKind.lose, player.id)){ byPlayer[player.id] = false; continue; }
         if(player.forcedWin){ byPlayer[player.id] = true; continue; }
 
         const result = evaluateBase(state, player);
@@ -175,7 +201,7 @@ export function evaluateMissions(state){
         .map(p => p.id);
 
     for(const player of pending){
-        const goal = player.goal ?? MISSIONS[player.mission].goal;
+        const goal = goalOf(player);
         const others = baseWinners.filter(id => id !== player.id);
         byPlayer[player.id] = goal === MissionGoal.soleWinner
             ? others.length === 0

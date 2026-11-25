@@ -1,11 +1,18 @@
-import { Action, Negatable, Timing } from '../cards/vocabulary.js';
+import { Action, Negatable } from '../cards/vocabulary.js';
 import { getCardEffects } from '../cards/effects/index.js';
 import { evaluateMissions } from './missions.js';
-import { runEffects, settleTableCards } from './resolve.js';
+import { OngoingKind } from './marks.js';
+import { cancelOf, fitsAgainst, isReaction, isShotShield, publicTargets } from './reactions.js';
+import {
+    drink, endOngoing, journalOf, runEffects, settleTableCards, triggerEffects, turnStartEffects,
+} from './resolve.js';
+import { nextRandom } from './rng.js';
 import {
     MatchStatus, Phase, PLAYS_PER_TURN, REACTION_WINDOW_MS,
-    cloneState, currentPlayer, optInRound, playerById, releaseOngoingCard, toDiscard,
+    cloneState, currentPlayer, isSimultaneous, optInRound, playerById, toDiscard,
 } from './state.js';
+
+export { isReaction };
 
 /**
  * O motor da partida: turno, mao, compra, pilha e janela de interferencia.
@@ -63,42 +70,37 @@ export class RuleError extends Error {}
 
 const fail = message => { throw new RuleError(message); };
 
-/** Uma carta so entra fora da vez se algum efeito dela reage. */
-export function isReaction(idCard){
-    const entry = getCardEffects(idCard);
-    return Boolean(entry?.effects?.some(effect => effect.timing === Timing.reaction));
-}
+const log = (draft, entry) => draft.log.push({ turn: draft.turnCount, ...entry });
 
-const firstAction = (entry, action) =>
-    entry?.effects?.find(effect => effect.action === action) ?? null;
+// As seis Gladsxodia. Ter as seis na mao, venha a carta de onde vier, encerra
+// a partida na hora, com vitoria so de quem as reuniu.
+const GLADSXODIA = [111, 112, 113, 114, 115, 116];
 
 /**
- * O que a carta de defesa combate (`negate`/`redirect`), ou null quando ela
- * reage sem cancelar nada.
- */
-const cancelOf = idCard => {
-    const entry = getCardEffects(idCard);
-    return firstAction(entry, Action.negate) ?? firstAction(entry, Action.redirect);
-};
-
-/**
- * Esta carta pode entrar na janela agora, contra o topo da pilha?
+ * Esta carta pode entrar agora, fora da vez?
  *
- * Carta de defesa so entra contra o que ela combate: a 6 anula troca de
- * missao, e jogada contra um "todo mundo bebe" ela nao teria o que anular — so
- * sairia da mao, com o ritual cobrado por nada. O motor recusa, e a tela usa
- * esta mesma conta para so acender a carta quando ela serve.
+ * Na janela, contra o topo da pilha, e so contra o que ela combate
+ * (`fitsAgainst`, em reactions.js). A 69 e a excecao: entra *antes* de a
+ * jogada existir — depois de o jogador da vez comprar e antes de ele jogar,
+ * com a pilha vazia, por qualquer outro jogador.
  */
 export function canAnswer(state, playerId, idCard){
-    if(state.phase !== Phase.window) return false;
     const player = playerById(state, playerId);
     if(!player || player.out || !player.hand.includes(idCard)) return false;
     if(!isReaction(idCard)) return false;
+    if(idCard === 69){
+        return state.phase === Phase.play
+            && state.stack.length === 0
+            && !state.resolution
+            && !state.drinks?.length && !state.rituals?.length
+            && (state.playsLeft ?? 0) > 0
+            && currentPlayer(state)?.id !== playerId;
+    }
+    if(state.phase !== Phase.window) return false;
     const top = state.stack[state.stack.length - 1];
     if(!top || top.byId === playerId) return false;
     if(state.window?.passed.includes(playerId)) return false;
-    const cancels = cancelOf(idCard);
-    return !cancels || canCancel(state, cancels.what, top);
+    return fitsAgainst(state, playerId, idCard, top);
 }
 
 /**
@@ -109,11 +111,8 @@ export const isHandLocked = player =>
     player.hand.length > 0 && player.hand.every(isReaction);
 
 /**
- * Esta carta pode ser jogada na propria vez?
- *
- * Carta de reacao nao: ela existe para responder a jogada de alguem, e na sua
- * vez nao ha jogada nenhuma para ela responder. A excecao e a mao travada —
- * ai a carta e queimada (descartada sem efeito) so para liberar a vez.
+ * Esta carta pode ser jogada na propria vez? Carta de reacao nao, salvo a mao
+ * travada — ai a carta e queimada (descartada sem efeito) so para liberar a vez.
  */
 export function canPlay(state, playerId, idCard){
     if(state.phase !== Phase.play) return false;
@@ -146,13 +145,18 @@ function openWindow(draft, now){
 // ---------------------------------------------------------------- declaracao
 
 /**
- * O que a carta pergunta *antes* de a janela abrir: so o que aponta jogador.
- * O resto (`optIn`, `option`, `cards`) e decisao de quem sofre o efeito e so
- * faz sentido depois de a carta sobreviver a mesa.
+ * O que a carta pergunta *antes* da janela: o que aponta jogador, e o que a
+ * propria carta manda declarar (`declare`: as missoes da 74, a carta que a 33
+ * copia, o equipamento da 80). O resto (`optIn`, `option`, voto, a escolha
+ * secreta da 99) e decisao de quem sofre o efeito, ou segredo, e espera a
+ * resolucao.
  */
 const DECLARABLE = new Set(['choose', 'manual']);
+const isDeclarable = needs => needs.declare ?? DECLARABLE.has(needs.kind);
 
-const effectContext = (item, choices, seedRef, drinksMark = 0) => ({
+const entryOf = item => (item.effects ? { effects: item.effects } : getCardEffects(item.idCard));
+
+const effectContext = (item, choices, seedRef, drinksMark = 0, extra = {}) => ({
     sourceId: item.byId,
     playedById: item.respondsToPlayerId ?? null,
     idCard: item.idCard,
@@ -161,25 +165,22 @@ const effectContext = (item, choices, seedRef, drinksMark = 0) => ({
     previous: [],
     slot: '',
     seedRef,
-    copyOf: item.copyOf ?? null,
-    // Onde a fila de shots estava quando esta carta comecou. E por essa marca
-    // que a rodada de voluntarios sabe quem a *propria* carta ja obrigou a
-    // beber — shot de cobranca anterior nao entra na rodada dela.
+    // Onde a fila de shots estava quando esta carta comecou: e por essa marca
+    // que a rodada de voluntarios sabe quem a *propria* carta ja obrigou.
     drinksMark,
+    shields: [],
+    reversed: { total: 0 },
+    playTargets: item.playTargets ?? [],
+    ...extra,
 });
 
 /**
  * Declarar a jogada: escolher os alvos antes de a mesa poder interferir.
  *
- * Interferencia so e decisao de verdade quando se sabe em quem a carta bate —
- * gastar um cancelamento as cegas nao e escolha, e adivinhacao. Por isso a
- * ordem e "jogou, apontou, *entao* a mesa tem 10s", e nao o contrario.
- *
  * O ensaio roda numa copia descartavel: a pergunta seguinte de uma carta pode
- * depender do efeito da anterior (`sameTarget`, `then`), entao nao da para
- * descobrir o que ela pergunta sem deixar ela rodar. Nada disso vale — o estado
- * de verdade so muda quando a janela fechar, e ai a resolucao roda de novo, com
- * as respostas ja em maos.
+ * depender do efeito da anterior, entao nao da para descobrir o que ela
+ * pergunta sem deixar ela rodar. Nada disso vale — o estado de verdade so muda
+ * quando a janela fechar.
  */
 function beginDeclaration(draft, now){
     const item = draft.stack[draft.stack.length - 1];
@@ -191,17 +192,15 @@ function beginDeclaration(draft, now){
 function runDeclaration(draft, now){
     const { item, choices } = draft.resolution;
     const scratch = cloneState({ ...draft, resolution: null });
-    const result = runEffects(scratch, getCardEffects(item.idCard),
-        effectContext(item, choices, scratch, (scratch.drinks ?? []).length));
+    const result = runEffects(scratch, entryOf(item),
+        effectContext(item, choices, scratch, (scratch.drinks ?? []).length, { rehearsal: true }));
 
-    if(result.needs && DECLARABLE.has(result.needs.kind)){
+    if(result.needs && isDeclarable(result.needs)){
         draft.phase = Phase.pending;
         draft.pending = [{ ...result.needs, idCard: item.idCard, uid: item.uid, declaring: true }];
         return;
     }
 
-    // Tudo o que dava para apontar, apontado. O que ficou (uma pergunta de
-    // `optIn`, por exemplo) espera a resolucao, como antes.
     const top = draft.stack[draft.stack.length - 1];
     if(top){
         top.choices = choices;
@@ -214,8 +213,7 @@ function runDeclaration(draft, now){
 
 /**
  * Os alvos que a jogada declarou, para a mesa ver de quem se trata enquanto a
- * janela corre. Chave com `:` e resposta de outro tipo (opcao, carta, sim/nao)
- * e nao aponta ninguem.
+ * janela corre. Chave com `:` e resposta de outro tipo e nao aponta ninguem.
  */
 function declaredTargets(choices){
     const ids = [];
@@ -231,26 +229,61 @@ function declaredTargets(choices){
 // ---------------------------------------------------------------- resolucao
 
 /**
- * Comeca a resolver o topo da pilha.
- *
- * O snapshot tirado aqui e o que permite retomar depois de uma escolha: a
- * resolucao inteira e refeita sobre ele. Guarda-se o estado *sem* a resolucao
- * corrente, senao o snapshot conteria a si mesmo a cada aninhamento.
+ * O escudo que uma defesa de shot pendura na jogada de baixo. A 11 tira 1 dos
+ * seus, a 59 ate 2 seus, a 60 1 de quem foi escolhido, a 23 passa 1 seu para
+ * outro, e a 90 devolve tudo para quem jogou.
+ */
+function shieldOf(item){
+    const cancels = cancelOf(item.idCard);
+    const chosen = [item.choices?.['0'] ?? []].flat()[0];
+    if(cancels.action === Action.redirect){
+        if(cancels.target?.kind === 'played') return { kind: 'reverse', by: item.byId };
+        return { kind: 'redirect', playerId: item.byId, to: chosen, left: cancels.amount ?? 1, by: item.byId };
+    }
+    const playerId = cancels.target?.kind === 'choose' ? chosen : item.byId;
+    return { kind: 'negate', playerId, left: cancels.amount ?? 1, by: item.byId };
+}
+
+/**
+ * Comeca a resolver o topo da pilha. O snapshot tirado aqui e o que permite
+ * retomar depois de uma escolha: a resolucao inteira e refeita sobre ele.
  */
 function beginResolution(draft, now){
     const item = draft.stack.pop();
     if(!item) return finishTurnStep(draft, now);
 
-    // Cancelamento e desvio consomem a jogada de baixo antes de qualquer coisa
-    // — e para isso que existe a janela.
     const cancels = cancelOf(item.idCard);
-    if(cancels && item.respondsTo !== undefined){
-        const below = draft.stack.findIndex(other => other.uid === item.respondsTo);
-        if(below !== -1 && canCancel(draft, cancels.what, draft.stack[below])){
-            const [cancelled] = draft.stack.splice(below, 1);
-            discardPlayed(draft, cancelled);
-            draft.log.push({ turn: draft.turnCount, type: 'cancelled',
-                idCard: cancelled.idCard, by: item.byId });
+    const belowIndex = item.respondsTo !== undefined
+        ? draft.stack.findIndex(other => other.uid === item.respondsTo)
+        : -1;
+    const below = belowIndex !== -1 ? draft.stack[belowIndex] : null;
+
+    if(below){
+        // A 101 soma nos alvos que a mesa ve agora, na jogada de baixo.
+        item.playTargets = publicTargets(draft, below);
+    }
+
+    if(cancels && below && fitsAgainst(draft, item.byId, item.idCard, below)){
+        if(isShotShield(item.idCard)){
+            // Negar ou desviar shot mexe so no shot: a carta de baixo resolve,
+            // com o escudo pendurado.
+            below.shields = [...(below.shields ?? []), shieldOf(item)];
+            log(draft, { type: 'shield', idCard: item.idCard, by: item.byId, against: below.idCard });
+        }else{
+            draft.stack.splice(belowIndex, 1);
+            // A carta cancelada vai para o descarte de quem a jogou — inclusive
+            // equipamento, que nunca chegou a ser equipado.
+            const owner = playerById(draft, below.byId);
+            if(owner) toDiscard(draft, owner, below.idCard);
+            log(draft, { type: 'cancelled', idCard: below.idCard, by: item.byId });
+            if(below.turnPlay){
+                draft.lastPlays = { ...(draft.lastPlays ?? {}),
+                    [below.byId]: { uid: below.uid, idCard: below.idCard, turn: draft.turnCount, cancelled: true } };
+            }
+            // 49 fora da vez: o jogo segue pelo jogador seguinte a quem a jogou.
+            if(cancels.what === Negatable.play && currentPlayer(draft)?.id !== item.byId){
+                draft.nextFrom = item.byId;
+            }
         }
     }
 
@@ -262,89 +295,89 @@ function beginResolution(draft, now){
     runResolution(draft, now);
 }
 
-/**
- * `what` diz o que a carta cancela. Sem o tipo da carta de baixo (que vive em
- * o_jogo.cards, nao em domain/), da para conferir pelo efeito dela: quem manda
- * beber e `drink`, quem equipa e `equip`. `play` cancela qualquer coisa.
- */
-function canCancel(state, what, target){
-    if(what === Negatable.play || what === undefined) return true;
-    // A acao pode estar dentro de uma escolha ou de um "se... entao": a 56
-    // so gira as missoes depois de quem joga escolher o lado, e continua sendo
-    // troca de missao.
-    const actions = new Set();
-    const walk = effects => {
-        for(const effect of [effects ?? []].flat()){
-            if(!effect) continue;
-            actions.add(effect.action);
-            walk(effect.options);
-            walk(effect.then);
-            walk(effect.otherwise);
-        }
-    };
-    walk(getCardEffects(target.idCard)?.effects);
-    const has = action => actions.has(action);
-    switch(what){
-        case Negatable.drink:       return has(Action.drink);
-        case Negatable.equipment:   return has(Action.equip);
-        // `missionTake` (a 64, Bitrix) fica de fora: ela copia a missao de
-        // alguem, ninguem perde a sua. Nao e troca, e a 6 nao a anula.
-        case Negatable.missionSwap: return has(Action.missionSwap) || has(Action.missionRotate)
-                                        || has(Action.missionChain);
-        case Negatable.nonShotPlay: return !has(Action.drink);
-        // `divine` e `effectCard` sao tipo de carta, nao efeito: sem o catalogo
-        // por perto, cancelam igual. Refinar exige o `type` de o_jogo.cards.
-        default:                    return true;
-    }
-}
-
 function runResolution(draft, now){
     const { item, choices, snapshot } = draft.resolution;
-    const entry = getCardEffects(item.idCard);
-
-    // seedRef: draft — o sorteio de alvo avanca a semente da partida.
-    const result = runEffects(draft, entry,
-        effectContext(item, choices, draft, (snapshot?.drinks ?? []).length));
+    const ctx = effectContext(item, choices, draft, (snapshot?.drinks ?? []).length, {
+        // O escudo se gasta a cada passagem: cada uma comeca dele inteiro.
+        shields: structuredClone(item.shields ?? []),
+        selfRelease: item.trigger === 'prison',
+    });
+    const result = runEffects(draft, entryOf(item), ctx, { ritual: !item.trigger });
 
     if(result.needs){
         draft.phase = Phase.pending;
         draft.pending = [{ ...result.needs, idCard: item.idCard, uid: item.uid }];
         // A passagem que para numa escolha e um ensaio: a resposta seguinte
-        // refaz a resolucao inteira desde o snapshot, e tudo o que ela fez vai
-        // acontecer de novo. Shot cobrado aqui seria shot cobrado duas vezes —
-        // e o shot e a unica parte do estado que ja desceu goela abaixo antes
-        // de o snapshot poder desfazer. Na carta 4, o Sauzburg bebia um por
-        // cada "quer beber?" respondido na mesa. A fila so abre na passagem que
-        // termina; ate la, ela volta a ser a de antes da carta.
-        draft.drinks = snapshot?.drinks ?? [];
+        // refaz tudo desde o snapshot. A fila de shots so abre na passagem que
+        // termina; ate la, volta a ser a de antes da carta.
+        draft.drinks = structuredClone(snapshot?.drinks ?? []);
         return;
+    }
+
+    // 90: tudo o que a carta mandaria beber, somado, desce em quem a jogou.
+    if(ctx.reversed.total > 0){
+        drink(draft, item.byId, ctx.reversed.total, { ...ctx, shields: [], sourceId: item.byId });
     }
 
     seatOrderDrinks(draft, snapshot);
 
+    if(item.turnPlay && snapshot){
+        draft.lastPlays = { ...(draft.lastPlays ?? {}), [item.byId]: {
+            uid: item.uid, idCard: item.idCard, turn: draft.turnCount,
+            journal: journalOf(snapshot, draft, item.uid),
+        } };
+    }
+
     draft.resolution = null;
     draft.pending = [];
+
+    if(item.trigger){
+        runTriggers(draft, now);
+        return;
+    }
+
     discardPlayed(draft, item);
+
+    // 69 resolvida: o jogador da vez perde aquela jogada e fica com a carta.
+    if(item.beforePlay){
+        draft.playsLeft = 0;
+        log(draft, { type: 'turn.lostPlay', playerId: currentPlayer(draft)?.id ?? null, by: item.byId });
+    }
+
+    // 52: a carta roubada entra na pilha na hora, como jogada do ladrao.
+    const queued = draft.queuedPlays ?? [];
+    draft.queuedPlays = [];
+    for(const play of queued){
+        if(playQueued(draft, play, now)) return;
+    }
     finishTurnStep(draft, now);
+}
+
+/** Uma carta que chegou na mao e tem que ser jogada agora. Reacao e queimada. */
+function playQueued(draft, { idCard, byId }, now){
+    const player = playerById(draft, byId);
+    const index = player?.hand.indexOf(idCard) ?? -1;
+    if(index === -1) return false;
+    player.hand.splice(index, 1);
+    if(isReaction(idCard)){
+        toDiscard(draft, player, idCard);
+        log(draft, { type: 'burned', playerId: byId, idCard });
+        return false;
+    }
+    const item = makeItem(draft, { idCard, playerId: byId });
+    item.turnPlay = currentPlayer(draft)?.id === byId;
+    draft.history = [...(draft.history ?? []), idCard];
+    draft.stack.push(item);
+    log(draft, { type: 'play.now', playerId: byId, idCard });
+    beginDeclaration(draft, now);
+    return true;
 }
 
 /**
  * Poe a conta desta carta na ordem da mesa, e nao na ordem em que os efeitos
- * dela rodaram.
- *
- * A ordem dos efeitos e mecanica, e mecanica e informacao. A carta 4 manda o
- * Sauzburg beber no efeito 0 e abre a rodada de voluntarios no efeito 1: quem
- * enfileira nessa ordem publica uma lista em que o primeiro nome e sempre o
- * Sauzburg, e a carta — que existe para a mesa saber que ele bebeu sem saber
- * qual deles e — se entrega na primeira vez que e jogada.
- *
- * O assento e a unica ordem que a mesa ja conhece antes da carta, e por isso e
- * a unica que nao conta nada. Vale para a fila (`drinks`, que a mesa ve na
- * hora) e para o log (que ela pode reler depois) — cobrir um e deixar o outro
- * seria trocar o vazamento de lugar.
- *
- * Mexe so no que esta carta acrescentou: o que ja estava na fila e de uma
- * cobranca anterior e continua na frente.
+ * dela rodaram: a ordem dos efeitos e mecanica, e mecanica e informacao (na
+ * carta 4 o primeiro nome seria sempre o Sauzburg). Vale para a fila e para o
+ * log. Mexe so no que esta carta acrescentou.
  */
 function seatOrderDrinks(draft, snapshot){
     const seat = id => {
@@ -363,10 +396,6 @@ function seatOrderDrinks(draft, snapshot){
         ];
     }
 
-    // No log as entradas de shot vem intercaladas com o resto (revelacao,
-    // ongoing, ritual): reordenar a lista inteira mudaria a historia. O que se
-    // reordena sao as entradas `drink` entre si, cada uma de volta numa das
-    // posicoes que elas ja ocupavam.
     const logMark = snapshot?.log?.length ?? 0;
     const slots = [];
     for(let i = logMark; i < draft.log.length; i++){
@@ -380,26 +409,26 @@ function seatOrderDrinks(draft, snapshot){
     }
 }
 
+/**
+ * A carta resolvida vai para o descarte — menos a que ficou na mesa: o
+ * equipamento que entrou numa cadeira, e o efeito que dura (quem a devolve e o
+ * fim do efeito).
+ */
 function discardPlayed(draft, item){
     const owner = playerById(draft, item.byId);
     if(!owner) return;
-    // Equipamento fica na mesa: quem o tira e equipment.destroy.
-    const entry = getCardEffects(item.idCard);
-    if(firstAction(entry, Action.equip)) return;
-    // Efeito prolongado tambem segura a carta na mesa: ela fica na area de quem
-    // esta sob o efeito enquanto a duracao corre, e quem a manda para o
-    // descarte e o fim da duracao (`releaseOngoingCard`). Descartar aqui faria
-    // a carta sumir com o efeito dela ainda valendo.
+    if(item.uid && draft.players.some(p => p.equipment.some(e => e.uid === item.uid))) return;
     if(item.uid && draft.ongoing.some(ongoing => ongoing.uid === item.uid)) return;
     toDiscard(draft, owner, item.idCard);
 }
 
 /**
  * Depois de resolver um item: se ainda ha pilha, a mesa ganha nova janela sobre
- * o novo topo. Se nao, o turno vai para `end` — ou volta para `play`, quando a
- * carta deu jogada extra.
+ * o novo topo. Se nao, o turno vai para `end` — ou volta para `play`, quando
+ * ainda ha jogada.
  */
 function finishTurnStep(draft, now){
+    if(draft.status !== MatchStatus.progress) return;
     if(draft.stack.length){
         openWindow(draft, now);
         return;
@@ -418,150 +447,159 @@ function finishTurnStep(draft, now){
 // -------------------------------------------------------------------- turno
 
 /**
- * Passa a vez. Consome `skipTurns`: quem esta pulando perde o turno e o
- * contador cai — o pulo e do jogador, nao da cadeira, entao inverter a mesa no
- * meio nao devolve o turno perdido.
+ * Passa a vez.
+ *
+ * Uma rodada e "ate voltar a vez de quem jogou a carta", contando tambem quando
+ * a vez dele e pulada: e a unidade das duracoes em rodadas (`roundsLeft`). Por
+ * isso a volta guarda todo mundo por quem a vez passou (`visited`), pulado ou
+ * nao. Pular conta as vezes do proprio alvo (`skipTurns`, a prisao).
  */
 function advanceTurn(draft, now){
-    expireOngoing(draft);
-    // A carta da mesa sai quando todo mundo trocou de missao, e quem saiu da
-    // partida deixa de contar. A saida de alguem pode ser o que faltava.
+    const previous = currentPlayer(draft);
+    if(previous){
+        // Jogada extra e da vez: nao atravessa para a proxima.
+        previous.extraPlays = 0;
+        // 85: acaba quando ele termina uma vez sua com 5 cartas ou menos,
+        // conferido a partir da vez seguinte a da jogada.
+        for(const ongoing of draft.ongoing.filter(o => o.kind === OngoingKind.greed
+            && o.targets.includes(previous.id))){
+            if(ongoing.since < draft.turnCount && previous.hand.length <= 5) endOngoing(draft, ongoing);
+        }
+    }
     settleTableCards(draft);
 
     const size = draft.order.length;
-    for(let step = 1; step <= size * 2; step++){
-        const index = ((draft.turnIndex + step * draft.direction) % size + size) % size;
+    let base = draft.turnIndex;
+    if(draft.nextFrom !== undefined && draft.nextFrom !== null){
+        const index = draft.order.indexOf(draft.nextFrom);
+        if(index !== -1) base = index;
+        draft.nextFrom = null;
+    }
+
+    const visited = [];
+    const prisonOffers = [];
+    let landed = null;
+    for(let step = 1; step <= size * 4; step++){
+        const index = ((base + step * draft.direction) % size + size) % size;
         const player = playerById(draft, draft.order[index]);
         if(!player || player.out) continue;
+        visited.push(player.id);
+        const prison = draft.ongoing.find(o => o.kind === OngoingKind.prison && o.targets.includes(player.id));
+        if(prison){
+            log(draft, { type: 'turn.skipped', playerId: player.id, idCard: prison.idCard });
+            if(prison.skipsLeft !== null && prison.skipsLeft !== undefined){
+                prison.skipsLeft--;
+                if(prison.skipsLeft <= 0){
+                    endOngoing(draft, prison);
+                    continue;
+                }
+            }
+            // A cada vez pulada, o preso pode beber 1 por conta propria.
+            prisonOffers.push({ kind: 'prison', byId: player.id, idCard: prison.idCard });
+            continue;
+        }
         if(player.skipTurns > 0){
             player.skipTurns--;
-            draft.log.push({ turn: draft.turnCount, type: 'turn.skipped', playerId: player.id });
+            log(draft, { type: 'turn.skipped', playerId: player.id });
             continue;
         }
-        draft.turnIndex = index;
+        landed = index;
         break;
     }
+    // Todo mundo preso ou pulando por muitas voltas: a vez fica onde estava,
+    // em vez de a mesa travar.
+    if(landed === null) landed = draft.turnIndex;
 
+    draft.turnIndex = landed;
     draft.turnCount++;
-    draft.playsLeft = PLAYS_PER_TURN;
-    draft.phase = Phase.draw;
-
-    if(draft.endsInTurns !== null){
-        draft.endsInTurns--;
-        if(draft.endsInTurns <= 0) return endMatch(draft);
-    }
-    applyTurnEffects(draft, now);
-    checkEndConditions(draft);
-}
-
-/** Efeitos prolongados que disparam na virada: eachTurn, onTargetTurn, delayed. */
-function applyTurnEffects(draft, now){
     const player = currentPlayer(draft);
-    if(!player) return;
+    draft.playsLeft = PLAYS_PER_TURN + (player.nextTurnPlays ?? 0);
+    player.nextTurnPlays = 0;
+    draft.phase = Phase.draw;
+    draft.lastTurnOf = { ...(draft.lastTurnOf ?? {}),
+        [player.id]: { prev: draft.lastTurnOf?.[player.id]?.cur ?? -1, cur: draft.turnCount } };
 
-    for(const ongoing of [...draft.ongoing]){
-        const hits = ongoing.timing === Timing.eachTurn
-            || (ongoing.timing === Timing.onTargetTurn && ongoing.targets.includes(player.id))
-            || (ongoing.timing === Timing.delayed && ongoing.turnsLeft === 0);
-        if(!hits) continue;
-
-        // Roda o efeito como imediato: o `timing` ja cumpriu o papel dele, que
-        // era adiar ate aqui. Sem isso, o efeito se reagendaria para sempre.
-        runEffects(draft, { effects: [{ ...ongoing.effect, timing: Timing.immediate }] }, {
-            sourceId: ongoing.sourceId,
-            idCard: ongoing.idCard,
-            choices: { 0: ongoing.targets },
-            previous: ongoing.targets,
-            slot: '',
-            seedRef: draft,
-        });
-        // O disparo entra no log. Sem isto, a unica marca de que a carta
-        // cobrou nesta vez sao os shots que ela mandou beber — e a mesa nao tem
-        // como ligar o shot a carta que estava parada na cadeira desde outro
-        // turno. E o que a tela usa para anunciar o efeito antes da jogada.
-        draft.log.push({ turn: draft.turnCount, type: 'ongoing.trigger',
-            idCard: ongoing.idCard, playerId: player.id, timing: ongoing.timing,
-            turnsLeft: ongoing.timing === Timing.onTargetTurn && ongoing.turnsLeft
-                ? ongoing.turnsLeft - 1
-                : ongoing.turnsLeft ?? null });
-
-        if(ongoing.timing === Timing.delayed){
-            finishOngoing(draft, ongoing);
-            continue;
-        }
-        // "Na vez dele, pelos proximos 3 turnos" sao tres vezes *dele*, e nao
-        // tres turnos de mesa: numa mesa de cinco, contar turnos de mesa faria
-        // a carta pegar o alvo uma vez so. Por isso quem vence a duracao de um
-        // `onTargetTurn` e o disparo, aqui, e nao o relogio de expireOngoing.
-        if(ongoing.timing === Timing.onTargetTurn
-            && ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
-            ongoing.turnsLeft--;
-            if(ongoing.turnsLeft <= 0) finishOngoing(draft, ongoing);
-        }
+    // 84: imune ate voltar a jogar.
+    for(const ongoing of draft.ongoing.filter(o => o.kind === OngoingKind.immune && o.targets.includes(player.id))){
+        endOngoing(draft, ongoing);
     }
-}
 
-/** Vence a contagem das duracoes e limpa o que acabou. */
-function expireOngoing(draft){
-    const expired = [];
-    const surviving = [];
+    // Rodadas: cada passagem pela vez de quem jogou conta uma.
+    const due = [];
     for(const ongoing of draft.ongoing){
-        // `onTargetTurn` fica de fora: a duracao dele conta disparos, nao
-        // turnos de mesa, e quem a vence e applyTurnEffects.
-        const countsTurns = ongoing.timing !== Timing.onTargetTurn;
-        if(countsTurns && ongoing.turnsLeft !== null && ongoing.turnsLeft !== undefined){
-            ongoing.turnsLeft--;
-            if(ongoing.turnsLeft < 0){
-                expired.push(ongoing);
-                continue;
+        if(ongoing.roundsLeft === null || ongoing.roundsLeft === undefined) continue;
+        const count = visited.filter(id => id === ongoing.sourceId).length;
+        if(!count) continue;
+        ongoing.roundsLeft -= count;
+        if(ongoing.roundsLeft <= 0) due.push(ongoing);
+    }
+    // O fim marcado (51) vem antes de qualquer outro vencimento da mesma
+    // virada: a 109 jogada junto ainda esta valendo quando a partida acaba.
+    let ends = due.some(o => o.kind === OngoingKind.endIn);
+    if(draft.endsInTurns !== null && draft.endsInTurns !== undefined){
+        draft.endsInTurns--;
+        if(draft.endsInTurns <= 0) ends = true;
+    }
+    if(ends) return endMatch(draft);
+
+    for(const ongoing of due){
+        if(ongoing.kind === OngoingKind.goalLater && !ongoing.fired){
+            // 20: dispara para quem for o Stanley agora, e fica na mesa.
+            for(const p of draft.players){
+                if(p.mission !== ongoing.mission) continue;
+                p.goal = ongoing.goal;
+                p.goalChangedBy = ongoing.idCard;
             }
-        }
-        if(ongoing.drinksLeft !== null && ongoing.drinksLeft !== undefined && ongoing.drinksLeft <= 0){
-            expired.push(ongoing);
+            ongoing.fired = true;
+            ongoing.active = true;
+            ongoing.roundsLeft = null;
+            log(draft, { type: 'ongoing.trigger', idCard: ongoing.idCard, playerId: null, timing: 'delayed' });
             continue;
         }
-        surviving.push(ongoing);
+        endOngoing(draft, ongoing);
     }
-    // A lista nova entra *antes* de encerrar os vencidos: `releaseOngoingCard`
-    // pergunta se sobrou outro efeito da mesma carta, e a resposta tem que ser
-    // sobre o que ficou, nao sobre o que estava.
-    draft.ongoing = surviving;
-    for(const ongoing of expired) endOngoing(draft, ongoing);
-}
 
-/** Tira um efeito prolongado da mesa antes da hora (disparou pela ultima vez). */
-function finishOngoing(draft, ongoing){
-    draft.ongoing = draft.ongoing.filter(other => other !== ongoing);
-    endOngoing(draft, ongoing);
+    draft.triggers = [...(draft.triggers ?? []), ...prisonOffers, ...turnStartEffects(draft, player)];
+    checkEndConditions(draft);
+    if(draft.status === MatchStatus.progress) runTriggers(draft, now);
 }
 
 /**
- * Fim de um efeito prolongado: desliga o que ele ligou e devolve a carta.
- *
- * Ja fora de `draft.ongoing` quando chega aqui — quem remove e quem chama.
+ * Os gatilhos do comeco da vez que pedem resposta: o equipamento da vez (70,
+ * 77) e o preso que pode beber por conta propria. Cada um vira uma resolucao
+ * pequena, igual a de uma carta, e a vez so chega na compra depois deles.
  */
-function endOngoing(draft, ongoing){
-    releaseOngoing(draft, ongoing);
-    // `returned` diz se a carta caiu no descarte agora. Nem todo prolongado
-    // segurava uma carta na mesa — o passivo de um equipamento continua com o
-    // equipamento —, e narrar descarte que nao houve seria mentir no log.
-    const returned = releaseOngoingCard(draft, ongoing);
-    draft.log.push({ turn: draft.turnCount, type: 'ongoing.end',
-        idCard: ongoing.idCard, targets: ongoing.targets, returned });
-}
+function runTriggers(draft, now){
+    while(draft.status === MatchStatus.progress && draft.triggers?.length){
+        const [trigger, ...rest] = draft.triggers;
+        draft.triggers = rest;
+        const holder = playerById(draft, trigger.byId);
+        if(!holder || holder.out) continue;
+        if(trigger.kind === 'equip'
+            && !holder.equipment.some(e => e.uid === trigger.equipUid && e.idCard === trigger.idCard)) continue;
+        if(trigger.kind === 'prison'
+            && !draft.ongoing.some(o => o.kind === OngoingKind.prison && o.targets.includes(trigger.byId))) continue;
 
-// Alguns efeitos deixam contador ligado no jogador; ao expirar, e preciso
-// desligar. Hoje so shots.ignore faz isso — mas o esquecimento dele seria um
-// bug silencioso de apuracao, que e o pior tipo que este jogo pode ter.
-function releaseOngoing(draft, ongoing){
-    if(ongoing.effect?.action !== Action.shotsIgnore) return;
-    for(const id of ongoing.targets){
-        const player = playerById(draft, id);
-        if(player && player.ignoringShots > 0) player.ignoringShots--;
+        draft.uidSeq = (draft.uidSeq ?? 0) + 1;
+        const item = {
+            uid: `${draft.turnCount}:${draft.uidSeq}`,
+            idCard: trigger.idCard,
+            byId: trigger.byId,
+            choices: {},
+            trigger: trigger.kind,
+            effects: triggerEffects(trigger),
+        };
+        draft.resolution = { item, choices: {}, snapshot: cloneState({ ...draft, resolution: null }) };
+        runResolution(draft, now);
+        return;
+    }
+    if(draft.status === MatchStatus.progress && !draft.resolution && !draft.stack.length){
+        draft.phase = Phase.draw;
     }
 }
 
 function checkEndConditions(draft){
+    // Partida gravada antes de a 62 virar efeito na mesa.
     for(const condition of draft.endWhen ?? []){
         const reached = draft.players.some(player => {
             if(condition.shots === undefined) return false;
@@ -571,25 +609,34 @@ function checkEndConditions(draft){
         });
         if(reached) return endMatch(draft);
     }
-    // Mesa sem carta na mao tambem acaba: sem isso a partida fica em loop de
-    // turnos vazios.
     const anyCards = draft.players.some(p => !p.out && (p.hand.length || p.deck.length));
     if(!anyCards) endMatch(draft);
 }
 
 /**
- * Fecho de cada comando: baralho que acabou encerra a partida.
- *
- * Vem depois da resolucao, e nao dentro da compra, para a carta em curso ainda
- * fazer efeito — quem esvaziou o baralho comprando ainda joga a carta que
- * comprou.
+ * Fecho de cada comando: a Gladsxodia reunida, a Quinta Dimensao alcancada e o
+ * baralho que acabou encerram a partida.
  */
 function settle(draft){
+    if(draft.status === MatchStatus.progress){
+        const glads = draft.players.find(p => !p.out && GLADSXODIA.every(id => p.hand.includes(id)));
+        if(glads){
+            draft.gladsWinner = glads.id;
+            log(draft, { type: 'game.glads', playerId: glads.id });
+            finalize(draft);
+            return draft;
+        }
+    }
+    const resolving = draft.phase === Phase.window || draft.phase === Phase.pending;
+    // 62: assim que os shots resolverem.
+    if(draft.endPending && draft.status === MatchStatus.progress && !resolving
+        && !draft.drinks?.length && !draft.rituals?.length){
+        endMatch(draft);
+    }
     if(draft.deckEmptied !== undefined
         && draft.deckEmptied !== null
         && draft.status === MatchStatus.progress
-        && draft.phase !== Phase.window
-        && draft.phase !== Phase.pending){
+        && !resolving){
         endMatch(draft);
     }
     return draft;
@@ -599,11 +646,14 @@ function settle(draft){
 
 /**
  * Encerra. Se algum Sjehnsens ainda nao apontou quem e quem, a partida para em
- * `guessing`: a missao dele *e* o palpite, entao apurar antes seria dar como
- * errado um palpite que ninguem deixou fazer.
+ * `guessing` — menos quando a Paz Terrivel (109) ja decidiu.
  */
 function endMatch(draft){
-    const needsGuess = draft.players.some(player =>
+    if(draft.status !== MatchStatus.progress) return;
+    const peace = draft.ongoing.filter(o => o.kind === OngoingKind.peace).at(-1);
+    if(peace) draft.peaceWinner = peace.sourceId;
+
+    const needsGuess = draft.peaceWinner === undefined && draft.players.some(player =>
         !player.out
         && player.mission === 'sjehnsens'
         && Object.keys(player.guesses ?? {}).length === 0);
@@ -616,16 +666,44 @@ function endMatch(draft){
     finalize(draft);
 }
 
-function finalize(draft){
-    const { winners, byPlayer } = evaluateMissions(draft);
+/**
+ * O destino final, do mais forte ao mais fraco: Gladsxodia, Paz Terrivel,
+ * derrota forcada, vitoria forcada, missao (as tres ultimas na apuracao). O
+ * casamento (99) e aplicado sobre o resultado, menos quando a Gladsxodia ou a
+ * 109 decidiu: o escolhido vence ou perde conforme quem jogou, mao unica.
+ *
+ * Exportado para os cenarios perguntarem "quem ganharia se acabasse agora".
+ */
+export function destiny(state){
+    const { winners, byPlayer } = evaluateMissions(state);
+    const peace = state.peaceWinner ?? (state.status !== MatchStatus.finished
+        ? (state.ongoing ?? []).filter(o => o.kind === OngoingKind.peace).at(-1)?.sourceId
+        : undefined);
 
-    // Destino ligado (link.fate): ganham ou perdem juntos. Roda depois da
-    // apuracao porque e um ajuste sobre o resultado, nao uma missao.
-    const final = new Set(winners);
-    for(const link of draft.links ?? []){
-        if(link.kind !== 'fate') continue;
-        if(link.between.some(id => final.has(id))) link.between.forEach(id => final.add(id));
+    let final;
+    if(state.gladsWinner !== undefined && state.gladsWinner !== null){
+        final = new Set([state.gladsWinner]);
+    }else if(peace !== undefined && peace !== null){
+        final = new Set([peace]);
+    }else{
+        final = new Set(winners);
+        for(const ongoing of (state.ongoing ?? []).filter(o => o.kind === OngoingKind.fate)){
+            if(ongoing.partner === null || ongoing.partner === undefined) continue;
+            if(final.has(ongoing.sourceId)) final.add(ongoing.partner);
+            else final.delete(ongoing.partner);
+        }
+        for(const link of state.links ?? []){
+            if(link.kind !== 'fate') continue;
+            const [source, partner] = link.between;
+            if(final.has(source)) final.add(partner);
+            else final.delete(partner);
+        }
     }
+    return { final, byPlayer };
+}
+
+function finalize(draft){
+    const { final, byPlayer } = destiny(draft);
 
     draft.status = MatchStatus.finished;
     draft.phase = Phase.end;
@@ -639,7 +717,7 @@ function finalize(draft){
         won: final.has(player.id),
         wonByMission: byPlayer[player.id] === true,
     }));
-    draft.log.push({ turn: draft.turnCount, type: 'match.end', winners: draft.winners });
+    log(draft, { type: 'match.end', winners: draft.winners });
 }
 
 // --------------------------------------------------------------- comandos
@@ -649,19 +727,14 @@ function finalize(draft){
  *
  * @param {object} state
  * @param {object} command  { type, playerId, idCard, choices, value, now }
- * @param {number} [command.now] instante em ms; a janela de interferencia
- *        precisa de relogio, e recebe-lo em vez de chamar Date.now() e o que
- *        mantem esta camada pura e testavel.
+ * @param {number} [command.now] instante em ms; recebe-lo em vez de chamar
+ *        Date.now() e o que mantem esta camada pura e testavel.
  * @returns {object} estado novo
  */
 export function apply(state, command){
     const draft = cloneState(state);
     const now = command.now ?? 0;
 
-    // `drank` e `performed` passam mesmo com a partida encerrada: o ultimo shot
-    // da partida foi cobrado antes do fim e continua a beber, e o ritual dele
-    // tambem. Recusar aqui deixaria a fila presa por cima da tela de resultado,
-    // sem ninguem para esvaziar.
     if(draft.status === MatchStatus.finished
         && command.type !== Command.guess
         && command.type !== Command.drank
@@ -669,20 +742,12 @@ export function apply(state, command){
         fail('partida encerrada');
     }
 
-    // A mesa congela enquanto alguem deve um shot. O `tick` e a excecao, e sai
-    // sem fazer nada: o relogio da janela e chamado de fora, a cada 200ms, e
-    // recusar cada um deles encheria a tela de erro por uma espera que e
-    // esperada. A janela e reaberta na ultima confirmacao, mais abaixo.
-    // Antes dos shots, o ritual: a carta pede a musiquinha e so depois o shot
-    // desce. Por isso esta trava vem primeiro e nem o `drank` escapa dela.
+    // Ritual na frente do shot: a musiquinha e o que autoriza o shot.
     if(draft.rituals?.length && command.type !== Command.performed){
         if(command.type === Command.tick) return draft;
         fail('a mesa espera o ritual da carta');
     }
 
-    // `performed` tambem passa: a carta que mandou beber pode ter pedido a
-    // musiquinha, e ai as duas filas estao abertas ao mesmo tempo. A ordem
-    // entre elas quem garante e a trava de cima.
     if(draft.drinks?.length
         && command.type !== Command.drank && command.type !== Command.performed){
         if(command.type === Command.tick) return draft;
@@ -694,9 +759,22 @@ export function apply(state, command){
             if(draft.phase !== Phase.draw) fail('nao e a fase de compra');
             const player = currentPlayer(draft);
             if(command.playerId !== player.id) fail('nao e a sua vez');
-            runEffects(draft, { effects: [{ action: Action.handDraw, target: { kind: 'self' }, amount: 1 }] },
-                { sourceId: player.id, choices: {}, slot: '', seedRef: draft });
-            draft.phase = Phase.play;
+            // 85: enquanto valer, a compra da vez tem 50% de falhar.
+            const greedy = draft.ongoing.some(o => o.kind === OngoingKind.greed && o.targets.includes(player.id));
+            let failed = false;
+            if(greedy){
+                const rolled = nextRandom(draft.seed);
+                draft.seed = rolled.seed;
+                failed = rolled.value < 0.5;
+            }
+            if(failed){
+                log(draft, { type: 'draw.failed', playerId: player.id });
+            }else{
+                runEffects(draft, { effects: [{ action: Action.handDraw, target: { kind: 'self' }, amount: 1 }] },
+                    { sourceId: player.id, choices: {}, slot: '', seedRef: draft });
+            }
+            // Compra que falhou com a mao vazia nao pode travar a vez.
+            draft.phase = player.hand.length || draft.deckEmptied != null ? Phase.play : Phase.end;
             break;
         }
 
@@ -709,47 +787,44 @@ export function apply(state, command){
 
             if(isReaction(command.idCard)){
                 if(!isHandLocked(player)) fail('carta de reacao so entra respondendo a uma jogada');
-                // Mao travada: a carta e queimada. Sai da mao para o descarte
-                // sem efeito, sem ritual e sem janela — nao ha jogada nenhuma
-                // para a mesa responder.
                 player.hand.splice(player.hand.indexOf(command.idCard), 1);
                 draft.playsLeft--;
                 toDiscard(draft, player, command.idCard);
-                draft.log.push({ turn: draft.turnCount, type: 'burned',
-                    playerId: player.id, idCard: command.idCard });
+                log(draft, { type: 'burned', playerId: player.id, idCard: command.idCard });
                 finishTurnStep(draft, now);
                 break;
             }
 
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
             draft.playsLeft--;
-            draft.stack.push(makeItem(draft, command));
-            // Primeiro os alvos, depois a janela: e olhando para quem a carta
-            // aponta que a mesa decide se vale interferir.
+            const item = makeItem(draft, command);
+            item.turnPlay = true;
+            draft.history = [...(draft.history ?? []), command.idCard];
+            draft.stack.push(item);
             beginDeclaration(draft, now);
             break;
         }
 
-        // Fora da vez. So carta de reacao entra, e so enquanto a janela do
-        // topo esta aberta — o resto do tempo a pilha esta resolvendo.
+        // Fora da vez. So carta de reacao, e so enquanto a janela do topo esta
+        // aberta — ou, a 69, antes da jogada do jogador da vez.
         case Command.react: {
-            if(draft.phase !== Phase.window) fail('a janela nao esta aberta');
+            const beforePlay = command.idCard === 69 && draft.phase === Phase.play;
+            if(draft.phase !== Phase.window && !beforePlay) fail('a janela nao esta aberta');
             const player = playerById(draft, command.playerId);
             if(!player || player.out) fail('jogador fora da mesa');
             if(!player.hand.includes(command.idCard)) fail('carta nao esta na mao');
             if(!isReaction(command.idCard)) fail('esta carta nao reage fora da vez');
 
             const top = draft.stack[draft.stack.length - 1];
-            if(top?.byId === command.playerId) fail('nao se reage a propria jogada');
+            if(!beforePlay && top?.byId === command.playerId) fail('nao se reage a propria jogada');
             if(!canAnswer(draft, command.playerId, command.idCard)){
                 fail('esta carta nao combate a jogada que esta na mesa');
             }
 
             player.hand.splice(player.hand.indexOf(command.idCard), 1);
-            draft.stack.push(makeItem(draft, command, top));
-            // A reacao declara os alvos dela igual, e a janela recomeca sobre a
-            // carta nova — quem vai sofrer *ela* ainda nao teve chance de dizer
-            // nada.
+            const item = makeItem(draft, command, beforePlay ? undefined : top);
+            if(beforePlay) item.beforePlay = true;
+            draft.stack.push(item);
             beginDeclaration(draft, now);
             break;
         }
@@ -762,8 +837,6 @@ export function apply(state, command){
             break;
         }
 
-        // O relogio da mesa. Fecha a janela vencida; fora dela, nao faz nada —
-        // chamar tick a toda hora tem que ser barato e inofensivo.
         case Command.tick: {
             if(draft.phase === Phase.window && now >= draft.window.closesAt){
                 beginResolution(draft, now);
@@ -771,21 +844,27 @@ export function apply(state, command){
             break;
         }
 
-        // "Cantei." Irma do `drank`, e pelo mesmo motivo: o ritual acontece na
-        // mesa de verdade, entao quem diz que aconteceu e a pessoa, e o fato
-        // fica no log. Sai da fila em vez de ficar marcado — ritual e de um so,
-        // e nao ha lista de quem falta para os outros acompanharem.
         case Command.performed: {
             const index = (draft.rituals ?? []).findIndex(
                 entry => entry.playerId === command.playerId);
             if(index === -1) fail('o ritual nao e seu');
             const [entry] = draft.rituals.splice(index, 1);
-            draft.log.push({ turn: draft.turnCount, type: 'ritual.done',
-                playerId: entry.playerId, idCard: entry.idCard });
+            log(draft, { type: 'ritual.done', playerId: entry.playerId, idCard: entry.idCard });
 
-            // Mesma devolucao de tempo do ultimo shot: a mesa parou por causa
-            // da musiquinha, e a janela nao pode pagar por isso. So quando nao
-            // ha shot atras — nesse caso quem devolve os 10s e o ultimo `drank`.
+            // Ritual que vem antes da escolha (75): a resolucao e refeita a
+            // cada resposta, e precisa saber que a carta ja foi inventada.
+            if(draft.resolution && entry.uid && draft.resolution.item?.uid === entry.uid){
+                const snapshot = draft.resolution.snapshot;
+                // A resolucao recomeca do snapshot: o ritual e o "feito" entram
+                // nele tambem, senao sumiriam do log na proxima resposta.
+                if(snapshot){
+                    snapshot.log.push(...draft.log.slice(snapshot.log.length)
+                        .filter(e => e.type === 'ritual' || e.type === 'ritual.done'));
+                }
+                draft.resolution = { ...draft.resolution,
+                    choices: { ...draft.resolution.choices, 'ritual:done': true } };
+            }
+
             if(draft.rituals.length === 0 && !draft.drinks?.length
                 && draft.phase === Phase.window && draft.window){
                 draft.window.closesAt = now + REACTION_WINDOW_MS;
@@ -793,29 +872,19 @@ export function apply(state, command){
             break;
         }
 
-        // "Bebi." E a unica confirmacao do jogo que corresponde a uma acao
-        // fora dele — e por isso ela e um comando, e nao um botao que fecha um
-        // aviso: o servidor precisa saber que aconteceu.
         case Command.drank: {
             const entry = (draft.drinks ?? []).find(
                 item => item.playerId === command.playerId && !item.confirmed);
             if(!entry) fail('voce nao tem shot para beber');
-
-            // Confirmar *marca*, nao tira da fila. A cobranca de uma carta e
-            // da mesa inteira, e nao de cada um por si: enquanto sobrar quem
-            // deve, a fila continua na tela de todo mundo que bebeu, com o ok
-            // ja dado ao lado do nome. Ver quem falta e o que faz a mesa
-            // cobrar a mesa — e e por isso que a marca mora no estado.
             entry.confirmed = true;
-            draft.log.push({ turn: draft.turnCount, type: 'drink.confirmed',
-                playerId: entry.playerId, amount: entry.amount });
+            log(draft, { type: 'drink.confirmed', playerId: entry.playerId, amount: entry.amount });
 
             if(draft.drinks.every(item => item.confirmed)){
                 draft.drinks = [];
-                // A mesa ficou parada esperando; a janela que estava aberta
-                // perdeu o tempo dela. A ultima confirmacao devolve os 10s
-                // inteiros, em vez de a carta resolver no instante seguinte
-                // porque alguem demorou para beber.
+                // A resolucao parada numa escolha recomeca do snapshot: a fila
+                // que ja desceu nao pode voltar com ela (um gatilho da vez que
+                // bebeu antes de o seguinte perguntar).
+                if(draft.resolution?.snapshot) draft.resolution.snapshot.drinks = [];
                 if(draft.phase === Phase.window && draft.window){
                     draft.window.closesAt = now + REACTION_WINDOW_MS;
                 }
@@ -826,11 +895,9 @@ export function apply(state, command){
         case Command.answer: {
             if(draft.phase !== Phase.pending || !draft.resolution) fail('nada esperando resposta');
             const request = draft.pending[0];
-            if(request.kind === 'optIn'){
-                // A rodada de voluntarios nao tem dono: quem responde e cada
-                // um da lista, na hora que quiser. Quem ja respondeu nao volta
-                // atras — a resposta e publica no instante em que chega, e
-                // desfaze-la seria mudar de ideia depois de ver a mesa.
+            if(isSimultaneous(request)){
+                // A rodada da mesa nao tem dono: quem responde e cada um da
+                // lista, na hora que quiser, e nao volta atras.
                 if(!optInRound(request).waiting.includes(command.playerId)){
                     fail('a escolha nao e sua');
                 }
@@ -839,24 +906,18 @@ export function apply(state, command){
             }
             const choices = keyFor(draft.resolution.choices, request, command.playerId, command.value);
 
-            // Declaracao: o estado ainda nao mudou (o ensaio roda numa copia),
-            // entao basta guardar a resposta e perguntar o proximo alvo.
             if(draft.resolution.declaring){
                 draft.resolution = { ...draft.resolution, choices };
                 runDeclaration(draft, now);
                 return settle(draft);
             }
 
-            // Refaz a resolucao inteira sobre o snapshot, agora com a resposta.
-            // Determinismo vem da semente: o mesmo sorteio sai igual.
             const restored = cloneState(draft.resolution.snapshot);
             restored.resolution = { ...draft.resolution, choices, snapshot: draft.resolution.snapshot };
             runResolution(restored, now);
             return settle(restored);
         }
 
-        // O palpite do Sjehnsens. Aceito ate a apuracao, e so depois dela a
-        // partida fecha de verdade.
         case Command.guess: {
             const player = playerById(draft, command.playerId);
             if(!player) fail('jogador fora da mesa');
@@ -878,16 +939,8 @@ export function apply(state, command){
 }
 
 /**
- * O contador dos uid vive *dentro* do estado, e nao neste modulo.
- *
- * Era `let uidCounter` aqui fora, e isso furava a pureza do `apply` num ponto
- * que so aparece quando alguem tenta refazer a partida: o uid dependia de
- * quantas cartas o processo inteiro tinha jogado, entao duas partidas na mesma
- * aba se contaminavam e o replay do log (domain/match/replay.js) chegava a um
- * estado igual em tudo, menos nos uid. Dentro do estado, a mesma entrada da a
- * mesma saida — que e o que `apply` sempre prometeu.
- *
- * `?? 0` porque partida gravada antes disso nao tem o campo.
+ * O contador dos uid vive *dentro* do estado: a mesma entrada da a mesma saida,
+ * e o replay chega ao mesmo estado. `?? 0` porque partida antiga nao tem o campo.
  */
 function makeItem(draft, command, respondsTo){
     draft.uidSeq = (draft.uidSeq ?? 0) + 1;
@@ -902,30 +955,31 @@ function makeItem(draft, command, respondsTo){
 }
 
 /**
- * Onde a resposta entra em `choices`, conforme o tipo do pedido.
- *
- * `optIn` acumula por jogador em vez de sobrescrever: "todos podem beber" sao
- * varias respostas para o mesmo efeito, e a resolucao so segue quando a ultima
- * chegar.
+ * Onde a resposta entra em `choices`, conforme o tipo do pedido. As rodadas da
+ * mesa (optIn, voto, descarte de cada um) acumulam por jogador; a corrida
+ * guarda a ordem de chegada.
  */
 function keyFor(choices, request, playerId, value){
+    const slot = request.slot;
+    if(request.key) return { ...choices, [slot + ':' + request.key]: value };
+    const merge = suffix => ({ ...choices, [slot + suffix]: { ...(choices[slot + suffix] ?? {}), [playerId]: value } });
     switch(request.kind){
-        case 'optIn': {
-            const key = request.slot + ':optIn';
-            return { ...choices, [key]: { ...(choices[key] ?? {}), [playerId]: value === true } };
-        }
-        case 'option': return { ...choices, [request.slot + ':option']: value };
-        case 'cards':  return { ...choices, [request.slot + ':cards']: value };
-        default:       return { ...choices, [request.slot]: value };  // alvo escolhido
+        case 'optIn':    return merge(':optIn');
+        case 'vote':     return { ...choices, [slot + ':vote']: { ...(choices[slot + ':vote'] ?? {}), [playerId]: value !== false } };
+        case 'handPick': return merge(':handPick');
+        case 'race':     return { ...choices, [slot + ':race']: [...(choices[slot + ':race'] ?? []), playerId] };
+        case 'option':   return { ...choices, [slot + ':option']: value };
+        case 'cards':    return { ...choices, [slot + ':cards']: value };
+        case 'missions': return { ...choices, [slot + ':missions']: value };
+        case 'order':    return { ...choices, [slot + ':order']: value };
+        case 'ongoing':  return { ...choices, [slot + ':ongoing']: value };
+        default:         return { ...choices, [slot]: value };
     }
 }
 
 /** Conveniencia para a UI: o que este jogador pode fazer agora. */
 export function legalCommands(state, playerId){
     if(state.status !== MatchStatus.progress) return [];
-    // Deve shot, so ha uma coisa a fazer — e quem nao deve nao faz nada ate a
-    // mesa beber.
-    // Ritual na frente do shot: ate a musiquinha sair, nem quem deve bebe.
     if(state.rituals?.length){
         return state.rituals.some(entry => entry.playerId === playerId)
             ? [Command.performed] : [];
@@ -937,12 +991,15 @@ export function legalCommands(state, playerId){
     const isTurn = currentPlayer(state)?.id === playerId;
     switch(state.phase){
         case Phase.draw:   return isTurn ? [Command.draw] : [];
-        case Phase.play:   return isTurn ? [Command.play] : [];
+        case Phase.play:
+            if(isTurn) return [Command.play];
+            return playerById(state, playerId)?.hand.some(idCard => canAnswer(state, playerId, idCard))
+                ? [Command.react] : [];
         case Phase.window: return pendingResponders(state).includes(playerId)
             ? [Command.react, Command.pass] : [];
         case Phase.pending: {
             const request = state.pending[0];
-            if(request?.kind === 'optIn'){
+            if(isSimultaneous(request)){
                 return optInRound(request).waiting.includes(playerId) ? [Command.answer] : [];
             }
             return request?.chooserId === playerId ? [Command.answer] : [];

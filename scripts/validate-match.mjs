@@ -29,6 +29,7 @@ import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
 // passou a jogar carta do mesmo jeito.
 import {
     IDS, beber, daVez, descarteBate, jogar, mesa, montarMesa, novaMesa, parada, passagem, responder,
+    tchouameni,
 } from './lib/mesa.mjs';
 
 let problemas = 0;
@@ -113,6 +114,8 @@ const check = (label, condition) => { if(!condition) erro(label); };
  * o motor aceita como alvo dela.
  */
 function jogarDefesa(antes, id){
+    // A 69 nao responde a uma carta: entra antes de o jogador da vez jogar.
+    if(id === 69) return tchouameni(antes, 2);
     for(const gatilho of IDS){
         if(isReaction(gatilho)) continue;
         try{
@@ -728,6 +731,43 @@ for(const id of IDS){
     festa = apply(festa, { type: Command.draw, playerId: 1, now: 0 });
     festa = apply(festa, { type: Command.play, playerId: 1, idCard: 2, now: 0 });
     check('o bot nao gasta a 6 contra carta de beber', botCommand(festa, 2)?.type === Command.pass);
+}
+
+
+// ------------------------------------------- 11. a Gladsxodia comprada
+
+{
+    // Reunir as seis na mao, venha a ultima de onde vier, encerra na hora com
+    // vitoria so de quem reuniu — sem esperar o palpite do Sjehnsens.
+    let state = montarMesa([
+        { mission: 'stanley', mao: [111, 112, 113, 115, 116] },
+        { mission: 'sjehnsens' },
+    ], { joga: 1 });
+    state.players[0].deck.unshift(114);
+    state = apply(state, { type: Command.draw, playerId: 1, now: 0 });
+    check('comprar a sexta Gladsxodia encerra a partida', state.status === MatchStatus.finished);
+    check('so quem reuniu vence', state.winners.join() === '1');
+}
+
+// ------------------------------------------- 12. mesas de bots variadas
+
+// Mesa de 2 a 7 bots, varias sementes: nenhum estado novo (equipamento da vez,
+// preso, voto, corrida, cadeia) pode deixar a mesa sem ninguem para responder.
+{
+    let travadas = 0;
+    for(let seed = 1; seed <= 40; seed++){
+        const { state: inicial } = createSoloMatch({ seed, you: { id: -99, name: 'z' }, botCount: 1 + seed % 6, pool: IDS });
+        let state = inicial;
+        for(let i = 0; i < 8000 && state.status !== MatchStatus.finished; i++){
+            const comando = state.players.map(p => botCommand(state, p.id, 999999)).find(Boolean)
+                ?? passagem(state)
+                ?? (state.phase === Phase.window ? { type: Command.tick, now: 9e15 } : null);
+            if(!comando) break;
+            state = apply(state, comando.type === Command.tick ? comando : { ...comando, now: 999999 });
+        }
+        if(state.status !== MatchStatus.finished || !descarteBate(state)) travadas++;
+    }
+    check('quarenta mesas de bots terminam sem travar', travadas === 0);
 }
 
 // ------------------------------------------------------------- panorama

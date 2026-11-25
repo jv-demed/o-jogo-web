@@ -1,5 +1,5 @@
 import { MISSIONS } from './missions.js';
-import { Phase, cloneState, playerById } from './state.js';
+import { PLAYS_PER_TURN, Phase, cloneState, playerById } from './state.js';
 
 /**
  * Poderes de dev: cirurgia no estado da partida.
@@ -88,7 +88,8 @@ export function giveCard(state, playerId, idCard){
  * `DevCommand`: so roda antes da primeira jogada, numa mesa que nao sai da aba.
  *
  * @param {object} state
- * @param {{mission?: string, shots?: number, hand?: number[]}[]} seats
+ * @param {{mission?: string, shots?: number, given?: number, skip?: number,
+ *          hand?: number[], equipment?: (number|{idCard: number, mission?: string})[]}[]} seats
  *        na ordem de `state.order`; campo ausente fica como a mesa sorteou.
  * @param {{turnOf?: number}} [options] id de quem joga primeiro. A fase volta
  *        para a compra: quem testa a carta compra como em qualquer vez.
@@ -105,13 +106,30 @@ export function arrangeTable(state, seats, { turnOf } = {}){
             player.goalChangedBy = null;
         }
         if(typeof seat.shots === 'number') player.shots = seat.shots;
+        if(typeof seat.given === 'number') player.shotsGiven = seat.given;
+        if(typeof seat.skip === 'number') player.skipTurns = seat.skip;
         if(Array.isArray(seat.hand)) player.hand = [...seat.hand];
+        if(Array.isArray(seat.discard)){
+            for(const idCard of seat.discard){
+                player.discard.push(idCard);
+                draft.discardPile.push({ idCard, playerId: player.id });
+            }
+        }
+        // Equipamento ja na cadeira: a carta que tem o momento dela na vez do
+        // portador (70, 73, 77, 93) se testa a partir dai, sem jogar antes.
+        if(Array.isArray(seat.equipment)){
+            player.equipment = seat.equipment.map((entry, i) => {
+                const { idCard, mission } = typeof entry === 'number' ? { idCard: entry } : entry;
+                return { idCard, from: player.id, uid: `dev:${player.id}:${i}`, ...(mission ? { mission } : {}) };
+            });
+        }
     });
     if(turnOf !== undefined){
         const index = draft.order.indexOf(turnOf);
         if(index === -1) throw new Error(`assento ${turnOf} nao esta na mesa`);
         draft.turnIndex = index;
         draft.phase = Phase.draw;
+        draft.playsLeft = PLAYS_PER_TURN;
     }
 
     log(draft, { type: 'dev.arrange', turnOf: turnOf ?? null });

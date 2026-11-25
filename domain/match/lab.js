@@ -1,6 +1,7 @@
 import { Command, apply, canAnswer, isReaction } from './engine.js';
+import { botCommand } from './bot.js';
 import { arrangeTable, giveCard, stackDeck } from './dev.js';
-import { cloneState, playerById } from './state.js';
+import { MatchStatus, Phase, cloneState, playerById } from './state.js';
 import { createSoloMatch } from './solo.js';
 
 /**
@@ -52,12 +53,58 @@ import { createSoloMatch } from './solo.js';
  * defesa combate depende so da carta de baixo, e nao da mesa.
  */
 export function answerableBy(idCard, pool){
+    // Uma mesa de mentira com tres cadeiras: o alvo da carta de baixo ainda nao
+    // foi escolhido, entao conta como possivel para todo mundo.
+    const seat = id => ({ id, hand: [], equipment: [], shots: 0, shotsGiven: 0, mission: 'stanley', skipTurns: 0 });
     return pool.filter(other => !isReaction(other) && canAnswer({
         phase: 'window',
-        players: [{ id: 1, hand: [idCard] }],
-        stack: [{ idCard: other, byId: 2 }],
+        players: [{ ...seat(1), hand: [idCard] }, seat(2), seat(3)],
+        order: [1, 2, 3],
+        direction: 1,
+        ongoing: [],
+        seed: 0,
+        stack: [{ idCard: other, byId: 2, choices: {} }],
         window: { passed: [] },
     }, 1, idCard));
+}
+
+/**
+ * As escolhas do cenario falam em assento (indice), e o motor em id. So o que
+ * aponta jogador e traduzido: o slot do alvo, o "para quem" (`:to`), a cadeia
+ * (`:chainN`) e a ordem (`:order`). Carta, missao e opcao ficam como estao.
+ */
+const pointsPlayer = slot => !slot.includes(':') || /:(to|chain\d+|order)$/.test(slot);
+function seatsToIds(choices, order){
+    return Object.fromEntries(Object.entries(choices ?? {}).map(([slot, value]) =>
+        [slot, Array.isArray(value) && pointsPlayer(slot) ? value.map(index => order[index] ?? index) : value]));
+}
+
+/**
+ * As jogadas que o cenario faz antes da carta testada (a 103 precisa de uma
+ * jogada do anterior para desfazer). Rodam na montagem, cada uma na vez de
+ * quem joga, com as escolhas do cenario; o que sobrar de pergunta, a politica
+ * do bot responde. A mesa nasce depois delas.
+ */
+function playBefore(state, before){
+    let current = state;
+    let now = 0;
+    for(const play of before){
+        const id = current.order[play.seat];
+        current = arrangeTable(current, [], { turnOf: id });
+        current = stackDeck(current, id, play.idCard);
+        current = apply(current, { type: Command.draw, playerId: id, now });
+        const choices = seatsToIds(play.choices, current.order);
+        current = apply(current, { type: Command.play, playerId: id, idCard: play.idCard, choices, now });
+        for(let guard = 0; guard < 400 && current.status === MatchStatus.progress; guard++){
+            now += 20000;
+            if(current.phase === Phase.end && !current.drinks?.length && !current.rituals?.length) break;
+            const command = current.players.map(p => botCommand(current, p.id, now)).find(Boolean)
+                ?? (current.phase === Phase.window ? { type: Command.tick } : null);
+            if(!command) break;
+            current = apply(current, { ...command, now });
+        }
+    }
+    return current;
 }
 
 /**
@@ -96,7 +143,7 @@ function disarmBots(state, seats, botIds){
     return draft;
 }
 
-export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, playedBy, botsDefend = false, now = 0 }){
+export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [], pool, trigger, playedBy, before = [], reactorSeat, botsDefend = false, now = 0 }){
     // Carta jogada por um bot e o mesmo caminho do gatilho, so que a carta que
     // ele joga e a testada — e ela nao vai para a sua mao.
     let yours = true;
@@ -107,6 +154,11 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
 
     // Defesa nao se joga na propria vez: sem gatilho, a mesa nao teria como
     // chegar no caso que se quer testar.
+    // A 69 nao responde a carta nenhuma: entra depois de o jogador da vez
+    // comprar e antes de ele jogar. O gatilho e so a vez dele, sem carta.
+    if(!trigger && idCard === 69){
+        trigger = { seat: (yourSeat - 1 + seats.length) % seats.length, idCard: null };
+    }
     if(!trigger && isReaction(idCard)){
         trigger = autoTrigger(idCard, { seed, seats, yourSeat, pool });
     }
@@ -118,6 +170,10 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
     if(!trigger){
         let state = arrangeTable(base, seats, { turnOf: you.id });
         if(!botsDefend) state = disarmBots(state, seats, botIds);
+        if(before.length){
+            state = playBefore(state, before);
+            state = arrangeTable(state, [], { turnOf: you.id });
+        }
         state = stackDeck(state, you.id, idCard);
         state = apply(state, { type: Command.draw, playerId: you.id, now });
         for(const id of extra) state = giveCard(state, you.id, id);
@@ -128,22 +184,44 @@ export function createLabMatch({ seed, you, idCard, seats, yourSeat, extra = [],
     // combate. Quem joga e o bot, pelo mesmo caminho de qualquer vez (compra a
     // carta do topo, joga), e voce ja esta com a defesa na mao quando a janela
     // abrir.
-    if(trigger.seat === yourSeat) throw new Error('o gatilho tem que ser de um bot');
+    // Voce joga o gatilho, e um bot entra com a carta testada: "alguem anula
+    // a sua jogada". A reacao do bot fica de roteiro (`reactions`) e sai assim
+    // que o motor a aceitar — na janela da sua jogada, ou, a 69, depois da
+    // sua compra.
+    if(trigger.seat === yourSeat){
+        if(reactorSeat === undefined || reactorSeat === yourSeat) throw new Error('o gatilho tem que ser de um bot');
+        const reactorId = base.order[reactorSeat];
+        let state = arrangeTable(base, seats, { turnOf: you.id });
+        if(!botsDefend) state = disarmBots(state, seats, botIds);
+        if(before.length){
+            state = playBefore(state, before);
+            state = arrangeTable(state, [], { turnOf: you.id });
+        }
+        state = giveCard(state, reactorId, idCard);
+        for(const id of extra) state = giveCard(state, you.id, id);
+        if(trigger.idCard !== null) state = stackDeck(state, you.id, trigger.idCard);
+        state = apply(state, { type: Command.draw, playerId: you.id, now });
+        return { state, botIds, opening: [], reactions: [{ type: Command.react, playerId: reactorId, idCard }] };
+    }
     const botId = base.order[trigger.seat];
     let state = arrangeTable(base, seats, { turnOf: botId });
     if(!botsDefend) state = disarmBots(state, seats, botIds);
+    if(before.length){
+        state = playBefore(state, before);
+        state = arrangeTable(state, [], { turnOf: botId });
+    }
     if(yours) state = giveCard(state, you.id, idCard);
     for(const id of extra) state = giveCard(state, you.id, id);
+    if(trigger.idCard === null){
+        return { state, botIds, opening: [{ type: Command.draw, playerId: botId }] };
+    }
     state = stackDeck(state, botId, trigger.idCard);
 
     // A compra e a jogada do bot ficam de roteiro, e nao aplicadas aqui: a mesa
     // nasce na vez dele, com o anuncio de quem joga, e as duas descem no ritmo
     // de qualquer bot. Aplicadas na montagem, a carta ja estava na mesa antes
     // de dar para ler de quem era a vez.
-    const choices = Object.fromEntries(Object.entries(trigger.choices ?? {})
-        .map(([slot, value]) => [slot, Array.isArray(value)
-            ? value.map(index => state.order[index])
-            : value]));
+    const choices = seatsToIds(trigger.choices, state.order);
     const opening = [
         { type: Command.draw, playerId: botId },
         { type: Command.play, playerId: botId, idCard: trigger.idCard, choices },

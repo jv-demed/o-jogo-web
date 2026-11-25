@@ -27,6 +27,8 @@ import { DrinkPrompt } from '@/components/game/DrinkPrompt';
 import { OptInPrompt } from '@/components/game/OptInPrompt';
 import { RitualPrompt } from '@/components/game/RitualPrompt';
 import { OngoingModal } from '@/components/game/OngoingModal';
+import { RequestPickModal, isRequestPick } from '@/components/game/RequestPickModal';
+import { TableRoundPrompt, isTableRound } from '@/components/game/TableRoundPrompt';
 import { DevPanel, DevButton } from '@/components/dev/DevPanel';
 import { CardPickerModal } from '@/components/dev/CardPickerModal';
 import { DevCommand } from '@/domain/match/dev';
@@ -119,9 +121,13 @@ export function MatchScreen({
     // deixar a pergunta atras de um botao e deixar a partida parada sem dizer
     // por que. Fechada, o botao de acao reabre com a selecao intacta.
     const isYourPick = isPlayerPick(request) && request.chooserId === you?.id;
+    // As outras perguntas de um jogador so (cartas, missoes, lugares, efeito)
+    // abrem sozinhas pelo mesmo motivo.
+    const isYourRequest = isRequestPick(request) && request.chooserId === you?.id;
     useEffect(() => {
         if(isYourPick) setOpenPanel('pick');
-    }, [isYourPick, request?.slot, request?.uid]);
+        else if(isYourRequest) setOpenPanel('request');
+    }, [isYourPick, isYourRequest, request?.slot, request?.uid, request?.key]);
 
     const closePanel = () => setOpenPanel(null);
 
@@ -153,7 +159,9 @@ export function MatchScreen({
 
     function handlePlay(idCard){
         setChoice(null);
-        if(state.phase === Phase.window){
+        // Fora da vez, so reacao: na janela, ou a 69 antes da jogada de quem
+        // esta com a vez.
+        if(state.phase === Phase.window || !isYourTurn){
             dispatch({ type: Command.react, playerId: you.id, idCard });
             return;
         }
@@ -165,7 +173,7 @@ export function MatchScreen({
     // jogada do topo. Quem sabe a diferenca e o motor, nao a tela.
     const playable = isYourTurn && state.phase === Phase.play
         ? you.hand.filter(idCard => canPlay(state, you.id, idCard))
-        : state.phase === Phase.window
+        : state.phase === Phase.window || state.phase === Phase.play
             ? you.hand.filter(idCard => canAnswer(state, you.id, idCard))
             : [];
     const burning = isYourTurn && state.phase === Phase.play && isHandLocked(you);
@@ -298,12 +306,13 @@ export function MatchScreen({
 
                                 <div className='flex items-end gap-2'>
                                     <MissionButton onClick={() => setOpenPanel('mission')}
-                                        changed={you.goalChangedBy != null}
+                                        changed={you.goalChangedBy != null
+                                            || you.equipment.some(e => (e.as ?? e.idCard) === 64 && e.mission)}
                                     />
                                     <div className='flex-1 min-w-0'>
                                         <TurnBar state={state} you={you}
                                             isYourTurn={isYourTurn}
-                                            onOpenPicker={() => setOpenPanel('pick')}
+                                            onOpenPicker={() => setOpenPanel(isRequestPick(request) ? 'request' : 'pick')}
                                             onDevDraw={isDev ? () => setDevPick('draw') : undefined}
                                             dispatch={dispatch}
                                         />
@@ -357,6 +366,17 @@ export function MatchScreen({
                 onClose={closePanel}
             />}
 
+            {openPanel === 'request' && isYourRequest && <RequestPickModal
+                request={request}
+                state={state}
+                you={you}
+                onAnswer={value => {
+                    dispatch({ type: Command.answer, playerId: you.id, value });
+                    closePanel();
+                }}
+                onClose={closePanel}
+            />}
+
             {openPanel === 'dev' && isDev && <DevPanel state={state} you={you}
                 reveal={reveal}
                 onToggleReveal={() => setReveal(on => !on)}
@@ -397,7 +417,7 @@ export function MatchScreen({
                 da lupa cai direto na mao — quem quis ler ja leu. */}
             {choice && <CardActionModal card={choice}
                 isPlayable={playable.includes(choice.id)}
-                isReaction={state.phase === Phase.window}
+                isReaction={state.phase === Phase.window || !isYourTurn}
                 isBurn={burning}
                 onPlay={() => handlePlay(choice.id)}
                 onInspect={() => { setPreview(choice); setChoice(null); }}
@@ -430,6 +450,16 @@ export function MatchScreen({
                 request={request}
                 players={state.players}
                 order={state.order}
+                playerId={you.id}
+                dispatch={dispatch}
+            />}
+
+            {/* O voto, a corrida e o descarte de cada um: a mesa responde
+                junta, como na rodada de voluntarios. */}
+            {rituals.length === 0 && drinks.length === 0
+                && isTableRound(request) && <TableRoundPrompt
+                request={request}
+                state={state}
                 playerId={you.id}
                 dispatch={dispatch}
             />}

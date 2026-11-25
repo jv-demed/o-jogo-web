@@ -2,7 +2,7 @@ import { Action, Negatable, Timing } from '../cards/vocabulary.js';
 import { getCardEffects } from '../cards/effects/index.js';
 import { ALL_MISSIONS } from './missions.js';
 import { Command, canAnswer } from './engine.js';
-import { MatchStatus, Phase, currentPlayer, optInRound, playerById } from './state.js';
+import { MatchStatus, Phase, currentPlayer, isSimultaneous, optInRound, playerById } from './state.js';
 
 /**
  * O jogador automatico.
@@ -263,14 +263,13 @@ export function botCommand(state, playerId, now = 0){
             const request = state.pending[0];
             if(!request) return null;
 
-            // Rodada de voluntarios: a pergunta e da mesa inteira ao mesmo
-            // tempo, e nao de um `chooserId`. O bot responde a propria vaga
-            // enquanto ela estiver aberta — e "sim" quando ele e um dos
-            // obrigados, que la nao ha o que escolher.
-            if(request.kind === 'optIn'){
+            // Rodada da mesa (voluntarios, voto, corrida, descarte de cada
+            // um): a pergunta e de todos ao mesmo tempo, e nao de um
+            // `chooserId`. O bot responde a propria vaga enquanto ela estiver
+            // aberta.
+            if(isSimultaneous(request)){
                 if(!optInRound(request).waiting.includes(playerId)) return null;
-                return { type: Command.answer, playerId,
-                    value: (request.forced ?? []).includes(playerId), now };
+                return { type: Command.answer, playerId, value: simultaneousAnswer(request, player), now };
             }
 
             if(request.chooserId !== playerId) return null;
@@ -287,13 +286,29 @@ export function botCommand(state, playerId, now = 0){
     }
 }
 
+/**
+ * A resposta do bot numa rodada da mesa. Nunca de gracas: so bebe quando e
+ * obrigado ou quando beber o solta da prisao; vota sempre que a carta e boa
+ * (empate ja e carta boa, e o bot nao tem gosto); toca na corrida na hora —
+ * quem da o atraso e a camada de cima; descarta a primeira carta da mao.
+ */
+function simultaneousAnswer(request, player){
+    switch(request.kind){
+        case 'vote':     return true;
+        case 'race':     return true;
+        case 'handPick': return player.hand.slice(0, request.count ?? 1);
+        default:         return (request.forced ?? []).includes(player.id) || request.selfRelease === true;
+    }
+}
+
 function answerFor(state, request, playerId){
     switch(request.kind){
-        // `optIn` nao passa por aqui: a rodada de voluntarios e respondida
-        // acima, porque quem decide se o bot esta nela e a lista, e nao o
-        // `chooserId`. (O bot nunca quer beber de gracas, de qualquer forma.)
-        case 'option': return 0;
-        case 'cards':  return [];
-        default:       return preferredTargets(state, request, playerId);
+        // Opcao: a primeira, que e a que faz alguem beber quando ha uma.
+        case 'option':   return 0;
+        case 'cards':    return [...new Set(request.cards ?? [])].slice(0, request.count ?? 1);
+        case 'missions': return (request.options ?? []).slice(0, request.count ?? 1);
+        case 'order':    return [...(request.ids ?? [])].reverse();
+        case 'ongoing':  return request.options?.[0] ?? null;
+        default:         return preferredTargets(state, request, playerId);
     }
 }

@@ -16,3 +16,9 @@ export const untilDrinks = n => ({ kind: DurationKind.untilDrinks, amount: n });
 export const untilDestroyed = () => ({ kind: DurationKind.untilDestroyed });
 
 export const permanent = () => ({ kind: DurationKind.permanent });
+
+// Rodada: ate a vez voltar para quem jogou a carta, contando tambem quando a
+// vez dele e pulada. E a unidade de "por 2 turnos completos" no texto.
+export const rounds = n => ({ kind: DurationKind.rounds, rounds: n });
+
+export const untilTurn = () => ({ kind: DurationKind.untilTurn });

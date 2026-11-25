@@ -1,9 +1,9 @@
 import { Action, Goal, Mission, Negatable, Pile, Scope, Timing } from '../vocabulary.js';
 import {
-    all, choose, farthest, manual, mission, neighbors, nextPlayer,
-    others, previousPlayer, sameTarget, self,
+    all, choose, farthest, mission, neighbors, nextPlayer,
+    others, previousPlayer, race, sameTarget, self,
 } from '../targets.js';
-import { permanent, turns, untilDrinks, untilMissionChange } from '../durations.js';
+import { permanent, rounds, turns, untilDrinks, untilMissionChange } from '../durations.js';
 
 /**
  * Efeitos das cartas do pack 1 (Amigue Secrete 2023), ids 1 a 63.
@@ -78,12 +78,12 @@ export const PACK_1_EFFECTS = {
     9: { effects: [
         { action: Action.missionReveal, target: mission(Mission.swarley) },
         { action: Action.drink, target: mission(Mission.swarley), amount: 1,
-          then: { action: Action.drink, target: choose(1, { by: 'target' }), amount: 1 } },
+          then: { action: Action.drink, target: choose(1, { by: 'target', except: 'self' }), amount: 1 } },
     ]},
 
     // 10 — Cesar que Destruiu o Imperio
     10: { effects: [
-        { action: Action.missionSwap, between: choose(1),
+        { action: Action.missionSwap, between: choose(1, { except: 'self' }),
           if: { mission: Mission.swarley, not: true },
           otherwise: { action: Action.missionSetGoal, mission: Mission.swarley,
                        goal: Goal.mostShots, timing: Timing.passive,
@@ -104,7 +104,7 @@ export const PACK_1_EFFECTS = {
     // 13 — Roubando a Jurupinga
     13: { effects: [
         { action: Action.shotsRemove, target: choose(1), amount: 1 },
-        { action: Action.drink, target: choose(1), amount: 1 },
+        { action: Action.drink, target: choose(1, { except: 'previous' }), amount: 1 },
     ]},
 
     // 14 — Cortador de Unhas
@@ -142,7 +142,7 @@ export const PACK_1_EFFECTS = {
     // 20 — Dia do Legume
     20: { effects: [
         { action: Action.missionSetGoal, mission: Mission.stanley, goal: Goal.alliesWin,
-          amount: 2, timing: Timing.delayed, duration: turns(3) },
+          amount: 2, timing: Timing.delayed, duration: rounds(3) },
     ]},
 
     // 21 — Dj Vomitado
@@ -158,7 +158,7 @@ export const PACK_1_EFFECTS = {
 
     // 23 — To Out
     23: { effects: [
-        { action: Action.redirect, what: Negatable.drink, target: choose(1), amount: 1,
+        { action: Action.redirect, what: Negatable.drink, target: choose(1, { except: 'self' }), amount: 1,
           timing: Timing.reaction },
     ]},
 
@@ -182,7 +182,7 @@ export const PACK_1_EFFECTS = {
 
     // 27 — Papai Noel
     27: { effects: [
-        { action: Action.drink, target: choose(1), amount: 1 },
+        { action: Action.drink, target: choose(1, { except: 'self' }), amount: 1 },
     ]},
 
     // 28 — Luvas no Chao
@@ -227,8 +227,10 @@ export const PACK_1_EFFECTS = {
     35: { effects: [
         { action: Action.deckPeek, target: self(), amount: 1, from: Pile.bottom,
           then: { action: Action.choice, chooser: 'self', options: [
-              { action: Action.handDraw, target: self(), amount: 1, from: Pile.bottom },
-              { action: Action.handDraw, target: self(), amount: 1, from: Pile.top },
+              { action: Action.handDraw, target: self(), amount: 1, from: Pile.bottom,
+                label: 'Comprar a do fundo' },
+              { action: Action.handDraw, target: self(), amount: 1, from: Pile.top,
+                label: 'Comprar a do topo' },
           ]} },
     ]},
 
@@ -241,7 +243,7 @@ export const PACK_1_EFFECTS = {
     // 37 — Caipa Dupla do Ceu
     37: { effects: [
         { action: Action.drink, target: self(), amount: 1 },
-        { action: Action.drink, target: choose(1), amount: 1 },
+        { action: Action.drink, target: choose(1, { except: 'self' }), amount: 1 },
     ]},
 
     // 38 — Role
@@ -276,8 +278,8 @@ export const PACK_1_EFFECTS = {
     // 43 — Piada do Milton
     43: { effects: [
         { action: Action.choice, chooser: 'target', target: previousPlayer(), options: [
-            { action: Action.manual, instruction: 'Contar uma piada para a mesa.' },
-            { action: Action.drink, target: sameTarget(), amount: 2 },
+            { action: Action.manual, instruction: 'Contar uma piada para a mesa.', label: 'Contar uma piada' },
+            { action: Action.drink, target: sameTarget(), amount: 2, label: 'Beber 2 shots' },
         ]},
     ]},
 
@@ -289,18 +291,17 @@ export const PACK_1_EFFECTS = {
     // 45 — Promoshare
     45: { effects: [
         { action: Action.drink, target: self(), amount: 1 },
-        { action: Action.drink, target: choose(2), amount: 1 },
+        { action: Action.drink, target: choose(2, { except: 'self' }), amount: 1 },
     ]},
 
     // 46 — Maozinha
     46: { effects: [
-        { action: Action.drink, amount: 2,
-          target: manual('o ultimo jogador desatento, no julgamento da mesa') },
-    ]},
+        { action: Action.drink, amount: 2, target: race() },
+    ], note: 'Corrida: o ultimo a tocar na mao bebe.' },
 
     // 47 — Ventilador Assassino
     47: { effects: [
-        { action: Action.drink, target: nextPlayer(), amount: 1 },
+        { action: Action.drink, target: nextPlayer({ toPlay: true }), amount: 1 },
     ]},
 
     // 48 — Prisao
@@ -320,25 +321,27 @@ export const PACK_1_EFFECTS = {
 
     // 50 — Modo Deus
     50: { effects: [
-        { action: Action.missionPeek, target: choose(1) },
-        { action: Action.missionSwap, between: sameTarget(), optional: true },
+        { action: Action.missionPeek, target: choose(1, { except: 'self' }) },
+        { action: Action.choice, chooser: 'self', target: sameTarget(), skippable: true, options: [
+            { action: Action.missionSwap, between: sameTarget(), label: 'Trocar de missão' },
+        ]},
     ]},
 
     // 51 — Sou Louca Sim!
     51: { effects: [
-        { action: Action.gameEndIn, amount: 2 },
+        { action: Action.gameEndIn, amount: 2, timing: Timing.passive, duration: rounds(2) },
     ]},
 
     // 52 — Cigarro no Olho
     52: { effects: [
-        { action: Action.handSteal, target: choose(1), amount: 1, blind: true,
-          then: { action: Action.turnExtraPlay, target: self(), amount: 1,
-                  note: 'A carta roubada e jogada na hora.' } },
+        { action: Action.handSteal, target: choose(1, { except: 'self' }), amount: 1, blind: true,
+          then: { action: Action.playNow, target: self(),
+                  note: 'A carta roubada entra na pilha na hora, como jogada do ladrao.' } },
     ]},
 
     // 53 — Xis do Gelson
     53: { effects: [
-        { action: Action.turnSkip, target: nextPlayer(), amount: 2 },
+        { action: Action.turnSkip, target: nextPlayer({ toPlay: true }), amount: 2 },
     ]},
 
     // 54 — Peido do Exequiel
@@ -354,14 +357,16 @@ export const PACK_1_EFFECTS = {
     // 56 — O Politico
     56: { effects: [
         { action: Action.choice, chooser: 'self', options: [
-            { action: Action.missionRotate, between: all(), direction: 'left' },
-            { action: Action.missionRotate, between: all(), direction: 'right' },
+            { action: Action.missionRotate, between: all(), direction: 'left',
+              label: 'Passar para o anterior' },
+            { action: Action.missionRotate, between: all(), direction: 'right',
+              label: 'Passar para o seguinte' },
         ]},
     ]},
 
     // 57 — A Prova Comida
     57: { effects: [
-        { action: Action.gameLose, target: choose(1), duration: turns(2),
+        { action: Action.gameLose, target: choose(1), duration: rounds(2),
           note: 'Perde mesmo cumprindo a missao, ate a marca expirar.' },
     ]},
 
@@ -391,7 +396,8 @@ export const PACK_1_EFFECTS = {
     // 62 — Quinta Dimensao
     62: { effects: [
         { action: Action.gameEndWhen, condition: { shots: { gte: 5 } },
-          note: 'Encerra quando qualquer jogador chegar a 5 shots.' },
+          timing: Timing.passive, duration: permanent(),
+          note: 'Conta so o que cada um bebe depois da carta; o primeiro a 5 encerra.' },
     ]},
 
     // 63 — Bencao de Gladstone

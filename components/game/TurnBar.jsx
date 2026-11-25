@@ -3,7 +3,7 @@ import { Command } from '@/domain/match/engine';
 import { Phase } from '@/domain/match/state';
 import { ICONS } from '@/assets/icons';
 import { ActionButton } from '@/components/buttons/ActionButton';
-import { nameList, promptText } from './narrate';
+import { cardName, nameList, promptText } from './narrate';
 
 /**
  * O que fazer agora: a barra que diz de quem e a vez e oferece a acao da fase.
@@ -204,13 +204,18 @@ function Prompt({ request, you, onOpenPicker, dispatch }){
     const answer = value => dispatch({ type: Command.answer, playerId: you.id, value });
 
     if(request.kind === 'option'){
+        // 35: a carta do fundo que voce espiou, so na sua tela, para decidir
+        // entre ela e a do topo.
+        const peeked = request.idCard === 35 && you.peeked?.playerId === you.id
+            ? you.peeked.cards?.[0] : null;
         return (
             <Bar>
+                {peeked != null && <Question text={`A última do seu baralho é ${cardName(peeked)}.`} />}
                 <Question text={promptText(request)} />
                 <div className='flex gap-2'>
                     {Array.from({ length: request.options }).map((_, i) => (
                         <ActionButton key={i}
-                            text={`Opção ${i + 1}`}
+                            text={request.labels?.[i] ?? `Opção ${i + 1}`}
                             variant={i === 0 ? 'primary' : 'secondary'}
                             width={`${100 / request.options}%`}
                             action={() => answer(i)}

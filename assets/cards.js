@@ -1206,8 +1206,8 @@ export const CARDS = [
         isShot: false,
         type: CardType.effect,
         text: `
-            Parece que alguém bebeu demais e está precisando dos poderes curativos das uvas. Escolha 1 jogador para perder metade de 
-            sua contagem de shots, arredondando para cima.
+            Parece que alguém bebeu demais e está precisando dos poderes curativos das uvas. Escolha 1 jogador para ficar com metade 
+            da sua contagem de shots, arredondando para cima.
         `,
         level: 3
     },{
