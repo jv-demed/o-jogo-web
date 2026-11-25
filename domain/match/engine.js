@@ -310,7 +310,7 @@ function runResolution(draft, now){
         // A passagem que para numa escolha e um ensaio: a resposta seguinte
         // refaz tudo desde o snapshot. A fila de shots so abre na passagem que
         // termina; ate la, volta a ser a de antes da carta.
-        draft.drinks = snapshot?.drinks ?? [];
+        draft.drinks = structuredClone(snapshot?.drinks ?? []);
         return;
     }
 
@@ -881,6 +881,10 @@ export function apply(state, command){
 
             if(draft.drinks.every(item => item.confirmed)){
                 draft.drinks = [];
+                // A resolucao parada numa escolha recomeca do snapshot: a fila
+                // que ja desceu nao pode voltar com ela (um gatilho da vez que
+                // bebeu antes de o seguinte perguntar).
+                if(draft.resolution?.snapshot) draft.resolution.snapshot.drinks = [];
                 if(draft.phase === Phase.window && draft.window){
                     draft.window.closesAt = now + REACTION_WINDOW_MS;
                 }
