@@ -23,8 +23,6 @@ Fechadas em 2026-08-24 e aplicadas. Não são pendências — estão aqui porque
 
 - [ ] **Levar o efeito estruturado para `o_jogo.cards`.** As 116 cartas já estão modeladas como dados — `domain/cards/effects/pack{1,2,3}.js`, vocabulário em `domain/cards/vocabulary.js`, `npm run validate:effects` verde com cobertura 116/116. Falta a outra metade: quem valida a jogada é o servidor, então o efeito precisa de uma coluna (`effect jsonb`) em `o_jogo.cards`, e o `scripts/gen-catalog-seed.mjs` precisa emiti-la junto com o resto do catálogo. O `text` continua sendo a fonte narrativa: quando os dois discordarem, o texto ganha.
 
-  Cartas cuja leitura ficou em aberto e que merecem uma decisão de regra antes de existir resolvedor: **74 Extreme Zero** (a escolha é por missão, não por jogador — virou alvo `manual`), **79 Largando a Medicina** (o texto não diz quem recebe a metade dos shots), **85 Jp da Ganância** ("até a mão se estabilizar" não tem duração equivalente no vocabulário, ficou em nota), **101 Valeu Valeu** e **105 Não é o Momento** (dependem do alvo da jogada em curso, e não do alvo da própria carta).
-
 - **A partida é reproduzível.** `match_commands` deixou de ser fila apagável e virou o log do que aconteceu (migration 0011): cada comando aplicado fica com `seq` (a ordem em que o host o aplicou), `applied_now` (o relógio que ele carimbou) e, quando o motor recusou, `refused` com o motivo. Junto com `matches.initial_state`, isso refaz a partida inteira — `replayMatch` em `domain/match/replay.js`, três linhas, porque o trabalho já estava feito: `apply` é puro e a aleatoriedade é semeada.
 
   `matches.state` continua gravado, mas mudou de papel: é **cache**, para o convidado não refazer 400 comandos a cada mudança e para quem recarrega começar na hora. A verdade é `initial_state` + log, e o banco impõe a relação entre os dois — `save_match_state` recusa estado que aponte para um comando que não está no log.
@@ -82,9 +80,7 @@ Jogável em `/solo`: você contra 1 a 6 bots, tudo no browser, sem passar pelo S
 Pendências do solo:
 
 - [ ] **Nada é persistido.** Fechar a aba perde a partida. O `usePersistentState` já existe e resolveria, mas só vale a pena se o solo virar mais que bancada de teste.
-- [ ] **Escolha de carta** (`kind: 'cards'` — descartar, dar, roubar escolhendo) ainda cai no default do resolvedor: as primeiras da mão. O motor já sabe pedir; falta a tela oferecer.
 - [ ] **Ferramentas de dev, segunda leva.** Falta o que encurta teste de *partida*, e não de carta: semente fixa no setup (o `rng.js` já foi escrito para isso) e visível na mesa, ajustar shots e trocar missão de qualquer um, esvaziar baralho / encerrar agora para cair direto na apuração, e copiar/colar o `state` em JSON — que sai quase de graça, já que o estado é JSON puro por decisão de projeto.
-- [ ] **`chooser: 'table'`** (voto da mesa) decide como se fosse quem jogou. Voto de verdade precisa de mecânica que não existe.
 
 ---
 
@@ -104,7 +100,21 @@ Decididas e implementadas em `domain/match/`. Não são pendências; estão aqui
 - **Stanley × Smichaels:** as duas missões perguntam pelo resultado alheio, então a apuração tem duas passadas e a segunda não se lê a si mesma — senão as duas ficam em referência circular. O corte é arbitrário; é o mesmo que a mesa faz no olho.
 - **Aleatoriedade com semente** (`domain/match/rng.js`), nunca `Math.random`: é o que permite o cliente reconferir o que o servidor sorteou, e o que torna teste de mesa reproduzível.
 
-Cartas cuja modelagem ficou aproximada no resolvedor, e que valem uma segunda passada quando forem jogadas na prática: `negate` de `divine`/`effectCard` cancela qualquer carta, porque distinguir exige o `type` de `o_jogo.cards`, que não vive em `domain/`; e `copy` só copia quando o motor tem o que copiar na pilha.
+**Efeitos das cartas — fechados em 2026-11-25.** As 116 cartas fazem o que o texto manda, cada uma com cenário em `scripts/scenarios/` (`npm run validate:cards`). O que não se deduz do texto:
+
+- **Turno e rodada.** Uma rodada é "até voltar a vez de quem jogou a carta", contando também quando a vez dele é pulada (`roundsLeft`, vencido em `advanceTurn`). Vale para as durações de 20, 51, 57, 78, 84 (imunidade), 87, 96 e 109. Pular (14, 15, 48, 53, 65, 84, 94) conta as vezes do próprio alvo, e a carta 1 continua contando as vezes do alvo.
+- **Não existe shot secreto.** Em "sem revelar" (38, 72, 74) a mesa vê quem bebeu e quem confirmou; o segredo é só qual dos que beberam tem qual missão. A fila, o log e a roda da 41 saem em ordem de assento, nunca na ordem em que a carta achou cada um. Na 39 os dois de fora são entregues de propósito.
+- **Defesas** só entram na janela, contra o que combatem (`fitsAgainst`, em `domain/match/reactions.js`), e não se jogam na própria vez, salvo mão só de defesa (uma é queimada).
+- **Negar ou desviar shot mexe só no shot.** A 11, a 59, a 60, a 23 e a 90 penduram um escudo na carta de baixo (`item.shields`) em vez de cancelá-la; a conta é por carta (contra a 83: com a 11 bebe 4, com a 59 bebe 3, com a 23 bebe 4 e o outro 1). A 90 devolve todos os shots da carta, somados, para quem a jogou.
+- **Anular a carta inteira** (26, 36, 49, 67, 105): "contra você" é ter você entre os alvos — declarado, automático ou por missão; alvo sorteado conta como possível. O tipo da carta vive em `domain/cards/types.js`, conferido contra `assets/cards.js` pelo `validate:effects`. A 105 só entra contra jogada que pega outro e não você; a 49 fora da vez faz o jogo seguir depois de quem a jogou.
+- **"Outro"** exclui quem escolhe (10, 23, 27, 70, 76, 9 — e "com você", 37 e 45); roubar, receber, espiar e casar (50, 52, 89, 98, 99) também. Na 13 o segundo é diferente do primeiro. Sem a palavra, dá para se escolher. Mesa pequena escolhe o máximo possível.
+- **Passivo** aplica na hora, fica em `state.ongoing` e é lido na hora (`domain/match/marks.js`: imune, travado, infinito, prisão, vínculo). O fim — duração, troca, dissipar, a 103 — passa por `endOngoing`, que desfaz, devolve a carta ao descarte uma vez e loga. Efeito imediato com `duration` usa o mesmo caminho.
+- **Meta trocada**: 5, 10, 68 e 71 são cartas da mesa (o efeito acaba na primeira troca da missão; a carta sai quando todos trocaram, e a 68 fica mesmo sem Smichaels, inativa, para não contar). A 20 não tem esse fim: a meta é da missão e a acompanha em troca, rotação e cadeia.
+- **Beber** para a prisão (48, 102), a 62 e a 96 conta mesmo com a 78 fazendo o shot não contar. Todo shot, inclusive o do vínculo da 61, passa pela fila de confirmação.
+- **Destino final**, do mais forte ao mais fraco: Gladsxódia, 109, derrota forçada (57, 97), vitória forçada, missão (`destiny`, em `engine.js`). A 99 é aplicada sobre o resultado, mão única, menos quando a Gladsxódia ou a 109 decidiu. Ter as seis Gladsxódia na mão encerra na hora, sem o palpite do Sjehnsens.
+- **Equipamento** fica na cadeira (`player.equipment`) e age para o portador atual, na vez dele (70, 73, 77, 93 — os que perguntam viram gatilhos do começo da vez). Destruído, vai para o descarte de quem o jogou. A 64 é uma camada de objetivo: identidade, cartas por missão e palpite do Sjehnsens seguem a carta de missão.
+- **103** deixou de ser reação: joga-se na própria vez e desfaz a última jogada do anterior pelo diário (`journalOf`) que cada jogada da vez guarda. Carta comprada, roubada ou descartada e informação vista não voltam.
+- **69** entra depois de o jogador da vez comprar e antes de ele jogar; por isso o bot da vez espera 2,5 s na fase de jogada quando há humano na mesa, sempre igual.
 
 ---
 
@@ -153,3 +163,10 @@ git show 885c83c --stat -- supabase/
 Também vive só no histórico o `audit_rls.sql`, que reexecuta a auditoria de RLS contra o banco.
 
 ⚠️ **O backfill não deve ser executado.** Optou-se por resetar: os dados legados foram descartados e o jogador é criado do zero. As tabelas legadas foram renomeadas para `*_legacy` e seus `idAuth` foram zerados pela FK `set null`, então o join do `backfill_from_legacy.sql` não encontraria ninguém.
+
+---
+
+## 🃏 Cartas
+
+- [ ] **Atualizar o texto da 100 no banco.** O `text` de `assets/cards.js` mudou ("ficar com metade da sua contagem"), e o seed do catálogo não é versionado: rode `node scripts/gen-catalog-seed.mjs` e aplique o upsert de `o_jogo.cards`.
+- [ ] **Bitrix (64) escolhendo o objetivo do Sjehnsens** não tem como ganhar: o palpite segue a carta de missão, e só o Sjehnsens de carta palpita.
