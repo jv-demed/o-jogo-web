@@ -3,7 +3,7 @@ import { ICONS } from '@/assets/icons';
 import { missionCard } from '@/assets/missions';
 import { Modal } from '@/components/containers/Modal';
 import { Card } from '@/components/cards/Card';
-import { MISSIONS, goalText } from '@/domain/match/missions';
+import { MISSIONS, bitrixMission, goalText } from '@/domain/match/missions';
 import { cardName } from './narrate';
 
 /**
@@ -28,7 +28,10 @@ export function MissionModal({ player, onClose }){
 
     const mission = MISSIONS[player.mission];
     const card = missionCard(mission.id);
-    const changedBy = player.goalChangedBy ?? null;
+    // A Bitrix (64) passa uma camada por cima: o dono persegue o objetivo de
+    // outra missao, e so ele ve qual.
+    const bitrix = bitrixMission(player);
+    const changedBy = bitrix ? 64 : player.goalChangedBy ?? null;
 
     return (
         <Modal onClose={onClose} label={`Missão: ${mission.name}`}>

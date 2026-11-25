@@ -102,7 +102,7 @@ export function Seat({
                     text-[0.65rem] font-semibold tabular-nums text-gold
                 `}>
                     <ICONS.shot />
-                    {player.shots}
+                    {shownShots(player, ongoing)}
                 </span>
                 {/* O baralho, e nao a mao: o fim da partida vem quando um
                     baralho acaba, entao este numero e um relogio. Quantas
@@ -199,7 +199,7 @@ export function YouCorner({
                 text-[0.65rem] font-semibold tabular-nums text-gold
             `}>
                 <ICONS.shot />
-                {player.shots}
+                {shownShots(player, ongoing)}
             </span>
 
             {/* O baralho, como na cadeira dos outros: e ele que conta o fim da
@@ -274,4 +274,12 @@ function Ongoing({ count, name = 'você', className = '', canOpen, onOpen }){
             {count}
         </Root>
     );
+}
+
+/**
+ * A contagem na cadeira. Com a 87 valendo, a mesa ve o infinito por cima da
+ * conta real, que continua andando por baixo.
+ */
+function shownShots(player, ongoing){
+    return (ongoing ?? []).some(o => o.kind === 'infinity') ? '∞' : player.shots;
 }

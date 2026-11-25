@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect } from 'react';
-import { Command } from '@/domain/match/engine';
+import { Command, canAnswer } from '@/domain/match/engine';
 import { botCommand } from '@/domain/match/bot';
 import { MatchStatus, Phase, currentPlayer } from '@/domain/match/state';
 import { TURN_INTRO_MS } from '@/hooks/useTurnIntro';
@@ -41,6 +41,21 @@ const TICK_MS = 200;
 
 const NO_SCRIPT = [];
 
+// Quanto o bot da vez espera antes de jogar quando ha gente na mesa. Existe por
+// causa da 69: ela entra depois da compra e antes da jogada, e sem tempo nenhum
+// a jogada do bot sairia antes de alguem conseguir pular a vez dele. A espera e
+// sempre a mesma, tenha alguem a carta ou nao, para nao entregar quem tem.
+const PLAY_WAIT = 2500;
+
+// A corrida da 46: cada bot toca num instante diferente, para a ordem de
+// chegada nao ser sempre a dos assentos. O sorteio e de tela, nao do motor: o
+// que vale e a ordem em que os comandos chegam.
+const raceDelay = (playerId, uid) => {
+    let hash = Math.abs(playerId * 7919);
+    for(const char of String(uid ?? '')) hash = (hash * 31 + char.charCodeAt(0)) % 100003;
+    return 400 + (hash % 1800);
+};
+
 /**
  * @param {number} [params.botDelay] quanto o bot pensa antes de jogar ou
  *        responder. O laboratorio pede mais: la a mesa esta sendo lida
@@ -50,7 +65,7 @@ const NO_SCRIPT = [];
  *        fila o que ja foi aplicado e quem guarda a lista. Precisa ser estavel
  *        entre renders, como `botIds`.
  */
-export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, active = true, botsPaused = false, botDelay = BOT_DELAY }){
+export function useMatchDriver({ state, botIds, script = NO_SCRIPT, reactions = NO_SCRIPT, dispatch, active = true, botsPaused = false, botDelay = BOT_DELAY }){
 
     // Um comando por vez, na ordem da mesa: quem responde primeiro e quem esta
     // com a vez, e o resto so entra na janela.
@@ -64,7 +79,15 @@ export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, ac
     const nextCommand = useCallback(() => {
         if(!state) return null;
         if(script.length) return script[0];
-        const fromBot = botIds.map(id => botCommand(state, id, Date.now())).find(Boolean);
+        // Reacao de roteiro do laboratorio: sai quando o motor a aceitar.
+        if(reactions.length && canAnswer(state, reactions[0].playerId, reactions[0].idCard)) return reactions[0];
+        const fromBots = botIds.map(id => botCommand(state, id, Date.now())).filter(Boolean);
+        // Na corrida, toca primeiro o bot mais rapido desta rodada, e nao o
+        // primeiro da lista.
+        const race = state.phase === Phase.pending && state.pending?.[0]?.kind === 'race'
+            ? state.pending[0] : null;
+        if(race) fromBots.sort((a, b) => raceDelay(a.playerId, race.uid) - raceDelay(b.playerId, race.uid));
+        const fromBot = fromBots[0];
         if(fromBot) return fromBot;
 
         if(state.status !== MatchStatus.progress || state.phase !== Phase.end) return null;
@@ -73,7 +96,7 @@ export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, ac
         if(state.rituals?.length || state.drinks?.length) return null;
         const player = currentPlayer(state);
         return player ? { type: Command.endTurn, playerId: player.id } : null;
-    }, [state, botIds, script]);
+    }, [state, botIds, script, reactions]);
 
     // O bot da vez espera o anuncio de quem vai jogar sair da tela: soltar a
     // jogada por baixo dele seria apresentar alguem que ja jogou. A fase de
@@ -85,7 +108,13 @@ export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, ac
         if(!command) return;
 
         const isTurnStart = state.phase === Phase.draw;
-        const delay = command.type === Command.endTurn
+        const hasHuman = state.players.some(player => !botIds.includes(player.id));
+        const request = state.phase === Phase.pending ? state.pending?.[0] : null;
+        const delay = request?.kind === 'race' && command.type === Command.answer
+            ? raceDelay(command.playerId, request.uid)
+            : command.type === Command.play && hasHuman
+                ? Math.max(botDelay, PLAY_WAIT)
+                : command.type === Command.endTurn
             ? PASS_DELAY
             : command.type === Command.pass
                 ? BOT_PASS_DELAY
@@ -97,7 +126,7 @@ export function useMatchDriver({ state, botIds, script = NO_SCRIPT, dispatch, ac
 
         const timer = setTimeout(() => dispatch(command), delay);
         return () => clearTimeout(timer);
-    }, [active, botsPaused, state, nextCommand, dispatch, botDelay]);
+    }, [active, botsPaused, state, nextCommand, dispatch, botDelay, botIds]);
 
     // So bate quando a janela ja venceu. Bater antes era inofensivo para o
     // motor, mas nao para a mesa: todo `apply` devolve estado novo, e estado

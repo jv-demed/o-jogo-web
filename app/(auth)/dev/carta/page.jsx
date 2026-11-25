@@ -80,6 +80,12 @@ function formFromScenario(scenario){
         mission: seat.mission,
         shots: seat.shots ?? 0,
         ...(seat.mao ? { hand: seat.mao } : {}),
+        ...(seat.dados !== undefined ? { given: seat.dados } : {}),
+        ...(seat.pula !== undefined ? { skip: seat.pula } : {}),
+        ...(seat.descarte ? { discard: seat.descarte } : {}),
+        // O equipamento ja na cadeira: as cartas com momento proprio (70, 73,
+        // 77, 93) se testam a partir dai.
+        ...(seat.equipamento ? { equipment: seat.equipamento } : {}),
     }));
     // `voce` e so do laboratorio: o assento que e voce, quando a carta e
     // jogada por outro. Sem ele, voce e quem joga.
@@ -87,18 +93,35 @@ function formFromScenario(scenario){
     const { gatilho } = scenario;
     // Os alvos vem em missao ou numero, e o laboratorio fala em assento: a
     // mesa ainda nao existe quando o formulario e preenchido.
+    // So o que aponta jogador vira assento: missoes, cartas e opcoes ficam
+    // como estao.
+    const pointsPlayer = slot => !slot.includes(':') || /:(to|chain\d+|order)$/.test(slot);
     const toSeats = choices => Object.fromEntries(Object.entries(choices ?? {}).map(([slot, value]) =>
-        [slot, Array.isArray(value) ? value.map(who => seatOf(scenario.mesa, who)) : value]));
+        [slot, Array.isArray(value) && pointsPlayer(slot) ? value.map(who => seatOf(scenario.mesa, who)) : value]));
+    // A 69 tem gatilho sem carta: e a vez de quem vai jogar.
     const trigger = gatilho ? {
         seat: seatOf(scenario.mesa, gatilho.joga),
-        idCard: gatilho.carta,
+        idCard: gatilho.carta ?? null,
         choices: toSeats(gatilho.escolhas),
     } : null;
+    // As jogadas antes da carta testada (103), montadas na hora.
+    const before = (scenario.antes ?? []).map(play => ({
+        seat: seatOf(scenario.mesa, play.joga),
+        idCard: play.carta,
+        choices: toSeats(play.escolhas),
+    }));
     const playerSeat = seatOf(scenario.mesa, scenario.joga);
     const playedBy = !gatilho && playerSeat !== yourSeat
         ? { seat: playerSeat, choices: toSeats(scenario.escolhas) }
         : null;
-    return { idCard: scenario.carta, seats, yourSeat, extra: [], trigger, playedBy, botsDefend: false };
+    // Voce joga o gatilho e um bot reage com a carta testada.
+    const reactorSeat = trigger && trigger.seat === yourSeat ? playerSeat : undefined;
+    // Reacao sua no cenario (49 contra a 69 que pula a sua vez) vira carta a
+    // mais na sua mao.
+    const extra = (scenario.reacoes ?? [])
+        .filter(play => seatOf(scenario.mesa, play.joga) === yourSeat)
+        .map(play => play.carta);
+    return { idCard: scenario.carta, seats, yourSeat, extra, trigger, playedBy, before, reactorSeat, botsDefend: false };
 }
 
 export default function CardLab(){
@@ -136,6 +159,8 @@ export default function CardLab(){
             pool: CATALOG_IDS,
             trigger: form.trigger,
             playedBy: form.playedBy,
+            before: form.before ?? [],
+            reactorSeat: form.reactorSeat,
             botsDefend: form.botsDefend,
         };
         setPrepared(params);
@@ -260,7 +285,8 @@ function LabForm({ form, setForm, onBuild }){
     });
 
     const triggerValid = !form.trigger
-        || (form.trigger.seat !== form.yourSeat && form.trigger.seat < form.seats.length);
+        || ((form.trigger.seat !== form.yourSeat || form.reactorSeat !== undefined)
+            && form.trigger.seat < form.seats.length);
 
     // O cenario carregado, para o botao dizer qual e. Mexer no formulario
     // depois nao o apaga: a mesa continua sendo "a do cenario, ajustada".
@@ -407,7 +433,9 @@ function LabForm({ form, setForm, onBuild }){
                                         onClick={() => setPicking('trigger')}
                                         className='flex-1 min-w-0 h-9 px-2 rounded-lg border border-gold bg-gold/10 text-left text-xs font-semibold truncate'
                                     >
-                                        joga #{form.trigger.idCard} {cardName(form.trigger.idCard)}
+                                        {form.trigger.idCard === null
+                                            ? 'compra e vai jogar'
+                                            : <>joga #{form.trigger.idCard} {cardName(form.trigger.idCard)}</>}
                                     </button>
                                     <button type='button'
                                         onClick={() => update({ trigger: null })}

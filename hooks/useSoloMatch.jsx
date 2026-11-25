@@ -41,7 +41,8 @@ export function useSoloMatch({ botDelay } = {}){
                 const state = apply(prev.state, { ...command, now: Date.now() });
                 // A jogada do roteiro de abertura sai da fila quando entra.
                 const opening = command === prev.opening?.[0] ? prev.opening.slice(1) : prev.opening;
-                return { ...prev, state, opening };
+                const reactions = command === prev.reactions?.[0] ? prev.reactions.slice(1) : prev.reactions;
+                return { ...prev, state, opening, reactions };
             }catch(err){
                 // Jogada ilegal nao derruba a mesa: o motor recusou e o estado
                 // anterior continua valendo. Mostrar e seguir e o certo aqui,
@@ -103,6 +104,7 @@ export function useSoloMatch({ botDelay } = {}){
         state,
         botIds: match?.botIds ?? EMPTY,
         script: match?.opening ?? EMPTY,
+        reactions: match?.reactions ?? EMPTY,
         dispatch,
         botsPaused,
         botDelay,

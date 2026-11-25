@@ -210,7 +210,7 @@ function Prompt({ request, you, onOpenPicker, dispatch }){
                 <div className='flex gap-2'>
                     {Array.from({ length: request.options }).map((_, i) => (
                         <ActionButton key={i}
-                            text={`Opção ${i + 1}`}
+                            text={request.labels?.[i] ?? `Opção ${i + 1}`}
                             variant={i === 0 ? 'primary' : 'secondary'}
                             width={`${100 / request.options}%`}
                             action={() => answer(i)}

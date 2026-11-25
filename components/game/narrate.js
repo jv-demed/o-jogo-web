@@ -91,9 +91,13 @@ export function narrate(entry, nameOf){
         case 'order.rearrange':
             return 'Os lugares na mesa mudaram.';
         case 'turn.skipped':
-            return `${who(entry.playerId)} perdeu a vez.`;
+            return entry.idCard
+                ? `${who(entry.playerId)} perdeu a vez (${cardName(entry.idCard)}).`
+                : `${who(entry.playerId)} perdeu a vez.`;
         case 'game.endIn':
             return `A partida acaba em ${entry.turns} turno(s).`;
+        case 'ritual.skip':
+            return null;
         case 'game.win':
             return `${list(entry.targets)} ganhou na hora.`;
         case 'game.lose':
@@ -111,10 +115,14 @@ export function narrate(entry, nameOf){
             return entry.onTable
                 ? `${cardName(entry.idCard)} ficou na mesa, valendo para todos.`
                 : `${cardName(entry.idCard)} ficou valendo sobre ${list(entry.targets)}.`;
+        case 'equip.mission':
+            return null;
         case 'ongoing.trigger':
-            return entry.idCard
-                ? `${cardName(entry.idCard)} cobrou de ${who(entry.playerId)}.`
-                : null;
+            if(!entry.idCard) return null;
+            // A 20 dispara para quem for o Stanley, e a mesa nao sabe quem e.
+            return entry.playerId === null || entry.playerId === undefined
+                ? `${cardName(entry.idCard)} começou a valer.`
+                : `${cardName(entry.idCard)} cobrou de ${who(entry.playerId)}.`;
         case 'ongoing.end':
             if(!entry.idCard) return null;
             // A saida nao diz quando o efeito acabou — isso ja foi antes, em
@@ -146,6 +154,68 @@ export function narrate(entry, nameOf){
             return '[dev] A mesa foi montada à mão.';
         case 'dev.window.close':
             return '[dev] A janela de interferência foi fechada na marra.';
+        // Defesa de shot: mexe so no shot, e a carta de baixo segue.
+        case 'shield':
+            return `${who(entry.by)} se protegeu de ${cardName(entry.against)} com ${cardName(entry.idCard)}.`;
+        case 'drink.blocked':
+            return `${shots(entry.amount)} de ${who(entry.playerId)} não ${entry.amount === 1 ? 'desceu' : 'desceram'}.`;
+        case 'drink.redirected':
+            return `${shots(entry.amount)} de ${who(entry.from)} ${entry.amount === 1 ? 'foi' : 'foram'} para ${who(entry.to)}.`;
+        case 'drink.reversed':
+            return `O shot de ${who(entry.playerId)} voltou para quem jogou.`;
+        case 'drink.linked':
+            return `${who(entry.to)} bebe junto com ${who(entry.from)}, pelo ${cardName(entry.idCard)}.`;
+        case 'shots.remove':
+            return entry.amount > 0 ? `${who(entry.playerId)} perdeu ${shots(entry.amount)} da conta.` : null;
+        case 'shots.set':
+            return `A conta de ${who(entry.playerId)} foi para ${entry.amount}.`;
+        case 'shots.swap':
+            return `${list(entry.between)} trocaram de contagem de shots.`;
+        case 'turn.skip':
+            return `${list(entry.targets)} vai perder ${entry.amount === 1 ? 'a próxima vez' : `${entry.amount} vezes`}.`;
+        case 'turn.lostPlay':
+            return `${who(entry.by)} pulou a jogada de ${who(entry.playerId)}.`;
+        case 'play.now':
+            return `${who(entry.playerId)} joga ${cardName(entry.idCard)} na hora.`;
+        case 'play.undo':
+            return entry.idCard
+                ? `${who(entry.by)} desfez ${cardName(entry.idCard)} de ${who(entry.target)}.`
+                : `${who(entry.by)} não tinha o que desfazer.`;
+        case 'copy':
+            return `${who(entry.by)} copiou ${cardName(entry.idCard)}.`;
+        case 'copy.empty':
+            return 'Não havia carta para copiar.';
+        case 'choice.skip':
+            return `${who(entry.by)} pulou ${cardName(entry.idCard)}.`;
+        // O voto: so os numeros, nunca quem votou o que.
+        case 'vote':
+            return `A mesa votou: ${entry.yes} boa, ${entry.no} ruim. ${entry.yes >= entry.no ? 'Carta boa!' : 'Carta ruim!'}`;
+        case 'hand.lost':
+            return `${who(entry.playerId)} perdeu uma carta da mão (${cardName(entry.by)}).`;
+        case 'hand.discard':
+            return `${who(entry.playerId)} descartou ${entry.cards.map(cardName).join(', ')}.`;
+        case 'hand.give':
+            return `${who(entry.from)} entregou ${entry.count} carta(s) a ${who(entry.to)}.`;
+        case 'deck.return':
+            return `${who(entry.playerId)} devolveu ${entry.cards.length} carta(s) ao baralho e embaralhou.`;
+        case 'mission.rotate.blocked':
+            return 'Alguém ficou fora da roda, com a missão travada.';
+        case 'mission.chain.stop':
+            return `${who(entry.by)} apontou o Stanley: a cadeia parou.`;
+        case 'equipment.transfer':
+            return `${cardName(entry.idCard)} passou de ${who(entry.from)} para ${who(entry.to)}.`;
+        case 'game.endReached':
+            return `${who(entry.playerId)} chegou a 5 shots: a Quinta Dimensão se abriu.`;
+        case 'game.glads':
+            return `${who(entry.playerId)} reuniu as seis Gladsxódia!`;
+        case 'draw.failed':
+            return `${who(entry.playerId)} não conseguiu comprar.`;
+        case 'boleto':
+            return entry.paid >= 3
+                ? `${who(entry.playerId)} bebeu 3 e quitou o boleto.`
+                : `${who(entry.playerId)} pagou ${shots(entry.paid)} do boleto.`;
+        case 'aura.dispel':
+            return entry.count ? `${entry.count} efeito(s) foram apagados da mesa.` : 'Não havia efeito para apagar.';
         case 'match.end':
             return entry.winners.length
                 ? `Fim. Ganhou: ${list(entry.winners)}.`
@@ -346,6 +416,18 @@ export function promptText(request){
             return 'Escolha uma opção.';
         case 'cards':
             return 'Escolha as cartas.';
+        case 'missions':
+            return request.count === 1 ? 'Escolha a missão.' : `Escolha ${request.count} missões.`;
+        case 'order':
+            return 'Arrume os lugares.';
+        case 'ongoing':
+            return 'Escolha o efeito.';
+        case 'vote':
+            return 'A carta é boa?';
+        case 'race':
+            return 'Mão na mesa!';
+        case 'handPick':
+            return 'Escolha a carta para descartar.';
         case 'manual':
             return request.description ?? 'A mesa aponta quem é.';
         default:

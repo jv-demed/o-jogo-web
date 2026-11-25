@@ -243,7 +243,9 @@ function swapMissions(draft, a, b){
     first.missionRevealed = false;
     second.missionRevealed = false;
     expireOnMissionChange(draft, [a, b]);
-    log(draft, { type: 'mission.swap', between: [a, b] });
+    // Em ordem de assento: na 40 a ordem em que a carta achou cada um diria
+    // quem era o Swarley.
+    log(draft, { type: 'mission.swap', between: ringInSeatOrder(draft, [a, b]) });
     return true;
 }
 

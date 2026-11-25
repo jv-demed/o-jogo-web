@@ -1,5 +1,5 @@
 import { MISSIONS } from './missions.js';
-import { Phase, cloneState, playerById } from './state.js';
+import { PLAYS_PER_TURN, Phase, cloneState, playerById } from './state.js';
 
 /**
  * Poderes de dev: cirurgia no estado da partida.
@@ -129,6 +129,7 @@ export function arrangeTable(state, seats, { turnOf } = {}){
         if(index === -1) throw new Error(`assento ${turnOf} nao esta na mesa`);
         draft.turnIndex = index;
         draft.phase = Phase.draw;
+        draft.playsLeft = PLAYS_PER_TURN;
     }
 
     log(draft, { type: 'dev.arrange', turnOf: turnOf ?? null });
