@@ -21,19 +21,26 @@
 //                                   // "voce" e "alguem", e nao da missao do
 //                                   // alvo: na mesa ninguem sabe quem e quem.
 //                                   // Missao so quando a carta fala dela.
-//     mesa: [{ mission: 'sauzburg', shots: 1, mao?: [ids] }, ...],  // ids 1..N
+//     mesa: [{ mission: 'sauzburg', shots: 1, mao?: [ids], dados?: 3, pula?: 2,
+//              equipamento?: [ids ou { idCard, mission }] }, ...],  // ids 1..N
+//     antes: [{ carta, joga, escolhas? }],  // jogadas antes da carta testada (103)
 //     joga: 2 | 'swarley',          // assento (id) ou missao de quem joga
 //     voce: 'stanley',              // so do laboratorio: quem e voce, quando a
 //                                   // carta e jogada por outro ("joga em voce").
 //                                   // Sem, voce e quem joga. O motor ignora.
-//     escolhas: { 0: ['sauzburg'] },// respostas por slot; sem, responde o simples
+//     escolhas: { 0: ['sauzburg'] },// respostas por slot; sem, responde o simples.
+//                                   // Pedido que nao e de alvo pode vir em
+//                                   // `slot:tipo` ('0:option', '0:vote'), e o
+//                                   // de chave propria em `slot:chave` ('0:to').
 //     espera: (s, p, ctx) => [['rotulo', booleano], ...],
 //     depois: [                     // opcional, em ordem
 //       { carta: 32, joga?: 'stanley', escolhas?: {...}, espera?: (s, p, ctx) => [...] },
-//       { turnos: 3 },              // passa a vez 3 vezes sem jogar
+//       { turnos: 3, escolhas? },   // passa a vez 3 vezes sem jogar
 //     ],
 //     esperaDepois: (s, p, ctx) => [...],
 //     gatilho: { carta: 32, joga: 'stanley', escolhas?: {...} },
+//                                   // a 69 usa `gatilho: { joga }` sem carta:
+//                                   // entra antes de o jogador da vez jogar
 //                                   // carta de defesa: quem joga e o gatilho, e
 //                                   // a carta testada entra na janela dele,
 //                                   // jogada por `joga`
@@ -47,7 +54,7 @@
 
 import { evaluateMissions } from '../domain/match/missions.js';
 import { Phase } from '../domain/match/state.js';
-import { beber, daVez, jogar, montarMesa, passarVez } from './lib/mesa.mjs';
+import { beber, daVez, jogar, montarMesa, passarVez, tchouameni } from './lib/mesa.mjs';
 import { SCENARIOS } from './scenarios/index.mjs';
 
 const ULTIMAS_DO_LOG = 15;
@@ -104,13 +111,13 @@ function conferir(espera, state, passos, onde){
 function passo(state, etapa, passos){
     let current = beber(state, 0, passos);
     if(etapa.turnos){
-        for(let i = 0; i < etapa.turnos; i++) current = passarVez(current, 0, passos);
+        for(let i = 0; i < etapa.turnos; i++) current = passarVez(current, 0, passos, etapa.escolhas);
         return beber(current, 0, passos);
     }
     // Depois de uma jogada a vez esta no fim: passa, e se o cenario disse quem
     // joga, gira ate ser a vez dele. Girar de verdade, e nao pular a vez na
     // marra, porque o efeito que esta na mesa cobra na virada.
-    if(current.phase === Phase.end) current = passarVez(current, 0, passos);
+    if(current.phase === Phase.end) current = passarVez(current, 0, passos, etapa.escolhas);
     if(etapa.joga !== undefined){
         const quem = typeof etapa.joga === 'string'
             ? finder(current)(etapa.joga).id
@@ -118,26 +125,36 @@ function passo(state, etapa, passos){
         let voltas = 0;
         while(daVez(current).id !== quem){
             if(voltas++ > current.order.length) throw new Error(`a vez nunca chega em ${etapa.joga}`);
-            current = passarVez(current, 0, passos);
+            current = passarVez(current, 0, passos, etapa.escolhas);
         }
     }
-    current = jogar(current, etapa.carta, { escolhas: etapa.escolhas, passos });
+    if(etapa.carta === null) return current;
+    current = jogar(current, etapa.carta, { escolhas: etapa.escolhas, passos, reacoes: etapa.reacoes });
     return beber(current, 0, passos);
 }
 
 function rodar(cenario){
     const passos = [];
     const { gatilho } = cenario;
-    let state = montarMesa(cenario.mesa, { joga: gatilho?.joga ?? cenario.joga, seed: cenario.carta });
+    const primeiro = cenario.antes?.[0]?.joga ?? gatilho?.joga ?? cenario.joga;
+    let state = montarMesa(cenario.mesa, { joga: primeiro, seed: cenario.semente ?? cenario.carta });
     passos.push(state);
     const quebras = [];
 
     try{
-        state = gatilho
-            ? jogar(state, gatilho.carta, { escolhas: gatilho.escolhas, passos, reacoes: [
-                { joga: cenario.joga, carta: cenario.carta, recusada: cenario.recusada },
-            ]})
-            : jogar(state, cenario.carta, { escolhas: cenario.escolhas, passos });
+        // Jogadas antes da carta testada, cada uma na vez de quem joga.
+        for(const etapa of cenario.antes ?? []) state = passo(state, etapa, passos);
+        if(cenario.antes?.length && !gatilho){
+            state = passo(state, { joga: cenario.joga, carta: null }, passos);
+        }
+        state = gatilho && gatilho.carta === undefined
+            ? tchouameni(state, cenario.joga, { escolhas: cenario.escolhas, passos, reacoes: cenario.reacoes })
+            : gatilho
+                ? jogar(state, gatilho.carta, { escolhas: gatilho.escolhas, passos, reacoes: [
+                    { joga: cenario.joga, carta: cenario.carta, recusada: cenario.recusada },
+                    ...(cenario.reacoes ?? []),
+                ]})
+                : jogar(state, cenario.carta, { escolhas: cenario.escolhas, passos, reacoes: cenario.reacoes });
         state = beber(state, 0, passos);
         quebras.push(...conferir(cenario.espera, state, passos, 'espera'));
 

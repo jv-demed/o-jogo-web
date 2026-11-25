@@ -84,6 +84,7 @@ export function montarMesa(assentos, { seed = 1, joga } = {}){
     if(turnOf === 0) throw new Error(`ninguem na mesa tem a missao ${joga}`);
     return arrangeTable(base, assentos.map(a => ({
         mission: a.mission, shots: a.shots ?? 0, hand: a.mao,
+        given: a.dados, skip: a.pula, equipment: a.equipamento,
     })), { turnOf });
 }
 
@@ -132,7 +133,7 @@ export function responder(state, escolhas = {}, quem = quemResponde(state)){
     // por `slot:chave`; o resto, pelo slot.
     const escolha = request.key !== undefined
         ? escolhas[request.slot + ':' + request.key]
-        : escolhas[request.slot];
+        : escolhas[request.slot + ':' + request.kind] ?? escolhas[request.slot];
 
     if(escolha !== undefined){
         switch(request.kind){

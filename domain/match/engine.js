@@ -844,6 +844,13 @@ export function apply(state, command){
             // Ritual que vem antes da escolha (75): a resolucao e refeita a
             // cada resposta, e precisa saber que a carta ja foi inventada.
             if(draft.resolution && entry.uid && draft.resolution.item?.uid === entry.uid){
+                const snapshot = draft.resolution.snapshot;
+                // A resolucao recomeca do snapshot: o ritual e o "feito" entram
+                // nele tambem, senao sumiriam do log na proxima resposta.
+                if(snapshot){
+                    snapshot.log.push(...draft.log.slice(snapshot.log.length)
+                        .filter(e => e.type === 'ritual' || e.type === 'ritual.done'));
+                }
                 draft.resolution = { ...draft.resolution,
                     choices: { ...draft.resolution.choices, 'ritual:done': true } };
             }

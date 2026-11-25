@@ -1,5 +1,165 @@
-// Cenarios do pack 3 (Amigue Secrete 2025), cartas 83 a 116. Vazio por enquanto:
-// cada carta ganha o seu quando a revisao chegar nela (painel "Efeitos das
-// Cartas"). Formato e regras em scripts/validate-cards.mjs e pack1.mjs.
+// Cenarios do pack 3 (Amigue Secrete 2025), cartas 83 a 116. Formato e regras
+// em scripts/validate-cards.mjs. Nao importa nada: o laboratorio le no browser.
 
-export default [];
+const MESA_DE_5 = [
+    { mission: 'stanley',   shots: 0 },
+    { mission: 'swarley',   shots: 0 },
+    { mission: 'sauzburg',  shots: 0 },
+    { mission: 'sjamals',   shots: 0 },
+    { mission: 'smichaels', shots: 0 },
+];
+
+const fora = (s, ...missoes) => s.players.filter(x => !missoes.includes(x.mission));
+const ninguemMais = (s, ...missoes) => fora(s, ...missoes).every(x => x.shots === 0);
+const pergunta = (passos, kind) => passos.find(e => e.pending?.[0]?.kind === kind)?.pending[0];
+const noDescarte = (s, idCard) => s.discardPile.some(e => e.idCard === idCard);
+const valendo = (s, idCard) => s.ongoing.some(o => o.idCard === idCard);
+const INFINITO = Number.MAX_SAFE_INTEGER;
+
+export default [
+    // ------------------------------------------------------------ fase 1: shots
+
+    {
+        carta: 83,
+        nome: 'Pó de Pirlimpimpim: Você escolhe alguém para beber 5',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['bebe 5', p('swarley').shots === 5], ['só ele', ninguemMais(s, 'swarley')]],
+    },
+    {
+        carta: 83,
+        nome: 'Pó de Pirlimpimpim: Alguém joga o pó em você, e você bebe 5',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['você bebe 5', p('swarley').shots === 5]],
+    },
+    {
+        carta: 86,
+        nome: 'Caipirinha de Banana: Quem mais deu shots bebe 2',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', dados: 4 }, { mission: 'sauzburg', dados: 2 }],
+        joga: 'stanley',
+        espera: (s, p) => [['quem mais deu bebe 2', p('swarley').shots === 2], ['só ele', ninguemMais(s, 'swarley')]],
+    },
+    {
+        carta: 86,
+        nome: 'Caipirinha de Banana: Empatados no topo, você bebe junto',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', dados: 4 }, { mission: 'sauzburg', dados: 4 }],
+        joga: 'stanley',
+        voce: 'sauzburg',
+        espera: (s, p) => [['os dois bebem 2', p('swarley').shots === 2 && p('sauzburg').shots === 2]],
+    },
+    {
+        carta: 86,
+        nome: 'Caipirinha de Banana: Ninguém deu shot, ninguém bebe',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        espera: s => [['ninguém bebe', s.players.every(x => x.shots === 0)]],
+    },
+    {
+        carta: 91,
+        nome: '#CriseNaDiretoria: Quem tem 5 ou mais bebe 1',
+        mesa: [{ mission: 'stanley', shots: 5 }, { mission: 'swarley', shots: 7 }, { mission: 'sauzburg', shots: 4 }],
+        joga: 'stanley',
+        espera: (s, p) => [
+            ['quem tem 5 bebe 1', p('stanley').shots === 6 && p('swarley').shots === 8],
+            ['quem tem 4 não', p('sauzburg').shots === 4],
+        ],
+    },
+    {
+        carta: 91,
+        nome: '#CriseNaDiretoria: Você com 5 shots bebe mais 1',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 5 }],
+        joga: 'stanley',
+        voce: 'swarley',
+        espera: (s, p) => [['você vai a 6', p('swarley').shots === 6], ['quem jogou não', p('stanley').shots === 0]],
+    },
+    {
+        carta: 95,
+        nome: 'Tatuagem de Shuriken: O Swelcows e mais um sorteado bebem 1',
+        mesa: [{ mission: 'stanley' }, { mission: 'swelcows' }, { mission: 'sauzburg' }, { mission: 'sjamals' }],
+        joga: 'stanley',
+        espera: (s, p) => [
+            ['o swelcows bebe 1, e não 2', p('swelcows').shots === 1],
+            ['mais um bebe 1', fora(s, 'swelcows').filter(x => x.shots === 1).length === 1],
+        ],
+    },
+    {
+        carta: 95,
+        nome: 'Tatuagem de Shuriken: O sorteio nunca cai no Swelcows',
+        mesa: [{ mission: 'stanley' }, { mission: 'swelcows' }],
+        joga: 'stanley',
+        voce: 'swelcows',
+        espera: (s, p) => [['o swelcows bebe só 1', p('swelcows').shots === 1], ['o sorteado é o outro', p('stanley').shots === 1]],
+    },
+    {
+        carta: 95,
+        nome: 'Tatuagem de Shuriken: Sem Swelcows na mesa, só o sorteado bebe',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        espera: s => [['um só bebe 1', s.players.filter(x => x.shots === 1).length === 1 && s.players.every(x => x.shots <= 1)]],
+    },
+    {
+        carta: 100,
+        nome: 'Uvas para Ressaca: Alguém fica com metade, arredondando para cima',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 3 }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['3 vira 2', p('swarley').shots === 2]],
+    },
+    {
+        carta: 100,
+        nome: 'Uvas para Ressaca: Você fica com metade dos seus 6',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 6 }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['6 vira 3', p('swarley').shots === 3]],
+    },
+    {
+        carta: 106,
+        nome: 'Eu Sou o Lucas: Um sorteado bebe 1',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        espera: s => [['um só bebe 1', s.players.filter(x => x.shots === 1).length === 1 && s.players.every(x => x.shots <= 1)]],
+    },
+    {
+        carta: 107,
+        nome: 'Vendedor de Drogas: Você faz alguém beber 1',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 2 }],
+        joga: 'stanley',
+        escolhas: { '0:option': 0, '0.0': ['swarley'] },
+        espera: (s, p, { passos }) => [
+            ['as opções têm nome', pergunta(passos, 'option')?.labels?.every(Boolean)],
+            ['bebe 1', p('swarley').shots === 3],
+        ],
+    },
+    {
+        carta: 107,
+        nome: 'Vendedor de Drogas: Alguém tira 1 shot da sua conta',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 2 }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { '0:option': 1, '0.1': ['swarley'] },
+        espera: (s, p) => [['você fica com 1', p('swarley').shots === 1], ['ninguém bebe', !s.log.some(e => e.type === 'drink')]],
+    },
+    {
+        carta: 110,
+        nome: 'Petricor: Você zera os shots de alguém',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 7 }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['zerado', p('swarley').shots === 0]],
+    },
+    {
+        carta: 110,
+        nome: 'Petricor: Alguém zera os seus shots',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 7 }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['você zera', p('swarley').shots === 0]],
+    },
+];

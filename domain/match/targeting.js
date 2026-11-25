@@ -291,7 +291,9 @@ export function meetsCondition(state, condition, ids, ctx){
     const subjects = who === ConditionWho.self
         ? [ctx.sourceId]
         : who === ConditionWho.selfOrTarget
-            ? [ctx.sourceId, ...ids]
+            // "Se voce ou o jogador escolhido": o escolhido e o do efeito
+            // anterior quando este mira quem jogou (24).
+            ? [ctx.sourceId, ...(ctx.previous ?? []), ...ids]
             : ids;
 
     const players = subjects.map(id => playerById(state, id)).filter(Boolean);
