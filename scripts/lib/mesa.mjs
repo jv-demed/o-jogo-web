@@ -84,7 +84,7 @@ export function montarMesa(assentos, { seed = 1, joga } = {}){
     if(turnOf === 0) throw new Error(`ninguem na mesa tem a missao ${joga}`);
     return arrangeTable(base, assentos.map(a => ({
         mission: a.mission, shots: a.shots ?? 0, hand: a.mao,
-        given: a.dados, skip: a.pula, equipment: a.equipamento,
+        given: a.dados, skip: a.pula, equipment: a.equipamento, discard: a.descarte,
     })), { turnOf });
 }
 

@@ -842,4 +842,193 @@ export default [
         voce: 'sauzburg',
         espera: (s, p) => [['você perde 2 vezes', p('sauzburg').skipTurns === 2], ['o pulado fica como estava', p('swarley').skipTurns === 1]],
     },
+
+    // ------------------------------------------------- fase 2: turno, mao e baralho
+
+    {
+        carta: 14,
+        nome: 'Cortador de Unhas: No Sjehnsens, ele perde 1 vez',
+        mesa: [{ mission: 'stanley' }, { mission: 'sjehnsens' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['sjehnsens'] },
+        espera: (s, p) => [['perde 1 vez', p('sjehnsens').skipTurns === 1]],
+        depois: [{ turnos: 1 }],
+        esperaDepois: (s, p) => [['a vez pula ele', s.order[s.turnIndex] === p('sauzburg').id]],
+    },
+    {
+        carta: 14,
+        nome: 'Cortador de Unhas: Em você, que não é o Sjehnsens, nada acontece',
+        mesa: [{ mission: 'stanley' }, { mission: 'sjehnsens' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        voce: 'sauzburg',
+        escolhas: { 0: ['sauzburg'] },
+        espera: (s, p) => [['você não perde a vez', p('sauzburg').skipTurns === 0]],
+    },
+    {
+        carta: 15,
+        nome: 'O Guerreiro Entregue: Alguém dorme e perde 2 vezes',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['perde 2 vezes', p('swarley').skipTurns === 2]],
+        depois: [{ turnos: 4 }],
+        esperaDepois: (s, p) => [['as duas vezes dele foram puladas', s.log.filter(e => e.type === 'turn.skipped' && e.playerId === p('swarley').id).length === 2]],
+    },
+    {
+        carta: 15,
+        nome: 'O Guerreiro Entregue: Você dorme e perde 2 vezes',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p) => [['você perde 2 vezes', p('swarley').skipTurns === 2]],
+    },
+    {
+        carta: 16,
+        nome: 'Não Dá Pra Tetudo: Você descarta a mão e compra uma nova do mesmo tamanho',
+        mesa: [{ mission: 'stanley', mao: [7, 8, 12] }, { mission: 'swarley' }],
+        joga: 'stanley',
+        espera: (s, p) => {
+            const eu = p('stanley');
+            return [
+                ['a mão velha foi para o descarte', [7, 8, 12].every(c => eu.discard.includes(c))],
+                ['a mão nova tem o mesmo tamanho', eu.hand.length === 4],
+                ['a troca fica no log', s.log.some(e => e.type === 'hand.redraw' && e.size === 4)],
+            ];
+        },
+    },
+    {
+        carta: 22,
+        nome: 'Jogos Desnecessários: Duas cartas do seu descarte voltam ao baralho',
+        mesa: [{ mission: 'stanley', descarte: [7, 8, 12] }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { '0:return': [7, 12] },
+        espera: (s, p, { passos }) => {
+            const eu = p('stanley');
+            return [
+                ['a escolha é do seu descarte', pergunta(passos, 'cards')?.source === 'discard'
+                    && pergunta(passos, 'cards')?.chooserId === eu.id],
+                ['as duas voltaram ao baralho', eu.deck.includes(7) && eu.deck.includes(12)],
+                ['saíram do descarte', !eu.discard.includes(7) && !eu.discard.includes(12) && eu.discard.includes(8)],
+                ['o baralho foi embaralhado', !(eu.deck.at(-1) === 12 && eu.deck.at(-2) === 7)],
+            ];
+        },
+    },
+    {
+        carta: 25,
+        nome: 'Viagem no Porta-Malas: Você compra 1 carta extra',
+        mesa: [{ mission: 'stanley', mao: [7] }, { mission: 'swarley' }],
+        joga: 'stanley',
+        espera: (s, p) => [['a mão ficou com 3 (1 + compra da vez + extra)', p('stanley').hand.length === 3]],
+    },
+    {
+        carta: 34,
+        nome: 'Vamos pra Baleia: Você escolhe quem viaja e arruma os lugares',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        escolhas: { 0: ['swarley', 'sauzburg', 'sjamals'], '0:order': ['sjamals', 'swarley', 'sauzburg'] },
+        espera: (s, p, { passos }) => [
+            ['quem arruma é quem jogou', pergunta(passos, 'order')?.chooserId === p('stanley').id],
+            ['os lugares mudaram', s.order.join() === [1, 4, 2, 3, 5].join()],
+            ['a vez continua com quem estava', s.order[s.turnIndex] === p('stanley').id],
+        ],
+    },
+    {
+        carta: 34,
+        nome: 'Vamos pra Baleia: Alguém troca o seu lugar',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'smichaels',
+        escolhas: { 0: ['swarley', 'smichaels'], '0:order': ['smichaels', 'swarley'] },
+        espera: (s, p) => [['você foi para o lugar 2', s.order[1] === p('smichaels').id]],
+    },
+    {
+        carta: 35,
+        nome: 'Disco de Duelo: Você vê a última do baralho e compra ela',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { '0.then:option': 0 },
+        espera: (s, p, { passos }) => {
+            const antes = passos.find(e => e.phase === 'window');
+            const ultima = antes?.players.find(x => x.id === p('stanley').id).deck.at(-1);
+            return [
+                ['só quem jogou viu a carta', p('stanley').peeked?.cards?.[0] === ultima && p('swarley').peeked === null],
+                ['comprou a do fundo', p('stanley').hand.includes(ultima)],
+            ];
+        },
+    },
+    {
+        carta: 35,
+        nome: 'Disco de Duelo: Você prefere a do topo',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { '0.then:option': 1 },
+        espera: (s, p, { passos }) => {
+            const antes = passos.find(e => e.phase === 'window')?.players.find(x => x.id === p('stanley').id);
+            return [['comprou a do topo', p('stanley').hand.includes(antes?.deck[0])],
+                ['a do fundo ficou', p('stanley').deck.at(-1) === antes?.deck.at(-1)]];
+        },
+    },
+    {
+        carta: 52,
+        nome: 'Cigarro no Olho: Você rouba uma carta e ela é jogada na hora',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', mao: [2] }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p, { log }) => [
+            ['a carta roubada entrou na pilha', log.some(e => e.type === 'play.now' && e.idCard === 2)],
+            ['a festinha resolveu: os outros bebem', p('swarley').shots === 1 && p('sauzburg').shots === 1],
+            ['quem roubou não bebe', p('stanley').shots === 0],
+            ['sem jogada extra', p('stanley').extraPlays === 0 && s.phase === 'end'],
+            ['a roubada caiu no descarte do ladrão', p('stanley').discard.includes(2)],
+        ],
+    },
+    {
+        carta: 52,
+        nome: 'Cigarro no Olho: A carta roubada de você é de reação, e é queimada',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', mao: [11] }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p, { log }) => [
+            ['a sua carta saiu da mão', !p('swarley').hand.includes(11)],
+            ['ela foi queimada', log.some(e => e.type === 'burned' && e.idCard === 11)],
+        ],
+    },
+    {
+        carta: 54,
+        nome: 'Peido do Exequiel: A ordem de jogo inverte',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        espera: s => [['a direção inverteu', s.direction === -1]],
+        depois: [{ turnos: 1 }],
+        esperaDepois: (s, p) => [['a vez vai para o anterior', s.order[s.turnIndex] === p('smichaels').id]],
+    },
+    {
+        carta: 58,
+        nome: 'Tábua do Joaquim: Três escolhidos descartam, cada um a sua carta',
+        mesa: [
+            { mission: 'stanley' },
+            { mission: 'swarley', mao: [7, 8] },
+            { mission: 'sauzburg', mao: [12, 17] },
+            { mission: 'sjamals', mao: [] },
+        ],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley', 'sauzburg', 'sjamals'], '0:handPick': { swarley: [8], sauzburg: [12] } },
+        espera: (s, p, { passos }) => [
+            ['a rodada é dos três com mão, ao mesmo tempo', pergunta(passos, 'handPick')?.players.length === 2],
+            ['mão vazia não responde', !pergunta(passos, 'handPick')?.players.includes(p('sjamals').id)],
+            ['cada um descartou a sua', p('swarley').hand.join() === '7' && p('sauzburg').hand.join() === '17'],
+            ['as cartas caíram no descarte', p('swarley').discard.includes(8) && p('sauzburg').discard.includes(12)],
+        ],
+    },
+    {
+        carta: 58,
+        nome: 'Tábua do Joaquim: Você escolhe qual carta descartar',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', mao: [7, 8, 18] }, { mission: 'sauzburg', mao: [12] }, { mission: 'sjamals', mao: [17] }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley', 'sauzburg', 'sjamals'], '0:handPick': { swarley: [18] } },
+        espera: (s, p) => [['você ficou com as outras', p('swarley').hand.join() === '7,8']],
+    },
 ];

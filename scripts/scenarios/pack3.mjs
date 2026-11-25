@@ -162,4 +162,79 @@ export default [
         escolhas: { 0: ['swarley'] },
         espera: (s, p) => [['você zera', p('swarley').shots === 0]],
     },
+
+    // ------------------------------------------------- fase 2: turno, mao e baralho
+
+    {
+        carta: 85,
+        nome: 'Jp da Ganância: Você compra 2 e passa a arriscar a compra',
+        mesa: [{ mission: 'stanley', mao: [] }, { mission: 'swarley' }],
+        joga: 'stanley',
+        espera: (s, p) => [
+            ['comprou 2, além da compra da vez', p('stanley').hand.length === 3],
+            ['a ganância ficou valendo', valendo(s, 85)],
+        ],
+        depois: [{ turnos: 1 }, { carta: 7, joga: 'stanley' }, { turnos: 1 }],
+        esperaDepois: s => [
+            ['terminou a vez seguinte com 5 ou menos: a ganância acaba', !valendo(s, 85)],
+            ['a carta foi para o descarte', noDescarte(s, 85)],
+        ],
+    },
+    {
+        carta: 85,
+        nome: 'Jp da Ganância: Com a mão cheia, a compra da vez segue arriscada',
+        mesa: [{ mission: 'stanley', mao: [7, 8, 12, 17, 18, 21] }, { mission: 'swarley' }],
+        joga: 'stanley',
+        semente: 7,
+        depois: [{ carta: 2, joga: 'stanley' }, { turnos: 2 }],
+        esperaDepois: (s, p, { log }) => [
+            ['ainda valendo depois de uma vez com mão cheia', valendo(s, 85)],
+            ['a compra da vez foi sorteada', log.some(e => e.type === 'draw.failed') || p('stanley').hand.length >= 7],
+        ],
+    },
+    {
+        carta: 89,
+        nome: 'Foto do Frango: Alguém escolhe uma carta da mão e te entrega, e você joga outra',
+        mesa: [{ mission: 'stanley', mao: [] }, { mission: 'swarley', mao: [7, 2] }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'], '0:give': [2] },
+        espera: (s, p, { passos }) => [
+            ['quem escolhe a carta é o alvo', pergunta(passos, 'cards')?.chooserId === p('swarley').id],
+            ['a carta veio para você', p('stanley').hand.includes(2) && !p('swarley').hand.includes(2)],
+            ['você joga de novo', s.phase === 'play' && s.order[s.turnIndex] === p('stanley').id],
+        ],
+    },
+    {
+        carta: 89,
+        nome: 'Foto do Frango: Você entrega a carta que quiser',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', mao: [7, 2, 8] }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'], '0:give': [8] },
+        espera: (s, p) => [['você ficou com as outras', p('swarley').hand.join() === '7,2']],
+    },
+    {
+        carta: 92,
+        nome: 'Slides?: Todos mostram uma carta sorteada da mão',
+        mesa: [{ mission: 'stanley', mao: [7, 8] }, { mission: 'swarley', mao: [12, 17, 18] }, { mission: 'sauzburg', mao: [] }],
+        joga: 'stanley',
+        espera: (s, p) => [
+            ['cada um com mão mostrou 1', p('stanley').revealed.length === 1 && p('swarley').revealed.length === 1],
+            ['a mostrada estava na mão', p('swarley').hand.includes(p('swarley').revealed[0])],
+            ['mão vazia não mostra', p('sauzburg').revealed.length === 0],
+        ],
+    },
+    {
+        carta: 94,
+        nome: 'Cama Embaixo da Mesa: Você dorme 1 vez e volta jogando 2',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        espera: (s, p) => [['perde a próxima vez', p('stanley').skipTurns === 1], ['nada de jogada extra agora', s.phase === 'end']],
+        // swarley, sauzburg, (stanley dorme) swarley, sauzburg, stanley
+        depois: [{ turnos: 5 }],
+        esperaDepois: (s, p) => [
+            ['a vez é sua', s.order[s.turnIndex] === p('stanley').id],
+            ['com 2 jogadas', s.playsLeft === 2],
+        ],
+    },
 ];

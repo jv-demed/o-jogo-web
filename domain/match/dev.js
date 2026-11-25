@@ -109,6 +109,12 @@ export function arrangeTable(state, seats, { turnOf } = {}){
         if(typeof seat.given === 'number') player.shotsGiven = seat.given;
         if(typeof seat.skip === 'number') player.skipTurns = seat.skip;
         if(Array.isArray(seat.hand)) player.hand = [...seat.hand];
+        if(Array.isArray(seat.discard)){
+            for(const idCard of seat.discard){
+                player.discard.push(idCard);
+                draft.discardPile.push({ idCard, playerId: player.id });
+            }
+        }
         // Equipamento ja na cadeira: a carta que tem o momento dela na vez do
         // portador (70, 73, 77, 93) se testa a partir dai, sem jogar antes.
         if(Array.isArray(seat.equipment)){
