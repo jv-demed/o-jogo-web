@@ -12,7 +12,7 @@ import { Command, apply } from '../../domain/match/engine.js';
 import { arrangeTable } from '../../domain/match/dev.js';
 import { CARD_EFFECTS } from '../../domain/cards/effects/index.js';
 import { MISSIONS } from '../../domain/match/missions.js';
-import { MatchStatus, Phase, createMatch, optInRound } from '../../domain/match/state.js';
+import { MatchStatus, Phase, createMatch, isSimultaneous, optInRound } from '../../domain/match/state.js';
 
 export const IDS = Object.keys(CARD_EFFECTS).map(Number).sort((a, b) => a - b);
 
@@ -110,7 +110,7 @@ export function paraIds(state, valor){
  */
 export function quemResponde(state){
     const request = state.pending[0];
-    return request.kind === 'optIn'
+    return isSimultaneous(request)
         ? optInRound(request).waiting[0]
         : request.chooserId;
 }
@@ -128,7 +128,11 @@ export function quemResponde(state){
  */
 export function responder(state, escolhas = {}, quem = quemResponde(state)){
     const request = state.pending[0];
-    const escolha = escolhas[request.slot];
+    // Pedido com chave propria (a cadeia da 88, o "para quem" da 80) responde
+    // por `slot:chave`; o resto, pelo slot.
+    const escolha = request.key !== undefined
+        ? escolhas[request.slot + ':' + request.key]
+        : escolhas[request.slot];
 
     if(escolha !== undefined){
         switch(request.kind){
@@ -136,9 +140,28 @@ export function responder(state, escolhas = {}, quem = quemResponde(state)){
                 if((request.forced ?? []).includes(quem)) return true;
                 if(typeof escolha === 'boolean') return escolha;
                 return paraIds(state, escolha).includes(quem);
+            // Voto: lista de quem acha a carta boa, ou true/false para todos.
+            case 'vote':
+                if(typeof escolha === 'boolean') return escolha;
+                return paraIds(state, escolha).includes(quem);
+            // Corrida: a ordem de chegada. Quem nao esta na lista toca depois.
+            case 'race':
+                return true;
+            // Descarte de cada um: { missao ou id: [cartas] }.
+            case 'handPick': {
+                for(const [who, cards] of Object.entries(escolha)){
+                    const [id] = paraIds(state, /^\d+$/.test(who) ? Number(who) : who);
+                    if(id === quem) return cards;
+                }
+                return [state.players.find(p => p.id === quem).hand[0]];
+            }
             case 'option':
             case 'cards':
+            case 'missions':
+            case 'ongoing':
                 return escolha;
+            case 'order':
+                return paraIds(state, escolha);
             default:
                 return paraIds(state, escolha);
         }
@@ -148,9 +171,15 @@ export function responder(state, escolhas = {}, quem = quemResponde(state)){
     const todos = state.players.map(p => p.id);
 
     switch(request.kind){
-        case 'optIn':  return true;
-        case 'option': return 0;
-        case 'cards':  return [];
+        case 'optIn':    return true;
+        case 'vote':     return true;
+        case 'race':     return true;
+        case 'handPick': return [state.players.find(p => p.id === quem).hand[0]];
+        case 'option':   return 0;
+        case 'cards':    return [...new Set(request.cards)].slice(0, request.count ?? 1);
+        case 'missions': return request.options.slice(0, request.count ?? 1);
+        case 'order':    return [...request.ids].reverse();
+        case 'ongoing':  return request.options[0];
         default: {
             const pool = request.candidates ?? todos;
             const count = request.upTo ? Math.min(1, request.count) : request.count;
@@ -158,6 +187,20 @@ export function responder(state, escolhas = {}, quem = quemResponde(state)){
             return (preferidos.length >= count ? preferidos : pool).slice(0, count);
         }
     }
+}
+
+/**
+ * Na corrida (46) a ordem de chegada e a resposta: com `escolhas[slot]` como
+ * lista, quem toca primeiro e o primeiro da lista.
+ */
+function quemCorre(state, escolhas){
+    const request = state.pending[0];
+    const ordem = escolhas?.[request.slot];
+    const { waiting } = optInRound(request);
+    if(Array.isArray(ordem)){
+        for(const id of paraIds(state, ordem)) if(waiting.includes(id)) return id;
+    }
+    return waiting[0];
 }
 
 export const daVez = state => state.players.find(p => p.id === state.order[state.turnIndex]);
@@ -219,12 +262,15 @@ export const passagem = state => (state.status === MatchStatus.progress
  * efeito prolongado querem — o efeito que esta na mesa cobra na virada, sem
  * carta nova nenhuma no meio para confundir a conta.
  */
-export function passarVez(state, now = 0, passos){
+export function passarVez(state, now = 0, passos, escolhas){
     let current = beber(state, now, passos);
+    current = resolverPendentes(current, { escolhas, passos, now });
     current = { ...current, phase: Phase.end };
     current = apply(current, { type: Command.endTurn, playerId: daVez(current).id, now });
     passos?.push(current);
-    return current;
+    // O comeco da vez pode perguntar (o equipamento da vez, o preso que pode
+    // beber por conta propria): responde antes de seguir.
+    return resolverPendentes(current, { escolhas, passos, now });
 }
 
 /**
@@ -254,20 +300,28 @@ export function jogar(state, idCard, { escolhas, passos, reacoes = [] } = {}){
     current = apply(current, { type: Command.play, playerId: player.id, idCard, now: 0 });
     passos?.push(current);
 
-    // Duas paradas ate a carta resolver, e nesta ordem: a declaracao dos alvos
-    // (que acontece *antes* da janela) e a resolucao em si. As duas param em
-    // `pending`, e entre elas corre a janela de interferencia — daí o tick.
-    // O relogio anda: a janela abre a partir do instante do comando, entao um
-    // `now` fixo abriria uma janela que nunca vence.
-    let now = 1000;
+    return resolverPendentes(current, { escolhas, passos, reacoes });
+}
+
+/**
+ * Resolve tudo o que a mesa tem aberto: janela, escolha, ritual e shot, ate
+ * ela parar numa fase sem pergunta (a vez de alguem jogar, ou o fim da vez).
+ */
+export function resolverPendentes(state, { escolhas, passos, reacoes = [], now: inicio = 1000 } = {}){
+    let current = state;
+    // Duas paradas ate a carta resolver: a declaracao dos alvos (antes da
+    // janela) e a resolucao em si. O relogio anda: a janela abre a partir do
+    // instante do comando, entao um `now` fixo abriria uma janela que nunca vence.
+    let now = inicio;
     let guarda = 0;
     const fila = [...reacoes];
-    while(guarda++ < 40){
+    while(guarda++ < 300){
         now += 60000;
         if(parada(current)){
             current = beber(current, now, passos);
             continue;
         }
+        if(current.status !== MatchStatus.progress) break;
         if(current.phase === Phase.window && fila.length){
             current = reagir(current, fila.shift(), now);
             passos?.push(current);
@@ -279,7 +333,9 @@ export function jogar(state, idCard, { escolhas, passos, reacoes = [] } = {}){
             continue;
         }
         if(current.phase === Phase.pending && current.resolution){
-            const quem = quemResponde(current);
+            const quem = current.pending[0].kind === 'race'
+                ? quemCorre(current, escolhas)
+                : quemResponde(current);
             current = apply(current, {
                 type: Command.answer,
                 playerId: quem,
@@ -291,8 +347,27 @@ export function jogar(state, idCard, { escolhas, passos, reacoes = [] } = {}){
         }
         break;
     }
-    if(guarda >= 40) throw new Error('escolha em loop');
+    if(guarda >= 300) throw new Error('escolha em loop');
     return current;
+}
+
+
+/**
+ * A 69: o jogador da vez compra, e antes de ele jogar `joga` entra com a
+ * Tchouameni. Resolve tudo e devolve a mesa parada na vez dele.
+ */
+export function tchouameni(state, joga, { escolhas, passos, reacoes = [] } = {}){
+    let current = state;
+    if(current.phase === Phase.draw){
+        current = apply(current, { type: Command.draw, playerId: daVez(current).id, now: 0 });
+        passos?.push(current);
+    }
+    const [quem] = paraIds(current, joga);
+    const player = current.players.find(p => p.id === quem);
+    player.hand = [69, ...player.hand];
+    current = apply(current, { type: Command.react, playerId: quem, idCard: 69, now: 0 });
+    passos?.push(current);
+    return resolverPendentes(current, { escolhas, passos, reacoes });
 }
 
 /** Uma reacao na janela aberta, do jeito que a tela mandaria. */

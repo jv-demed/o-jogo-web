@@ -9,6 +9,7 @@
 import { loadCards } from './lib/loadAssets.mjs';
 import { validateCardEffects } from '../domain/cards/validateEffect.js';
 import { CARD_EFFECTS, MODELED_PACKS } from '../domain/cards/effects/index.js';
+import { CARD_KINDS } from '../domain/cards/types.js';
 
 const CARDS = loadCards();
 const byId = new Map(CARDS.map(c => [c.id, c]));
@@ -40,7 +41,18 @@ for(const pack of MODELED_PACKS){
     }
 }
 
-// 3. Panorama.
+// 3. O tipo de cada carta em domain/cards/types.js tem que bater com o catalogo:
+//    as defesas 36, 66 e 67 so entram contra um tipo, e o motor le dali.
+const TIPOS = { defesa: 'defense', divino: 'divine', efeito: 'effect', equipamento: 'equip',
+    investigacao: 'investigation', 'rápido': 'quick', shot: 'shot' };
+for(const carta of CARDS){
+    if(CARD_KINDS[carta.id] !== TIPOS[carta.type]){
+        console.error(`ERRO #${carta.id} ${carta.name}: tipo ${carta.type} no catalogo, ${CARD_KINDS[carta.id]} em domain/cards/types.js`);
+        problemas++;
+    }
+}
+
+// 4. Panorama.
 const total = CARDS.length;
 const modeladas = CARDS.filter(c => CARD_EFFECTS[c.id] !== undefined).length;
 const porPack = {};

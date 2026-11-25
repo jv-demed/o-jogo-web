@@ -40,6 +40,9 @@ export const TargetKind = Object.freeze({
     equipped:   'equipped',   // o portador do equipamento
     sameTarget: 'sameTarget', // o alvo ja resolvido antes, na mesma carta
     manual:     'manual',     // a mesa aponta quem e; `description` diz o criterio
+    playTargets:'playTargets',// os alvos publicos da jogada de baixo (carta 101)
+    missionPick:'missionPick',// quem tem uma das missoes que quem jogou escolheu (carta 74)
+    race:       'race',       // o ultimo a tocar na corrida da mesa (carta 46)
 });
 
 // O que o efeito faz. Prefixo = recurso tocado, para o resolvedor despachar por
@@ -106,6 +109,9 @@ export const Action = Object.freeze({
     auraDispel:         'aura.dispel',
     copy:               'copy',
     choice:             'choice',           // `options` + `chooser`
+    playNow:            'card.playNow',     // a carta que acabou de chegar entra na pilha na hora
+    playUndo:           'play.undo',        // desfaz a ultima jogada de alguem
+    immune:             'player.immune',    // ninguem pode mirar o alvo enquanto durar
     manual:             'manual',           // exige juiz humano; `instruction` explica
 });
 
@@ -122,7 +128,9 @@ export const Timing = Object.freeze({
 
 // Ate quando o efeito vale. Sem `duration`, o efeito e pontual.
 export const DurationKind = Object.freeze({
-    turns:              'turns',              // `turns: N`
+    turns:              'turns',              // `turns: N` vezes do alvo (onTargetTurn)
+    rounds:             'rounds',             // `rounds: N` voltas da vez ate quem jogou
+    untilTurn:          'untilTurn',          // ate o alvo voltar a jogar
     untilMissionChange: 'untilMissionChange', // ate a missao em `mission` trocar de dono
     untilDrinks:        'untilDrinks',        // ate o alvo beber `amount`
     untilDestroyed:     'untilDestroyed',     // ate outra carta remover
@@ -157,6 +165,7 @@ export const Goal = Object.freeze({
     alliesWin:   'alliesWin',   // depende da vitoria de `amount` outros jogadores
     winAtEnd:    'winAtEnd',
     loseAtEnd:   'loseAtEnd',
+    soleWinner:  'soleWinner',  // ganha se todos os outros perderem
 });
 
 // Quem decide, quando a carta oferece uma escolha.

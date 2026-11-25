@@ -1,9 +1,9 @@
 import { Action, Metric, Mission, Negatable, Pile, Rounding, Scope, Timing } from '../vocabulary.js';
 import {
-    all, choose, equipped, filter, mission, others, played, previousPlayer,
-    random, rank, sameTarget, self,
+    all, choose, equipped, filter, mission, played, playTargets, previousPlayer,
+    random, rank, self,
 } from '../targets.js';
-import { permanent, turns, untilDestroyed, untilDrinks, untilMissionChange } from '../durations.js';
+import { permanent, rounds, untilDestroyed, untilDrinks, untilMissionChange, untilTurn } from '../durations.js';
 
 /**
  * Efeitos das cartas do pack 3 (Amigue Secrete 2025), ids 83 a 116.
@@ -19,9 +19,8 @@ const GLADSXODIA = [111, 112, 113, 114, 115, 116];
 const gladsxodia = () => ({
     effects: [
         { action: Action.drink, target: choose(1), amount: 1 },
-        { action: Action.gameWin, target: self(), if: { holds: GLADSXODIA, who: 'self' } },
     ],
-    note: 'A identidade citada no texto e so sabor: a carta nao olha missao.',
+    note: 'Ter as seis na mao, venha a carta de onde vier, encerra na hora (engine.js).',
 });
 
 export const PACK_3_EFFECTS = {
@@ -33,15 +32,14 @@ export const PACK_3_EFFECTS = {
     // 84 — Freio de Ouro
     84: { effects: [
         { action: Action.turnSkip, target: self(), amount: 2 },
-        { action: Action.negate, what: Negatable.play, target: self(),
-          timing: Timing.passive, duration: turns(2) },
+        { action: Action.immune, target: self(), timing: Timing.passive, duration: untilTurn() },
     ]},
 
     // 85 — Jp da Ganancia
     85: { effects: [
         { action: Action.handDraw, target: self(), amount: 2 },
         { action: Action.handDraw, target: self(), amount: 1, chance: 0.5,
-          timing: Timing.eachTurn },
+          timing: Timing.passive, duration: untilTurn() },
     ], note: 'A compra vira 50% de chance, ate o numero de cartas na mao se estabilizar.' },
 
     // 86 — Caipirinha de Banana
@@ -52,18 +50,18 @@ export const PACK_3_EFFECTS = {
     // 87 — Ao Infinito e Alem
     87: { effects: [
         { action: Action.shotsSet, target: choose(1), amount: 'infinity',
-          timing: Timing.passive, duration: turns(2) },
+          timing: Timing.passive, duration: rounds(2) },
     ]},
 
     // 88 — Vamos Fazer um Sorteio?
     88: { effects: [
-        { action: Action.missionChain, between: choose(1),
+        { action: Action.missionChain, between: choose(1, { except: 'self' }),
           condition: { stopAt: { mission: Mission.stanley } } },
     ], note: 'A cadeia para na tentativa de troca com o Stanley — essa troca nao acontece.' },
 
     // 89 — Foto do Frango
     89: { effects: [
-        { action: Action.handGive, target: choose(1), amount: 1, chooser: 'target' },
+        { action: Action.handGive, target: choose(1, { except: 'self' }), amount: 1, chooser: 'target' },
         { action: Action.turnExtraPlay, target: self(), amount: 1 },
     ]},
 
@@ -100,20 +98,20 @@ export const PACK_3_EFFECTS = {
     94: { effects: [
         { action: Action.turnSkip, target: self(), amount: 1,
           then: { action: Action.turnExtraPlay, target: self(), amount: 1,
-                  timing: Timing.delayed, duration: turns(1) } },
+                  timing: Timing.delayed, duration: untilTurn() } },
     ]},
 
     // 95 — Tatuagem de Shuriken
     95: { effects: [
         { action: Action.drink, target: mission(Mission.swelcows), amount: 1 },
-        { action: Action.drink, target: random(1), amount: 1 },
+        { action: Action.drink, target: random(1, { except: { mission: Mission.swelcows } }), amount: 1 },
     ]},
 
     // 96 — Enem
     96: { effects: [
         { action: Action.handDiscard, target: choose(1), amount: 1,
           condition: { onDrink: true },
-          timing: Timing.passive, duration: turns(2) },
+          timing: Timing.passive, duration: rounds(2) },
     ], note: 'A carta perdida e aleatoria, e a penalidade vale a cada shot bebido.' },
 
     // 97 — Maldicao do Jogador
@@ -129,7 +127,7 @@ export const PACK_3_EFFECTS = {
 
     // 99 — Pedido de Casamento
     99: { effects: [
-        { action: Action.linkFate, between: choose(1, { secret: true }),
+        { action: Action.linkFate, between: choose(1, { secret: true, except: 'self' }),
           timing: Timing.passive, duration: permanent() },
     ], note: 'Permanente ate outra carta anular — "ate que a morte os separem".' },
 
@@ -141,7 +139,7 @@ export const PACK_3_EFFECTS = {
     // 101 — Valeu Valeu
     101: {
         effects: [
-            { action: Action.drink, target: sameTarget(), amount: 1, timing: Timing.reaction },
+            { action: Action.drink, target: playTargets(), amount: 1, timing: Timing.reaction },
         ],
         ritual: 'Dizer "valeu valeu".',
         note: 'O alvo aqui e o da carta em jogo agora, e vale para todos eles.',
@@ -154,9 +152,8 @@ export const PACK_3_EFFECTS = {
 
     // 103 — Vamos pra Argentina
     103: { effects: [
-        { action: Action.negate, what: Negatable.play, target: previousPlayer(),
-          timing: Timing.reaction },
-    ], note: 'Diferente das defesas, o alvo aqui e quem jogou, nao quem se protege.' },
+        { action: Action.playUndo, target: previousPlayer() },
+    ], note: 'Na propria vez: desfaz a ultima jogada do jogador anterior, se feita desde a sua ultima vez.' },
 
     // 104 — Leo Noites
     104: { effects: [
@@ -177,8 +174,8 @@ export const PACK_3_EFFECTS = {
     // 107 — Vendedor de Drogas
     107: { effects: [
         { action: Action.choice, chooser: 'self', options: [
-            { action: Action.drink, target: choose(1), amount: 1 },
-            { action: Action.shotsRemove, target: choose(1), amount: 1 },
+            { action: Action.drink, target: choose(1), amount: 1, label: 'Alguém bebe 1' },
+            { action: Action.shotsRemove, target: choose(1), amount: 1, label: 'Alguém perde 1' },
         ]},
     ]},
 
@@ -192,9 +189,7 @@ export const PACK_3_EFFECTS = {
     // 109 — Paz Terrivel
     109: { effects: [
         { action: Action.gameWin, target: self(), condition: { gameEndsWithin: 2 },
-          timing: Timing.endgame, duration: turns(2) },
-        { action: Action.gameLose, target: others(), condition: { gameEndsWithin: 2 },
-          timing: Timing.endgame, duration: turns(2) },
+          timing: Timing.endgame, duration: rounds(2) },
     ]},
 
     // 110 — Petricor

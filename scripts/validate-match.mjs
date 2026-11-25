@@ -29,6 +29,7 @@ import { MatchStatus, Phase, createMatch } from '../domain/match/state.js';
 // passou a jogar carta do mesmo jeito.
 import {
     IDS, beber, daVez, descarteBate, jogar, mesa, montarMesa, novaMesa, parada, passagem, responder,
+    tchouameni,
 } from './lib/mesa.mjs';
 
 let problemas = 0;
@@ -113,6 +114,8 @@ const check = (label, condition) => { if(!condition) erro(label); };
  * o motor aceita como alvo dela.
  */
 function jogarDefesa(antes, id){
+    // A 69 nao responde a uma carta: entra antes de o jogador da vez jogar.
+    if(id === 69) return tchouameni(antes, 2);
     for(const gatilho of IDS){
         if(isReaction(gatilho)) continue;
         try{

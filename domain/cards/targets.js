@@ -13,7 +13,7 @@ export const all = extra => ({ kind: TargetKind.all, ...extra });
 
 export const others = () => ({ kind: TargetKind.all, except: 'self' });
 
-export const random = (count = 1) => ({ kind: TargetKind.random, count });
+export const random = (count = 1, extra) => ({ kind: TargetKind.random, count, ...extra });
 
 export const mission = (which, extra) => ({ kind: TargetKind.mission, mission: which, ...extra });
 
@@ -21,7 +21,13 @@ export const neighbors = (direction, count = 1) => ({ kind: TargetKind.relative,
 
 export const previousPlayer = () => ({ kind: TargetKind.relative, offset: -1 });
 
-export const nextPlayer = () => ({ kind: TargetKind.relative, offset: 1 });
+export const nextPlayer = extra => ({ kind: TargetKind.relative, offset: 1, ...extra });
+
+export const playTargets = () => ({ kind: TargetKind.playTargets });
+
+export const missionPick = (count, extra) => ({ kind: TargetKind.missionPick, count, ...extra });
+
+export const race = () => ({ kind: TargetKind.race });
 
 export const farthest = () => ({ kind: TargetKind.farthest });
 

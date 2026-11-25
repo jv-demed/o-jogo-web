@@ -26,12 +26,12 @@ const EFFECT_KEYS = new Set([
     'action', 'target', 'between', 'amount', 'timing', 'duration', 'if',
     'otherwise', 'then', 'options', 'chooser', 'what', 'scope', 'mission',
     'goal', 'instruction', 'condition', 'direction', 'from', 'rounding',
-    'chance', 'optional', 'upTo', 'blind', 'by', 'note',
+    'chance', 'optional', 'upTo', 'blind', 'by', 'note', 'label', 'skippable',
 ]);
 
 const TARGET_KEYS = new Set([
     'kind', 'count', 'upTo', 'except', 'mission', 'secret', 'direction',
-    'offset', 'by', 'order', 'where', 'description', 'note',
+    'offset', 'by', 'order', 'where', 'description', 'note', 'toPlay',
 ]);
 
 // Acoes que precisam saber em quem batem. As de fora (order.reverse,
@@ -129,12 +129,12 @@ function validateTarget(target, path, errors){
         }
     }
     if(target.except !== undefined){
-        if(target.except === 'self'){
+        if(target.except === 'self' || target.except === 'previous'){
             // ok
         }else if(isPlainObject(target.except) && target.except.mission !== undefined){
             checkMissions(target.except.mission, path + '.except.mission', errors);
         }else{
-            errors.push(path + '.except: esperado "self" ou { mission }');
+            errors.push(path + '.except: esperado "self", "previous" ou { mission }');
         }
     }
     if(target.kind === TargetKind.mission){
@@ -171,6 +171,9 @@ function validateDuration(duration, path, errors){
         errors.push(path + '.kind: desconhecido "' + duration.kind + '"');
         return;
     }
+    if(duration.kind === DurationKind.rounds && !isCount(duration.rounds)){
+        errors.push(path + '.rounds: esperado inteiro positivo');
+    }
     if(duration.kind === DurationKind.turns && !isCount(duration.turns)){
         errors.push(path + '.turns: esperado inteiro positivo');
     }
@@ -191,6 +194,9 @@ function validateCondition(cond, path, errors){
     if(cond.mission !== undefined) checkMissions(cond.mission, path + '.mission', errors);
     if(cond.who !== undefined && !WHOS.has(cond.who)){
         errors.push(path + '.who: desconhecido "' + cond.who + '"');
+    }
+    if(cond.any !== undefined && typeof cond.any !== 'boolean'){
+        errors.push(path + '.any: esperado booleano');
     }
     if(cond.not !== undefined && typeof cond.not !== 'boolean'){
         errors.push(path + '.not: esperado booleano');
@@ -258,7 +264,9 @@ export function validateEffect(effect, path = 'effect'){
     }
     if(effect.action === Action.choice){
         if(!Array.isArray(effect.options) || effect.options.length < 2){
+            if(!(effect.skippable === true && effect.options?.length >= 1)){
             errors.push(path + '.options: choice precisa de ao menos 2 opcoes');
+        }
         }
         if(!CHOOSERS.has(effect.chooser)) errors.push(path + '.chooser: desconhecido "' + effect.chooser + '"');
     }else if(effect.options !== undefined){
@@ -304,7 +312,7 @@ export function validateEffect(effect, path = 'effect'){
     return errors;
 }
 
-const ENTRY_KEYS = new Set(['effects', 'ritual', 'note']);
+const ENTRY_KEYS = new Set(['effects', 'ritual', 'ritualFirst', 'note']);
 
 /**
  * Valida a entrada de uma carta: `{ effects, ritual?, note? }`.

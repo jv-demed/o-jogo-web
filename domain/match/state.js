@@ -1,5 +1,6 @@
 import { sample, shuffle } from './rng.js';
 import { ALL_MISSIONS, MISSIONS } from './missions.js';
+import { OngoingKind } from './marks.js';
 
 /**
  * O estado da partida e como ela nasce.
@@ -74,6 +75,7 @@ function createPlayer({ id, name, avatar, deck, mission }){
 
         skipTurns: 0,            // turnos a pular (turn.skip)
         extraPlays: 0,           // jogadas extras acumuladas (turn.extraPlay)
+        nextTurnPlays: 0,        // jogadas a mais na proxima vez (carta 94)
 
         forcedWin: false,        // game.win
         forcedLose: false,       // game.lose
@@ -160,8 +162,20 @@ export function createMatch({ seed, players }){
         // Vem antes dos shots na tela: cantar e o que autoriza a beber.
         rituals: [],
 
-        // Efeitos com duracao, que sobrevivem a jogada que os criou.
+        // Efeitos com duracao, que sobrevivem a jogada que os criou. Todo
+        // passivo mora aqui, e o que ele muda e lido na hora (marks.js): o fim
+        // de um efeito e tirar a entrada, por um caminho so (`endOngoing`).
         ongoing: [],
+        ongoingSeq: 0,
+        // Efeitos que disparam no comeco de uma vez e pedem resposta (o
+        // equipamento da vez, o preso que pode beber por conta propria).
+        triggers: [],
+        // As cartas que ja entraram na pilha, para a 33 escolher uma.
+        history: [],
+        // A ultima jogada de cada um, com o diario do que ela mudou (carta 103),
+        // e quando cada um comecou as duas ultimas vezes.
+        lastPlays: {},
+        lastTurnOf: {},
         // Vinculos entre jogadores (link.shots, link.fate).
         links: [],
         // Condicoes de fim de jogo plantadas por carta (game.endWhen).
@@ -250,10 +264,25 @@ export function fromDiscard(state, player, idCard){
  * resposta de quem nao esta na rodada), o bot e a tela.
  */
 export function optInRound(request){
-    const round = [...(request?.candidates ?? []), ...(request?.forced ?? [])];
-    const answered = request?.answered ?? [];
+    switch(request?.kind){
+        case 'vote':
+            return roundOf(request.voters, request.answered);
+        case 'race':
+            return roundOf(request.racers, request.touched);
+        case 'handPick':
+            return roundOf(request.players, request.answered);
+        default:
+            return roundOf([...(request?.candidates ?? []), ...(request?.forced ?? [])], request?.answered);
+    }
+}
+
+function roundOf(round = [], answered = []){
     return { round, waiting: round.filter(id => !answered.includes(id)) };
 }
+
+/** Pedidos que a mesa responde junta, cada um por si, sem `chooserId`. */
+export const SIMULTANEOUS = Object.freeze(['optIn', 'vote', 'race', 'handPick']);
+export const isSimultaneous = request => SIMULTANEOUS.includes(request?.kind);
 
 /** Os shots que este jogador ainda deve beber. */
 export const drinksOf = (state, playerId) =>
@@ -276,6 +305,7 @@ export function ongoingFor(state, playerId){
     return (state.ongoing ?? []).filter(ongoing =>
         ongoing.equippedTo === undefined
         && !ongoing.onTable
+        && !ongoing.global
         && (ongoing.targets ?? []).includes(playerId));
 }
 
@@ -287,8 +317,15 @@ export function ongoingFor(state, playerId){
  * dizer quem e. Ver `plantOnTable` em resolve.js.
  */
 export function ongoingOnTable(state){
-    return (state.ongoing ?? []).filter(ongoing => ongoing.onTable === true);
+    return (state.ongoing ?? []).filter(ongoing => ongoing.onTable === true || ongoing.global === true);
 }
+
+/**
+ * Os efeitos que uma carta de dissipar alcanca (81 apaga todos, 104 um): tudo
+ * o que esta valendo e veio de uma jogada, menos equipamento — esse sai por
+ * destruicao, e mora na cadeira, nao aqui.
+ */
+export const dispellable = state => (state.ongoing ?? []).filter(o => o.uid && o.equippedTo === undefined);
 
 /** Quem ainda segura uma carta da mesa: os que nao trocaram de missao desde ela. */
 export function tableCardWaiting(state, ongoing){
@@ -310,6 +347,7 @@ export function tableCardWaiting(state, ongoing){
  */
 export function releaseOngoingCard(state, ongoing){
     if(!ongoing?.uid) return false;                    // nao veio de uma carta jogada
+    if(ongoing.released) return false;                 // ja voltou uma vez
     if(ongoing.equippedTo !== undefined) return false; // equipamento sai por destroy
     // Uma carta so pode ter deixado mais de um efeito prolongado. Ela so cai
     // quando o ultimo deles acabar, senao o primeiro a vencer levaria a carta
@@ -317,9 +355,12 @@ export function releaseOngoingCard(state, ongoing){
     if((state.ongoing ?? []).some(other => other !== ongoing && other.uid === ongoing.uid)) return false;
     const owner = playerById(state, ongoing.sourceId);
     if(!owner) return false;
+    ongoing.released = true;
     toDiscard(state, owner, ongoing.idCard);
     return true;
 }
+
+export { OngoingKind };
 
 /** Copia defensiva. O motor trabalha sobre o clone e devolve estado novo. */
 export const cloneState = state => structuredClone(state);
