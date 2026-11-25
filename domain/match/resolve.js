@@ -1216,8 +1216,9 @@ export function applyEffect(draft, effect, ctx){
     }
 
     // O que dura: aplica (ou guarda) agora, fica em `ongoing`, e o fim desfaz.
-    if(effect.duration || !NOW.has(effect.timing) || effect.action === Action.gameEndIn
-        || effect.action === Action.gameEndWhen){
+    // Equipar e agora: a carta vai para a cadeira, e e ela que dura.
+    if(effect.action !== Action.equip && (effect.duration || !NOW.has(effect.timing)
+        || effect.action === Action.gameEndIn || effect.action === Action.gameEndWhen)){
         // A pausa da 84 e da 48 e de verdade (skipTurns); a duracao e da
         // imunidade, ou da prisao.
         const durable = planted(draft, effect, finalIds, ctx);

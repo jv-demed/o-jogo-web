@@ -588,4 +588,58 @@ export default [
         recusada: true,
         espera: (s, p) => [['a 105 continua na mão', p('swarley').hand.includes(105)]],
     },
+
+    // ------------------------------------------------------- fase 6: equipamentos
+
+    {
+        carta: 93,
+        nome: 'Boleto do Dron: Na vez dele, o portador bebe 1, e talvez mais',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        depois: [{ turnos: 1 }],
+        esperaDepois: (s, p, { log }) => {
+            const boleto = log.find(e => e.type === 'boleto');
+            return [
+                ['bebeu na vez dele', boleto && p('swarley').shots === boleto.paid && boleto.paid >= 1],
+                ['sem os 3 na mesma vez, o boleto segue', boleto.paid === 3 || p('swarley').equipment.some(e => e.idCard === 93)],
+            ];
+        },
+    },
+    {
+        carta: 93,
+        nome: 'Boleto do Dron: Você bebe os 3 na mesma vez e quita o boleto',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        semente: 20,
+        escolhas: { 0: ['swarley'] },
+        depois: [{ turnos: 1 }],
+        esperaDepois: (s, p) => [
+            ['você bebeu 3', p('swarley').shots === 3],
+            ['o boleto foi destruído', p('swarley').equipment.length === 0],
+            ['e foi para o descarte de quem jogou', p('stanley').discard.includes(93)],
+        ],
+    },
+    {
+        carta: 108,
+        nome: 'Boina: Ninguém consegue trocar a missão de quem está de boina',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        depois: [{ carta: 32, joga: 'sauzburg', escolhas: { 0: ['swarley', 'sjamals'] } }],
+        esperaDepois: (s, p) => [
+            ['a troca foi barrada', p('swarley').id === 2 && p('sjamals').id === 4],
+            ['o log diz que barrou', s.log.some(e => e.type === 'mission.swap.blocked')],
+        ],
+    },
+    {
+        carta: 108,
+        nome: 'Boina: Você se equipa e fica fora da rotação',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['stanley'] },
+        depois: [{ carta: 56, joga: 'swarley', escolhas: { '0:option': 1 } }],
+        esperaDepois: (s, p) => [['você continua stanley', p('stanley').id === 1], ['os outros trocaram', p('swarley').id === 3]],
+    },
 ];
