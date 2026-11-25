@@ -1546,4 +1546,50 @@ export default [
         escolhas: { '60:0': ['sjamals'] },
         espera: (s, p) => [['você bebe só 1', p('sjamals').shots === 1]],
     },
+
+    // ------------------------------------------------------- fase 7: fim de jogo
+
+    {
+        carta: 51,
+        nome: 'Sou Louca Sim!: O jogo termina depois de 2 rodadas',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        espera: s => [['a carta fica na mesa', s.ongoing.some(o => o.idCard === 51 && o.global)]],
+        depois: [
+            { turnos: 5, espera: s => [['ainda na segunda rodada', s.status === 'progress']] },
+            { turnos: 1 },
+        ],
+        esperaDepois: s => [['a vez voltou duas vezes: acabou', s.status === 'finished']],
+    },
+    {
+        carta: 51,
+        nome: 'Sou Louca Sim!: Dissipada, a partida não acaba',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        depois: [{ carta: 81, joga: 'swarley' }, { turnos: 6 }],
+        esperaDepois: s => [['a partida segue', s.status === 'progress']],
+    },
+    {
+        carta: 62,
+        nome: 'Quinta Dimensão: O primeiro a beber 5 depois da carta encerra o jogo',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 9 }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        espera: s => [['quem já tinha 9 não encerra', s.status === 'progress']],
+        depois: [{ carta: 83, joga: 'swarley', escolhas: { 0: ['sauzburg'] } }],
+        esperaDepois: s => [['bebeu 5 e a partida acabou', s.status === 'finished'], ['os shots foram bebidos antes', !s.drinks.length]],
+    },
+    {
+        carta: 62,
+        nome: 'Quinta Dimensão: Você chega a 5 aos poucos',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        depois: [
+            { carta: 42, joga: 'stanley', escolhas: { 0: ['swarley'] } },
+            { carta: 42, joga: 'stanley', escolhas: { 0: ['swarley'] }, espera: s => [['com 4, segue', s.status === 'progress']] },
+            { carta: 27, joga: 'stanley', escolhas: { 0: ['swarley'] } },
+        ],
+        esperaDepois: s => [['no quinto, acabou', s.status === 'finished']],
+    },
 ];
