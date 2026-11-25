@@ -235,4 +235,59 @@ export default [
         escolhas: { '1:missions': ['smichaels', 'sjehnsens', 'swelcows'] },
         espera: (s, p) => [['você bebe 1', p('smichaels').shots === 1]],
     },
+
+    // ------------------------------------------------------ fase 4: o que dura
+
+    {
+        carta: 78,
+        nome: 'O Senhor dos Anéis: Por 2 rodadas, o que alguém bebe não conta',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        depois: [
+            { carta: 42, joga: 'sauzburg', escolhas: { 0: ['swarley'] }, espera: (s, p) => [
+                ['bebeu sem contar', p('swarley').shots === 0 && p('swarley').shotsIgnored === 2],
+            ] },
+            { turnos: 4 },
+            { carta: 42, joga: 'sauzburg', escolhas: { 0: ['swarley'] } },
+        ],
+        esperaDepois: (s, p) => [['depois de 2 rodadas volta a contar', p('swarley').shots === 2], ['a carta saiu', !valendo(s, 78)]],
+    },
+    {
+        carta: 78,
+        nome: 'O Senhor dos Anéis: Você bebe e não conta',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        depois: [{ carta: 83, joga: 'stanley', escolhas: { 0: ['swarley'] } }],
+        esperaDepois: (s, p) => [['a sua conta não muda', p('swarley').shots === 0], ['mas você bebeu', p('swarley').shotsIgnored === 5]],
+    },
+    {
+        carta: 81,
+        nome: 'A Árvore da Berlim: Tudo o que está valendo é apagado, menos equipamento',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', equipamento: [108] }, { mission: 'sauzburg', shots: 9 }],
+        joga: 'sauzburg',
+        antes: [
+            { carta: 57, joga: 'stanley', escolhas: { 0: ['sauzburg'] } },
+            { carta: 61, joga: 'swarley', escolhas: { 0: ['stanley', 'sauzburg'] } },
+            { carta: 5, joga: 'sauzburg' },
+        ],
+        espera: (s, p, { apurar }) => [
+            ['nada mais valendo', s.ongoing.length === 0],
+            ['as cartas voltaram ao descarte', [57, 61, 5].every(id => noDescarte(s, id))],
+            ['a meta trocada foi desfeita', p('sauzburg').goal === 'mostShots'],
+            ['a derrota forçada foi embora', apurar()[p('sauzburg').id] === true],
+            ['o equipamento ficou', p('swarley').equipment.length === 1],
+        ],
+    },
+    {
+        carta: 81,
+        nome: 'A Árvore da Berlim: O que estava sobre você é apagado',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        antes: [{ carta: 78, joga: 'stanley', escolhas: { 0: ['swarley'] } }],
+        espera: (s, p) => [['nada valendo sobre você', !s.ongoing.some(o => o.targets.includes(p('swarley').id))]],
+    },
 ];

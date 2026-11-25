@@ -28,6 +28,7 @@ const pergunta = (passos, kind) => passos.find(e => e.pending?.[0]?.kind === kin
 
 const naMesa = (s, idCard) => s.ongoing.some(o => o.idCard === idCard && o.onTable === true);
 const noDescarte = (s, idCard) => s.discardPile.some(e => e.idCard === idCard);
+const valendo = (s, idCard) => s.ongoing.some(o => o.idCard === idCard);
 
 export default [
     {
@@ -1268,5 +1269,122 @@ export default [
         antes: [{ carta: 54, joga: 'stanley' }],
         escolhas: { '0:option': 1 },
         espera: s => [['o seguinte, no sentido de agora, é o da direita', s.players.map(x => x.mission).join() === 'swarley,sauzburg,sjamals,stanley']],
+    },
+
+    // ------------------------------------------------------ fase 4: o que dura
+
+    {
+        carta: 33,
+        nome: 'O Robin Brasileiro: Você copia uma carta já jogada e escolhe o alvo dela',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        antes: [{ carta: 42, joga: 'swarley', escolhas: { 0: ['sauzburg'] } }],
+        escolhas: { '0:copy': [42], '0.copy.0': ['sjamals'] },
+        espera: (s, p, { passos }) => [
+            ['a escolha e o alvo são declarados antes da janela', passos.some(e => e.phase === 'window'
+                && e.stack.at(-1)?.idCard === 33 && e.stack.at(-1)?.targets?.includes(p('sjamals').id))],
+            ['dá para escolher entre as jogadas', pergunta(passos, 'cards')?.cards.includes(42)],
+            ['o copiado faz efeito como seu', p('sjamals').shots === 2 && p('stanley').shotsGiven === 2],
+        ],
+    },
+    {
+        carta: 33,
+        nome: 'O Robin Brasileiro: Copiando a festinha, você bebe com o resto da mesa',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'swarley',
+        antes: [{ carta: 2, joga: 'sauzburg' }],
+        escolhas: { '0:copy': [2] },
+        espera: (s, p) => [['você bebe mais 1', p('swarley').shots === 2], ['quem copiou não bebe desta vez', p('stanley').shots === 1]],
+    },
+    {
+        carta: 48,
+        nome: 'Prisão: O preso fica 3 vezes sem jogar e sai',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        espera: s => [['a carta fica sobre o preso', s.ongoing.some(o => o.idCard === 48 && o.kind === 'prison')]],
+        depois: [{ turnos: 6, escolhas: { '0:optIn': false } }],
+        esperaDepois: (s, p, { log, passos }) => [
+            ['pulou 3 vezes', log.filter(e => e.type === 'turn.skipped' && e.playerId === p('swarley').id).length === 3],
+            ['a cada vez pulada ele pôde beber', passos.filter(e => e.pending?.[0]?.kind === 'optIn'
+                && e.pending[0].candidates.join() === String(p('swarley').id)).length >= 2],
+            ['saiu da prisão', !valendo(s, 48)],
+            ['a carta voltou ao descarte', noDescarte(s, 48)],
+        ],
+    },
+    {
+        carta: 48,
+        nome: 'Prisão: Você bebe 1 por conta própria a cada vez pulada, e sai com 2',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        depois: [{ turnos: 5, escolhas: { '0:optIn': true } }],
+        esperaDepois: (s, p) => [
+            ['você bebeu 2', p('swarley').shots === 2],
+            ['e saiu da prisão', !valendo(s, 48)],
+            ['a vez é sua de novo', s.order[s.turnIndex] === p('swarley').id],
+        ],
+    },
+    {
+        carta: 48,
+        nome: 'Prisão: Shot de carta conta para sair',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg' }],
+        joga: 'stanley',
+        escolhas: { 0: ['swarley'] },
+        depois: [{ turnos: 1, escolhas: { '0:optIn': false } }, { carta: 42, joga: 'sauzburg', escolhas: { 0: ['swarley'] } }],
+        esperaDepois: s => [['bebeu 2 de carta e saiu', !valendo(s, 48)]],
+    },
+    {
+        carta: 57,
+        nome: 'A Prova Comida: Alguém perde mesmo cumprindo a missão, por 2 rodadas',
+        mesa: [{ mission: 'stanley' }, { mission: 'sauzburg', shots: 9 }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { 0: ['sauzburg'] },
+        espera: (s, p, { apurar }) => [['perderia agora', apurar()[p('sauzburg').id] === false]],
+        depois: [
+            { turnos: 5, espera: (s, p, { apurar }) => [['ainda na segunda rodada', apurar()[p('sauzburg').id] === false]] },
+            { turnos: 1 },
+        ],
+        esperaDepois: (s, p, { apurar }) => [
+            ['duas rodadas depois, a missão volta a valer', apurar()[p('sauzburg').id] === true],
+            ['a carta voltou ao descarte', noDescarte(s, 57)],
+        ],
+    },
+    {
+        carta: 57,
+        nome: 'A Prova Comida: Comeram a sua prova',
+        mesa: [{ mission: 'stanley' }, { mission: 'sauzburg', shots: 9 }],
+        joga: 'stanley',
+        voce: 'sauzburg',
+        escolhas: { 0: ['sauzburg'] },
+        espera: (s, p, { apurar }) => [['você perderia', apurar()[p('sauzburg').id] === false]],
+    },
+    {
+        carta: 61,
+        nome: 'O Fio Vermelho: Quem está ligado bebe junto, e um fio não puxa outro',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        escolhas: { 0: ['swarley', 'sauzburg'] },
+        espera: s => [['o vínculo fica valendo', s.ongoing.some(o => o.idCard === 61 && o.targets.length === 2)]],
+        depois: [
+            { carta: 42, joga: 'sjamals', escolhas: { 0: ['swarley'] }, espera: (s, p, { passos }) => [
+                ['o parceiro bebe o mesmo', p('swarley').shots === 2 && p('sauzburg').shots === 2],
+                ['e confirma, como qualquer shot', passos.some(e => e.drinks?.some(d => d.playerId === p('sauzburg').id))],
+            ] },
+            { carta: 2, joga: 'stanley' },
+        ],
+        esperaDepois: (s, p) => [['cada um bebe o seu e o do outro, sem eco', p('swarley').shots === 4 && p('sauzburg').shots === 4]],
+    },
+    {
+        carta: 61,
+        nome: 'O Fio Vermelho: Você está ligado e bebe quando o outro bebe',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        voce: 'sauzburg',
+        escolhas: { 0: ['swarley', 'sauzburg'] },
+        depois: [{ carta: 83, joga: 'sjamals', escolhas: { 0: ['swarley'] } }],
+        esperaDepois: (s, p) => [['você bebeu 5', p('sauzburg').shots === 5]],
     },
 ];
