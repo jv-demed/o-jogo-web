@@ -671,29 +671,39 @@ function endMatch(draft){
  * derrota forcada, vitoria forcada, missao (as tres ultimas na apuracao). O
  * casamento (99) e aplicado sobre o resultado, menos quando a Gladsxodia ou a
  * 109 decidiu: o escolhido vence ou perde conforme quem jogou, mao unica.
+ *
+ * Exportado para os cenarios perguntarem "quem ganharia se acabasse agora".
  */
-function finalize(draft){
-    const { winners, byPlayer } = evaluateMissions(draft);
+export function destiny(state){
+    const { winners, byPlayer } = evaluateMissions(state);
+    const peace = state.peaceWinner ?? (state.status !== MatchStatus.finished
+        ? (state.ongoing ?? []).filter(o => o.kind === OngoingKind.peace).at(-1)?.sourceId
+        : undefined);
 
     let final;
-    if(draft.gladsWinner !== undefined && draft.gladsWinner !== null){
-        final = new Set([draft.gladsWinner]);
-    }else if(draft.peaceWinner !== undefined && draft.peaceWinner !== null){
-        final = new Set([draft.peaceWinner]);
+    if(state.gladsWinner !== undefined && state.gladsWinner !== null){
+        final = new Set([state.gladsWinner]);
+    }else if(peace !== undefined && peace !== null){
+        final = new Set([peace]);
     }else{
         final = new Set(winners);
-        for(const ongoing of draft.ongoing.filter(o => o.kind === OngoingKind.fate)){
+        for(const ongoing of (state.ongoing ?? []).filter(o => o.kind === OngoingKind.fate)){
             if(ongoing.partner === null || ongoing.partner === undefined) continue;
             if(final.has(ongoing.sourceId)) final.add(ongoing.partner);
             else final.delete(ongoing.partner);
         }
-        for(const link of draft.links ?? []){
+        for(const link of state.links ?? []){
             if(link.kind !== 'fate') continue;
             const [source, partner] = link.between;
             if(final.has(source)) final.add(partner);
             else final.delete(partner);
         }
     }
+    return { final, byPlayer };
+}
+
+function finalize(draft){
+    const { final, byPlayer } = destiny(draft);
 
     draft.status = MatchStatus.finished;
     draft.phase = Phase.end;

@@ -52,7 +52,7 @@
 // `passos` (cada estado intermediario), `log` (o log da partida) e `apurar()`
 // (quem ganharia se a partida acabasse ali, por id).
 
-import { evaluateMissions } from '../domain/match/missions.js';
+import { destiny } from '../domain/match/engine.js';
 import { Phase } from '../domain/match/state.js';
 import { beber, daVez, jogar, montarMesa, passarVez, tchouameni } from './lib/mesa.mjs';
 import { SCENARIOS } from './scenarios/index.mjs';
@@ -92,7 +92,12 @@ const finder = state => mission => {
 const contexto = (state, passos) => ({
     passos,
     log: state.log,
-    apurar: () => evaluateMissions(state).byPlayer,
+    // Quem ganharia se a partida acabasse agora, com o destino final inteiro
+    // (missao, derrota forcada, 99, 109, Gladsxodia).
+    apurar: () => {
+        const { final } = destiny(state);
+        return Object.fromEntries(state.players.map(p => [p.id, final.has(p.id)]));
+    },
 });
 
 /** Roda as expectativas e devolve as que quebraram. Excecao dentro conta como quebra. */

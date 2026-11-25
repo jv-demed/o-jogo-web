@@ -237,4 +237,102 @@ export default [
             ['com 2 jogadas', s.playsLeft === 2],
         ],
     },
+
+    // ------------------------------------------------------------ fase 3: missoes
+
+    {
+        carta: 88,
+        nome: 'Vamos Fazer um Sorteio?: A cadeia para quando alguém aponta o Stanley',
+        mesa: MESA_DE_5,
+        joga: 'sauzburg',
+        escolhas: { 0: ['swarley'], '0:chain0': ['stanley'] },
+        espera: (s, p, { passos }) => {
+            const segundo = passos.map(e => e.pending?.[0]).find(r => r?.key === 'chain0');
+            return [
+                ['quem jogou trocou com o primeiro', s.players.find(x => x.id === 3).mission === 'swarley'
+                    && s.players.find(x => x.id === 2).mission === 'sauzburg'],
+                ['o próximo aponta na própria tela', segundo?.chooserId === 2],
+                ['não pode apontar quem já entrou', segundo && !segundo.candidates.includes(3) && !segundo.candidates.includes(2)],
+                ['o stanley não troca', p('stanley').id === 1],
+                ['o log diz onde parou', s.log.some(e => e.type === 'mission.chain.stop')],
+            ];
+        },
+    },
+    {
+        carta: 88,
+        nome: 'Vamos Fazer um Sorteio?: Sem Stanley, a cadeia vai até não sobrar ninguém',
+        mesa: [{ mission: 'sauzburg' }, { mission: 'swarley' }, { mission: 'sjamals' }],
+        joga: 'sauzburg',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'], '0:chain0': ['sjamals'] },
+        espera: s => [['as missões andaram duas vezes', s.players.map(x => x.mission).join() === 'swarley,sjamals,sauzburg']],
+    },
+    {
+        carta: 88,
+        nome: 'Vamos Fazer um Sorteio?: Apontar o Stanley de cara não troca nada',
+        mesa: [{ mission: 'sauzburg' }, { mission: 'stanley' }],
+        joga: 'sauzburg',
+        voce: 'stanley',
+        escolhas: { 0: ['stanley'] },
+        espera: (s, p) => [['ninguém trocou', p('stanley').id === 2 && p('sauzburg').id === 1]],
+    },
+    {
+        carta: 97,
+        nome: 'Maldição do Jogador: Alguém perde se o jogo acabar, até a missão dele trocar',
+        mesa: [{ mission: 'stanley' }, { mission: 'sauzburg', shots: 9 }, { mission: 'swarley' }],
+        joga: 'stanley',
+        escolhas: { 0: ['sauzburg'] },
+        espera: (s, p, { apurar }) => [
+            ['com mais shots, perde mesmo assim', apurar()[p('sauzburg').id] === false],
+            ['a carta fica sobre ele', s.ongoing.some(o => o.idCard === 97 && o.targets.includes(p('sauzburg').id))],
+        ],
+        depois: [{ carta: 32, joga: 'stanley', escolhas: { 0: ['sauzburg', 'swarley'] } }],
+        esperaDepois: (s, p) => [['trocou de missão: a maldição acaba', !valendo(s, 97)], ['a carta volta ao descarte', noDescarte(s, 97)]],
+    },
+    {
+        carta: 97,
+        nome: 'Maldição do Jogador: Você é amaldiçoado',
+        mesa: [{ mission: 'stanley' }, { mission: 'sauzburg', shots: 9 }],
+        joga: 'stanley',
+        voce: 'sauzburg',
+        escolhas: { 0: ['sauzburg'] },
+        espera: (s, p, { apurar }) => [['você perderia', apurar()[p('sauzburg').id] === false]],
+    },
+    {
+        carta: 98,
+        nome: 'Separar e Procurar Pistas: Você vê a missão de alguém em segredo',
+        mesa: MESA_DE_5,
+        joga: 'stanley',
+        escolhas: { 0: ['sjamals'] },
+        espera: (s, p) => [
+            ['você sabe', p('stanley').knownMissions[p('sjamals').id] === 'sjamals'],
+            ['só você', fora(s, 'stanley').every(x => !x.knownMissions[p('sjamals').id])],
+            ['não é revelada', !p('sjamals').missionRevealed],
+        ],
+    },
+    {
+        carta: 99,
+        nome: 'Pedido de Casamento: O escolhido vence se você vencer',
+        mesa: [{ mission: 'sauzburg', shots: 9 }, { mission: 'swarley', shots: 4 }, { mission: 'sjamals', shots: 5 }],
+        joga: 'sauzburg',
+        escolhas: { 0: ['sjamals'] },
+        espera: (s, p, { passos, log, apurar }) => [
+            ['o alvo não é declarado', !passos.some(e => e.stack.at(-1)?.targets?.includes(p('sjamals').id))],
+            ['o log não mostra o alvo', !log.some(e => (e.targets ?? []).includes(p('sjamals').id))],
+            ['a carta fica na sua cadeira', s.ongoing.some(o => o.idCard === 99 && o.targets.join() === '1')],
+            ['você ganha, e o escolhido junto', apurar()[1] === true && apurar()[3] === true],
+        ],
+    },
+    {
+        carta: 99,
+        nome: 'Pedido de Casamento: Você foi escolhido e perde junto com quem jogou',
+        mesa: [{ mission: 'sauzburg', shots: 1 }, { mission: 'swarley', shots: 0 }, { mission: 'stanley', shots: 5 }],
+        joga: 'sauzburg',
+        voce: 'swarley',
+        escolhas: { 0: ['swarley'] },
+        espera: (s, p, { apurar }) => [
+            ['quem jogou perde', apurar()[1] === false],
+            ['você perde junto, mesmo com a missão cumprida', apurar()[2] === false],
+        ],
+    },
 ];
