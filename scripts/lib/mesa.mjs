@@ -131,7 +131,9 @@ export function responder(state, escolhas = {}, quem = quemResponde(state)){
     const request = state.pending[0];
     // Pedido com chave propria (a cadeia da 88, o "para quem" da 80) responde
     // por `slot:chave`; o resto, pelo slot.
-    const escolha = request.key !== undefined
+    // A defesa e o gatilho tem slots com o mesmo nome: `carta:slot` desempata.
+    const daCarta = escolhas[request.idCard + ':' + request.slot];
+    const escolha = daCarta !== undefined ? daCarta : request.key !== undefined
         ? escolhas[request.slot + ':' + request.key]
         : escolhas[request.slot + ':' + request.kind] ?? escolhas[request.slot];
 

@@ -290,4 +290,58 @@ export default [
         antes: [{ carta: 78, joga: 'stanley', escolhas: { 0: ['swarley'] } }],
         espera: (s, p) => [['nada valendo sobre você', !s.ongoing.some(o => o.targets.includes(p('swarley').id))]],
     },
+
+    // ------------------------------------------------------------ fase 5: reacoes
+
+    {
+        carta: 67,
+        nome: 'Ricardo Goleiro 1: Você defende a carta divina jogada em você',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 6 }],
+        joga: 'swarley',
+        gatilho: { carta: 110, joga: 'stanley', escolhas: { 0: ['swarley'] } },
+        espera: (s, p, { log }) => [['anulada', log.some(e => e.type === 'cancelled' && e.idCard === 110)], ['os seus shots ficam', p('swarley').shots === 6]],
+    },
+    {
+        carta: 67,
+        nome: 'Ricardo Goleiro 1: Contra carta que não é divina, a defesa é recusada',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley', shots: 6 }],
+        joga: 'swarley',
+        gatilho: { carta: 21, joga: 'stanley', escolhas: { 0: ['swarley'] } },
+        recusada: true,
+        espera: (s, p) => [['a 67 continua na mão', p('swarley').hand.includes(67)]],
+    },
+    {
+        carta: 67,
+        nome: 'Ricardo Goleiro 1: Contra divina em outro, a defesa é recusada',
+        mesa: [{ mission: 'stanley' }, { mission: 'swarley' }, { mission: 'sauzburg', shots: 4 }],
+        joga: 'swarley',
+        gatilho: { carta: 110, joga: 'stanley', escolhas: { 0: ['sauzburg'] } },
+        recusada: true,
+        espera: (s, p) => [['a 67 continua na mão', p('swarley').hand.includes(67)]],
+    },
+    {
+        carta: 69,
+        nome: 'Tchouameni: Você pula a jogada de quem está prestes a jogar',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        gatilho: { joga: 'stanley' },
+        espera: (s, p, { log }) => [
+            ['quem ia jogar perdeu a jogada', s.phase === 'end' && s.order[s.turnIndex] === p('stanley').id],
+            ['e ficou com a carta', p('stanley').hand.length === 6],
+            ['você disse Tchouameni', log.some(e => e.type === 'ritual.done' && e.playerId === p('swarley').id)],
+        ],
+    },
+    {
+        carta: 69,
+        nome: 'Tchouameni: Alguém pula a sua jogada, e a mesa pode responder',
+        mesa: MESA_DE_5,
+        joga: 'swarley',
+        voce: 'stanley',
+        gatilho: { joga: 'stanley' },
+        reacoes: [{ joga: 'stanley', carta: 49 }],
+        espera: (s, p, { log }) => [
+            ['você cancelou a Tchouameni', log.some(e => e.type === 'cancelled' && e.idCard === 69)],
+            ['e ainda pode jogar', s.phase === 'play' && s.order[s.turnIndex] === p('stanley').id],
+        ],
+    },
 ];

@@ -155,7 +155,7 @@ function rodar(cenario){
         state = gatilho && gatilho.carta === undefined
             ? tchouameni(state, cenario.joga, { escolhas: cenario.escolhas, passos, reacoes: cenario.reacoes })
             : gatilho
-                ? jogar(state, gatilho.carta, { escolhas: gatilho.escolhas, passos, reacoes: [
+                ? jogar(state, gatilho.carta, { escolhas: { ...gatilho.escolhas, ...cenario.escolhas }, passos, reacoes: [
                     { joga: cenario.joga, carta: cenario.carta, recusada: cenario.recusada },
                     ...(cenario.reacoes ?? []),
                 ]})
