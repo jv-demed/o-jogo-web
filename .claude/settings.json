@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run validate)",
+      "Bash(npm run validate:match)",
+      "Bash(npm run validate:effects)",
+      "Bash(git fetch *)"
+    ]
+  }
+}
